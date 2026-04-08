@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { seedProjectSignals } from '@/lib/ai/cold-start'
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -57,6 +58,11 @@ export async function POST(request: Request) {
       .from('project_settings')
       .update(settings)
       .eq('project_id', project.id)
+  }
+
+  // Trigger cold-start analysis (non-blocking)
+  if (site_url) {
+    seedProjectSignals(project.id, site_url).catch(() => {})
   }
 
   return NextResponse.json({ id: project.id })

@@ -6,7 +6,7 @@ import { Code, Copy, Check, MessageCircle } from 'lucide-react'
 export function StepAddWidget() {
   const [copied, setCopied] = useState(false)
 
-  const snippet = `<script src="https://cdn.selfimprove.dev/widget.js" data-project="proj_xxx"></script>`
+  const snippet = `<script src="https://selfimprove-iota.vercel.app/widget.js" data-project="proj_xxx"></script>`
 
   const handleCopy = async () => {
     try {
