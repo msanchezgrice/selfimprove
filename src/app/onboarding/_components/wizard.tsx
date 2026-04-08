@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/browser'
 import type { RoiFocus } from '@/lib/types/database'
 import { StepConnectRepo } from './step-connect-repo'
 import { StepSelectSources } from './step-select-sources'
@@ -64,44 +63,29 @@ export function OnboardingWizard({ orgId }: OnboardingWizardProps) {
   const handleGoLive = async () => {
     setLoading(true)
     try {
-      const supabase = createClient()
-      const slug = slugify(projectName)
-
-      // Create project
-      const { data: project, error: projectError } = await supabase
-        .from('projects')
-        .insert({
+      const res = await fetch('/api/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           org_id: orgId,
           name: projectName.trim(),
-          slug,
+          slug: slugify(projectName),
           repo_url: repoUrl || null,
           site_url: siteUrl || null,
           framework: framework || null,
-          allowed_domains: siteUrl ? [new URL(siteUrl).hostname] : [],
-        })
-        .select('id')
-        .single()
+          settings: {
+            automation_roi_focus: roiFocus,
+            automation_implement_enabled: autoImplement,
+            safety_risk_threshold: riskThreshold,
+            widget_enabled: sources.widget,
+            voice_enabled: sources.voice,
+          },
+        }),
+      })
 
-      if (projectError || !project) {
-        throw new Error(projectError?.message ?? 'Failed to create project')
-      }
-
-      // Create project settings
-      const { error: settingsError } = await supabase
-        .from('project_settings')
-        .insert({
-          project_id: project.id,
-          automation_roi_focus: roiFocus,
-          automation_implement_enabled: autoImplement,
-          safety_risk_threshold: riskThreshold,
-          widget_enabled: sources.widget,
-          voice_enabled: sources.voice,
-          posthog_api_key: null,
-          sentry_dsn: null,
-        })
-
-      if (settingsError) {
-        throw new Error(settingsError.message)
+      if (!res.ok) {
+        const body = await res.json()
+        throw new Error(body.error ?? 'Failed to create project')
       }
 
       router.push('/dashboard')
