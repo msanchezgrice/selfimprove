@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
@@ -10,13 +11,15 @@ export async function GET(request: Request) {
     const supabase = await createClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
-      // Check if user has an org, if not create one
       const {
         data: { user },
       } = await supabase.auth.getUser()
 
       if (user) {
-        const { data: membership } = await supabase
+        // Use admin client to bypass RLS for first-time user setup
+        const admin = createAdminClient()
+
+        const { data: membership } = await admin
           .from('org_members')
           .select('id')
           .eq('user_id', user.id)
@@ -24,7 +27,6 @@ export async function GET(request: Request) {
           .single()
 
         if (!membership) {
-          // First-time user: create org and membership
           const displayName =
             user.user_metadata?.full_name ||
             user.email?.split('@')[0] ||
@@ -34,7 +36,7 @@ export async function GET(request: Request) {
             .replace(/[^a-z0-9]+/g, '-')
             .replace(/(^-|-$)/g, '')
 
-          const { data: org } = await supabase
+          const { data: org } = await admin
             .from('orgs')
             .insert({
               name: `${displayName}'s Team`,
@@ -44,7 +46,7 @@ export async function GET(request: Request) {
             .single()
 
           if (org) {
-            await supabase
+            await admin
               .from('org_members')
               .insert({ org_id: org.id, user_id: user.id, role: 'owner' })
           }
