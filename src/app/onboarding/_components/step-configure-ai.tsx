@@ -1,8 +1,10 @@
 'use client'
 
-import { Brain, Zap, Target, Shield } from 'lucide-react'
+import { useState } from 'react'
+import { Brain, Sparkles, ChevronDown, Zap, GitPullRequest, Bot } from 'lucide-react'
 import type { RoiFocus } from '@/lib/types/database'
-import type { ReactNode } from 'react'
+
+type AutomationLevel = 'roadmap' | 'roadmap_implement' | 'full_autonomous'
 
 type StepConfigureAiProps = {
   roiFocus: RoiFocus
@@ -13,50 +15,60 @@ type StepConfigureAiProps = {
   setRiskThreshold: (v: number) => void
 }
 
-type FocusOption = {
-  value: RoiFocus
+type PriorityOption = {
+  value: string
   label: string
-  description: string
-  icon: ReactNode
 }
 
-const focusOptions: FocusOption[] = [
+const priorityOptions: PriorityOption[] = [
+  { value: 'bugs', label: 'Fix bugs and improve stability' },
+  { value: 'ux', label: 'Improve usability and UX' },
+  { value: 'features', label: 'Add new features' },
+  { value: 'balanced', label: 'Balanced (all of the above)' },
+]
+
+type AutomationOption = {
+  value: AutomationLevel
+  title: string
+  description: string
+  icon: React.ReactNode
+}
+
+const automationOptions: AutomationOption[] = [
   {
-    value: 'balanced',
-    label: 'Balanced',
-    description: 'Equal weight across all factors',
+    value: 'roadmap',
+    title: 'Roadmap only (start here)',
+    description: 'AI generates your roadmap. You decide what to build.',
     icon: <Brain size={18} style={{ color: '#6366f1' }} />,
   },
   {
-    value: 'impact',
-    label: 'Impact-first',
-    description: 'Prioritize high-impact items',
-    icon: <Target size={18} style={{ color: '#6366f1' }} />,
+    value: 'roadmap_implement',
+    title: 'Roadmap + one-click implement',
+    description: 'AI creates PRs when you click "Implement." You review and merge.',
+    icon: <GitPullRequest size={18} style={{ color: '#6366f1' }} />,
   },
   {
-    value: 'effort',
-    label: 'Quick wins',
-    description: 'Low-effort, high-return items first',
-    icon: <Zap size={18} style={{ color: '#6366f1' }} />,
-  },
-  {
-    value: 'confidence',
-    label: 'High confidence',
-    description: 'Only act on strong signals',
-    icon: <Shield size={18} style={{ color: '#6366f1' }} />,
+    value: 'full_autonomous',
+    title: 'Full autonomous',
+    description: 'AI auto-approves, auto-builds, auto-merges low-risk changes. You set guardrails.',
+    icon: <Bot size={18} style={{ color: '#6366f1' }} />,
   },
 ]
 
-function getRiskLabel(value: number): string {
-  if (value <= 30) return 'Conservative'
-  if (value <= 70) return 'Moderate'
-  return 'Aggressive'
+function mapAutomationToProps(level: AutomationLevel): {
+  autoImplement: boolean
+} {
+  switch (level) {
+    case 'roadmap':
+      return { autoImplement: false }
+    case 'roadmap_implement':
+    case 'full_autonomous':
+      return { autoImplement: true }
+  }
 }
 
-function getRiskColor(value: number): string {
-  if (value <= 30) return '#059669'
-  if (value <= 70) return '#d97706'
-  return '#dc2626'
+function mapPropsToAutomation(autoImplement: boolean): AutomationLevel {
+  return autoImplement ? 'roadmap_implement' : 'roadmap'
 }
 
 export function StepConfigureAi({
@@ -67,43 +79,207 @@ export function StepConfigureAi({
   riskThreshold,
   setRiskThreshold,
 }: StepConfigureAiProps) {
+  const [productDescription, setProductDescription] = useState('')
+  const [targetUsers, setTargetUsers] = useState('')
+  const [currentFeatures, setCurrentFeatures] = useState('')
+  const [priority, setPriority] = useState('balanced')
+  const [automationLevel, setAutomationLevel] = useState<AutomationLevel>(
+    mapPropsToAutomation(autoImplement)
+  )
+
+  const handleAutomationChange = (level: AutomationLevel) => {
+    setAutomationLevel(level)
+    const mapped = mapAutomationToProps(level)
+    setAutoImplement(mapped.autoImplement)
+  }
+
+  // Map priority to roiFocus
+  const handlePriorityChange = (val: string) => {
+    setPriority(val)
+    const focusMap: Record<string, RoiFocus> = {
+      bugs: 'confidence',
+      ux: 'impact',
+      features: 'effort',
+      balanced: 'balanced',
+    }
+    setRoiFocus(focusMap[val] ?? 'balanced')
+  }
+
+  // Unused but kept for prop interface compatibility
+  void riskThreshold
+  void setRiskThreshold
+  void roiFocus
+
   return (
     <div>
-      <h2
-        className="text-lg font-semibold mb-1"
-        style={{ color: '#1a1a2e' }}
-      >
-        Configure your AI PM
-      </h2>
-      <p className="text-sm mb-5" style={{ color: '#8b8680' }}>
-        Set how your AI prioritizes and acts on signals.
-      </p>
-
-      {/* ROI Focus */}
-      <div className="mb-6">
-        <p
-          className="text-sm font-medium mb-3"
-          style={{ color: '#1a1a2e' }}
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-5">
+        <div
+          className="flex items-center justify-center w-10 h-10 rounded-xl"
+          style={{ backgroundColor: '#eef2ff' }}
         >
-          ROI Focus
+          <Sparkles size={20} style={{ color: '#6366f1' }} />
+        </div>
+        <div>
+          <h2
+            className="text-lg font-semibold"
+            style={{ color: '#1a1a2e' }}
+          >
+            Configure your AI PM
+          </h2>
+          <p className="text-sm" style={{ color: '#8b8680' }}>
+            Tell the AI about your product. Everything here can be changed later.
+          </p>
+        </div>
+      </div>
+
+      {/* Product description */}
+      <div
+        className="rounded-xl border p-5"
+        style={{ borderColor: '#e8e4de', backgroundColor: '#ffffff' }}
+      >
+        <div className="mb-4">
+          <label
+            className="block text-sm font-medium mb-1.5"
+            style={{ color: '#1a1a2e' }}
+          >
+            What does your product do?
+          </label>
+          <textarea
+            rows={2}
+            value={productDescription}
+            onChange={(e) => setProductDescription(e.target.value)}
+            className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none resize-y"
+            style={{
+              borderColor: '#e8e4de',
+              color: '#1a1a2e',
+              backgroundColor: '#ffffff',
+            }}
+            placeholder="A study tool for oral board exams with flashcards, quizzes, and an AI companion."
+          />
+        </div>
+
+        {/* Target users */}
+        <div className="mb-4">
+          <label
+            className="block text-sm font-medium mb-1.5"
+            style={{ color: '#1a1a2e' }}
+          >
+            Who are your users?
+          </label>
+          <input
+            type="text"
+            value={targetUsers}
+            onChange={(e) => setTargetUsers(e.target.value)}
+            className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none"
+            style={{
+              borderColor: '#e8e4de',
+              color: '#1a1a2e',
+              backgroundColor: '#ffffff',
+            }}
+            placeholder="Residents studying for oral board exams"
+          />
+        </div>
+
+        {/* Current features */}
+        <div className="mb-4">
+          <label
+            className="block text-sm font-medium mb-1.5"
+            style={{ color: '#1a1a2e' }}
+          >
+            Current features
+          </label>
+          <input
+            type="text"
+            value={currentFeatures}
+            onChange={(e) => setCurrentFeatures(e.target.value)}
+            className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none"
+            style={{
+              borderColor: '#e8e4de',
+              color: '#1a1a2e',
+              backgroundColor: '#ffffff',
+            }}
+            placeholder="Flashcards, quizzes, PDF reader, chat, progress tracking"
+          />
+        </div>
+
+        {/* Priority dropdown */}
+        <div className="mb-0">
+          <label
+            className="block text-sm font-medium mb-1.5"
+            style={{ color: '#1a1a2e' }}
+          >
+            What matters most right now?
+          </label>
+          <div className="relative">
+            <select
+              value={priority}
+              onChange={(e) => handlePriorityChange(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none appearance-none pr-10"
+              style={{
+                borderColor: '#e8e4de',
+                color: '#1a1a2e',
+                backgroundColor: '#ffffff',
+              }}
+            >
+              {priorityOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+            <ChevronDown
+              size={16}
+              className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"
+              style={{ color: '#8b8680' }}
+            />
+          </div>
+          <p className="text-xs mt-1" style={{ color: '#8b8680' }}>
+            Biases ROI scoring toward your priority.
+          </p>
+        </div>
+      </div>
+
+      {/* Automation level */}
+      <div className="mt-5">
+        <p
+          className="text-xs font-semibold uppercase tracking-wider mb-3"
+          style={{ color: '#8b8680' }}
+        >
+          Automation level
         </p>
-        <div className="grid grid-cols-2 gap-2.5">
-          {focusOptions.map((opt) => {
-            const selected = roiFocus === opt.value
+        <div className="space-y-2.5">
+          {automationOptions.map((opt) => {
+            const selected = automationLevel === opt.value
             return (
               <button
                 key={opt.value}
                 type="button"
-                onClick={() => setRoiFocus(opt.value)}
-                className="flex items-start gap-3 p-3 rounded-xl border text-left transition-all"
+                onClick={() => handleAutomationChange(opt.value)}
+                className="flex items-start gap-3 w-full p-4 rounded-xl border text-left transition-all"
                 style={{
                   borderColor: selected ? '#6366f1' : '#e8e4de',
                   backgroundColor: selected ? '#fafaff' : '#ffffff',
                   boxShadow: selected ? '0 0 0 1px #6366f1' : 'none',
                 }}
               >
+                <div className="mt-0.5 shrink-0">
+                  <div
+                    className="w-4 h-4 rounded-full border-2 flex items-center justify-center"
+                    style={{
+                      borderColor: selected ? '#6366f1' : '#d1d5db',
+                    }}
+                  >
+                    {selected && (
+                      <div
+                        className="w-2 h-2 rounded-full"
+                        style={{ backgroundColor: '#6366f1' }}
+                      />
+                    )}
+                  </div>
+                </div>
                 <div
-                  className="flex items-center justify-center w-8 h-8 rounded-lg shrink-0 mt-0.5"
+                  className="flex items-center justify-center w-8 h-8 rounded-lg shrink-0"
                   style={{
                     backgroundColor: selected ? '#eef2ff' : '#f5f3ef',
                   }}
@@ -115,7 +291,7 @@ export function StepConfigureAi({
                     className="text-sm font-medium"
                     style={{ color: '#1a1a2e' }}
                   >
-                    {opt.label}
+                    {opt.title}
                   </p>
                   <p
                     className="text-xs mt-0.5"
@@ -128,88 +304,18 @@ export function StepConfigureAi({
             )
           })}
         </div>
-      </div>
 
-      {/* Auto-implement */}
-      <div
-        className="flex items-center justify-between p-4 rounded-xl border mb-6"
-        style={{ borderColor: '#e8e4de' }}
-      >
-        <div>
-          <p
-            className="text-sm font-medium"
-            style={{ color: '#1a1a2e' }}
-          >
-            Auto-implement changes
-          </p>
-          <p className="text-xs mt-0.5" style={{ color: '#8b8680' }}>
-            Let the AI create PRs for approved roadmap items automatically.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setAutoImplement(!autoImplement)}
-          className="relative w-10 h-6 rounded-full transition-colors shrink-0 ml-4"
-          style={{
-            backgroundColor: autoImplement ? '#6366f1' : '#d1d5db',
-          }}
-          aria-label="Toggle auto-implement"
-        >
+        {automationLevel === 'full_autonomous' && (
           <div
-            className="absolute top-1 w-4 h-4 rounded-full bg-white transition-transform shadow-sm"
-            style={{
-              transform: autoImplement
-                ? 'translateX(22px)'
-                : 'translateX(4px)',
-            }}
-          />
-        </button>
-      </div>
-
-      {/* Risk threshold */}
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <p
-            className="text-sm font-medium"
-            style={{ color: '#1a1a2e' }}
+            className="mt-3 p-3 rounded-xl border flex items-center gap-2"
+            style={{ borderColor: '#e8e4de', backgroundColor: '#fffbeb' }}
           >
-            Risk threshold
-          </p>
-          <span
-            className="text-xs font-medium px-2 py-0.5 rounded-full"
-            style={{
-              color: getRiskColor(riskThreshold),
-              backgroundColor:
-                riskThreshold <= 30
-                  ? '#ecfdf5'
-                  : riskThreshold <= 70
-                    ? '#fffbeb'
-                    : '#fef2f2',
-            }}
-          >
-            {getRiskLabel(riskThreshold)} ({riskThreshold})
-          </span>
-        </div>
-        <input
-          type="range"
-          min={0}
-          max={100}
-          value={riskThreshold}
-          onChange={(e) => setRiskThreshold(Number(e.target.value))}
-          className="w-full h-2 rounded-lg appearance-none cursor-pointer"
-          style={{
-            accentColor: '#6366f1',
-            backgroundColor: '#e8e4de',
-          }}
-        />
-        <div
-          className="flex justify-between text-xs mt-1"
-          style={{ color: '#8b8680' }}
-        >
-          <span>Conservative</span>
-          <span>Moderate</span>
-          <span>Aggressive</span>
-        </div>
+            <Zap size={14} style={{ color: '#d97706' }} />
+            <p className="text-xs" style={{ color: '#92400e' }}>
+              Full autonomous mode auto-merges low-risk changes. You can set guardrails in project settings.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   )

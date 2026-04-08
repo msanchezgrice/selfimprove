@@ -36,6 +36,9 @@ export function OnboardingWizard({ orgId }: OnboardingWizardProps) {
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
 
+  // Project ID created in step 1
+  const [projectId, setProjectId] = useState<string | null>(null)
+
   // Step 1: Connect Repo
   const [projectName, setProjectName] = useState('')
   const [repoUrl, setRepoUrl] = useState('')
@@ -60,7 +63,7 @@ export function OnboardingWizard({ orgId }: OnboardingWizardProps) {
     return true
   }
 
-  const handleGoLive = async () => {
+  const handleStep1Continue = async () => {
     setLoading(true)
     try {
       const res = await fetch('/api/projects', {
@@ -70,6 +73,37 @@ export function OnboardingWizard({ orgId }: OnboardingWizardProps) {
           org_id: orgId,
           name: projectName.trim(),
           slug: slugify(projectName),
+          repo_url: repoUrl || null,
+          site_url: siteUrl || null,
+          framework: framework || null,
+        }),
+      })
+
+      if (!res.ok) {
+        const body = await res.json()
+        throw new Error(body.error ?? 'Failed to create project')
+      }
+
+      const { id } = await res.json()
+      setProjectId(id)
+      setStep(2)
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Project creation error:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleGoLive = async () => {
+    if (!projectId) return
+    setLoading(true)
+    try {
+      // Update project settings — project already exists from step 1
+      const res = await fetch(`/api/projects/${projectId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           repo_url: repoUrl || null,
           site_url: siteUrl || null,
           framework: framework || null,
@@ -85,7 +119,7 @@ export function OnboardingWizard({ orgId }: OnboardingWizardProps) {
 
       if (!res.ok) {
         const body = await res.json()
-        throw new Error(body.error ?? 'Failed to create project')
+        throw new Error(body.error ?? 'Failed to update project')
       }
 
       router.push('/dashboard')
@@ -167,7 +201,7 @@ export function OnboardingWizard({ orgId }: OnboardingWizardProps) {
         {step === 2 && (
           <StepSelectSources sources={sources} setSources={setSources} />
         )}
-        {step === 3 && <StepAddWidget />}
+        {step === 3 && <StepAddWidget projectId={projectId} />}
         {step === 4 && (
           <StepConfigureAi
             roiFocus={roiFocus}
@@ -207,12 +241,12 @@ export function OnboardingWizard({ orgId }: OnboardingWizardProps) {
             )}
             <button
               type="button"
-              onClick={() => setStep((s) => s + 1)}
-              disabled={!canContinue()}
+              onClick={step === 1 ? handleStep1Continue : () => setStep((s) => s + 1)}
+              disabled={!canContinue() || loading}
               className="text-sm font-semibold px-6 py-2.5 rounded-xl text-white transition-opacity disabled:opacity-40"
               style={{ backgroundColor: '#6366f1' }}
             >
-              Continue
+              {step === 1 && loading ? 'Creating...' : 'Continue'}
             </button>
           </div>
         )}
