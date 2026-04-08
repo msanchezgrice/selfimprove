@@ -1,0 +1,496 @@
+'use client'
+
+import { useState } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import type {
+  RoadmapItemRow,
+  RoadmapCategory,
+  RoadmapScope,
+  RoadmapStatus,
+  SignalType,
+} from '@/lib/types/database'
+
+type PRDDetailProps = {
+  item: RoadmapItemRow
+}
+
+/* ---------- Config ---------- */
+
+const categoryConfig: Record<RoadmapCategory, { bg: string; text: string; label: string }> = {
+  bug: { bg: '#fef2f2', text: '#dc2626', label: 'Bug' },
+  feature: { bg: '#eef2ff', text: '#6366f1', label: 'Feature' },
+  improvement: { bg: '#fffbeb', text: '#d97706', label: 'Improvement' },
+  infrastructure: { bg: '#f8fafc', text: '#475569', label: 'Infra' },
+}
+
+const scopeConfig: Record<RoadmapScope, { bg: string; text: string; label: string }> = {
+  small: { bg: '#f0fdf4', text: '#16a34a', label: 'Small' },
+  medium: { bg: '#fffbeb', text: '#d97706', label: 'Medium' },
+  large: { bg: '#fef2f2', text: '#dc2626', label: 'Large' },
+}
+
+const statusConfig: Record<RoadmapStatus, { bg: string; text: string; label: string }> = {
+  proposed: { bg: '#eef2ff', text: '#6366f1', label: 'Proposed' },
+  approved: { bg: '#f0fdf4', text: '#059669', label: 'Approved' },
+  building: { bg: '#fffbeb', text: '#d97706', label: 'Building' },
+  shipped: { bg: '#ecfdf5', text: '#059669', label: 'Shipped' },
+  archived: { bg: '#f8fafc', text: '#475569', label: 'Archived' },
+  dismissed: { bg: '#fef2f2', text: '#dc2626', label: 'Dismissed' },
+}
+
+const signalTypeBadge: Record<string, { bg: string; text: string }> = {
+  voice: { bg: '#f5f3ff', text: '#7c3aed' },
+  feedback: { bg: '#eef2ff', text: '#6366f1' },
+  analytics: { bg: '#ecfeff', text: '#0891b2' },
+  error: { bg: '#fef2f2', text: '#dc2626' },
+  builder: { bg: '#ecfdf5', text: '#059669' },
+}
+
+/* ---------- Helpers ---------- */
+
+function Badge({ bg, text, label }: { bg: string; text: string; label: string }) {
+  return (
+    <span
+      className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium whitespace-nowrap"
+      style={{ backgroundColor: bg, color: text }}
+    >
+      {label}
+    </span>
+  )
+}
+
+function MetricCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div
+      className="flex flex-col items-center rounded-lg border px-4 py-3"
+      style={{ borderColor: '#e8e4de' }}
+    >
+      <span className="text-lg font-semibold tabular-nums" style={{ color: '#1a1a2e' }}>
+        {value}
+      </span>
+      <span className="text-xs" style={{ color: '#8b8680' }}>
+        {label}
+      </span>
+    </div>
+  )
+}
+
+function SectionCard({
+  title,
+  children,
+}: {
+  title: string
+  children: React.ReactNode
+}) {
+  return (
+    <div
+      className="rounded-xl border bg-white p-5"
+      style={{ borderColor: '#e8e4de' }}
+    >
+      <h3 className="text-sm font-semibold mb-3" style={{ color: '#1a1a2e' }}>
+        {title}
+      </h3>
+      {children}
+    </div>
+  )
+}
+
+/* ---------- PRD Content types ---------- */
+
+type EvidenceItem = {
+  type?: string
+  content?: string
+  signal_type?: string
+}
+
+type PRDContent = {
+  problem?: string
+  evidence?: EvidenceItem[]
+  thinking_traces?: string[]
+  expected_impact?: string
+  solution?: string
+  acceptance_criteria?: string[]
+  files_to_modify?: { path?: string; change?: string }[]
+  risks?: string[]
+  rollback?: string
+}
+
+/* ---------- Main component ---------- */
+
+export function PRDDetail({ item }: PRDDetailProps) {
+  const router = useRouter()
+  const [loading, setLoading] = useState(false)
+  const [dismissing, setDismissing] = useState(false)
+  const [dismissReason, setDismissReason] = useState('')
+  const [localItem, setLocalItem] = useState(item)
+
+  const prd = localItem.prd_content as PRDContent | null
+  const cat = categoryConfig[localItem.category]
+  const scope = scopeConfig[localItem.scope]
+  const status = statusConfig[localItem.status]
+
+  async function handleGeneratePRD() {
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/roadmap/${localItem.id}/prd`, {
+        method: 'POST',
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setLocalItem((prev) => ({ ...prev, prd_content: data.prd }))
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleApprove() {
+    const res = await fetch(`/api/roadmap/${localItem.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'approved' }),
+    })
+    if (res.ok) {
+      setLocalItem((prev) => ({ ...prev, status: 'approved' }))
+    }
+  }
+
+  async function handleDismiss() {
+    if (!dismissReason.trim()) return
+    const res = await fetch(`/api/roadmap/${localItem.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'dismissed', dismiss_reason: dismissReason }),
+    })
+    if (res.ok) {
+      setLocalItem((prev) => ({
+        ...prev,
+        status: 'dismissed',
+        dismiss_reason: dismissReason,
+      }))
+      setDismissing(false)
+    }
+  }
+
+  async function handleFeedback(direction: 'up' | 'down') {
+    const res = await fetch(`/api/roadmap/${localItem.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(
+        direction === 'up'
+          ? { feedback_up: localItem.feedback_up + 1 }
+          : { feedback_down: localItem.feedback_down + 1 },
+      ),
+    })
+    if (res.ok) {
+      setLocalItem((prev) => ({
+        ...prev,
+        feedback_up: direction === 'up' ? prev.feedback_up + 1 : prev.feedback_up,
+        feedback_down: direction === 'down' ? prev.feedback_down + 1 : prev.feedback_down,
+      }))
+    }
+  }
+
+  return (
+    <div className="p-6 max-w-3xl mx-auto">
+      {/* Back button */}
+      <Link
+        href="/dashboard/roadmap"
+        className="inline-flex items-center gap-1 text-sm font-medium mb-6 transition-colors hover:opacity-70"
+        style={{ color: '#6366f1' }}
+      >
+        &larr; Back to Roadmap
+      </Link>
+
+      {/* Title */}
+      <h1 className="text-2xl font-bold mb-3" style={{ color: '#1a1a2e' }}>
+        {localItem.title}
+      </h1>
+
+      {/* Badge row */}
+      <div className="flex items-center gap-2 flex-wrap mb-4">
+        <Badge bg={cat.bg} text={cat.text} label={cat.label} />
+        <Badge bg={scope.bg} text={scope.text} label={scope.label} />
+        <Badge bg={status.bg} text={status.text} label={status.label} />
+      </div>
+
+      {/* Metrics row */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        <MetricCard label="Impact" value={`${localItem.impact}/10`} />
+        <MetricCard label="Size" value={`${localItem.size}/10`} />
+        <MetricCard label="ROI Score" value={localItem.roi_score.toFixed(1)} />
+        <MetricCard label="Confidence" value={`${localItem.confidence}%`} />
+      </div>
+
+      {/* Description */}
+      <div
+        className="rounded-xl border bg-white p-5 mb-4"
+        style={{ borderColor: '#e8e4de' }}
+      >
+        <p className="text-sm leading-relaxed" style={{ color: '#1a1a2e' }}>
+          {localItem.description}
+        </p>
+      </div>
+
+      {/* PRD sections */}
+      {prd ? (
+        <div className="space-y-4 mb-6">
+          {prd.problem && (
+            <SectionCard title="Problem">
+              <p className="text-sm leading-relaxed" style={{ color: '#1a1a2e' }}>
+                {prd.problem}
+              </p>
+            </SectionCard>
+          )}
+
+          {prd.evidence && prd.evidence.length > 0 && (
+            <SectionCard title="Evidence Trail">
+              <ul className="space-y-2">
+                {prd.evidence.map((ev, i) => {
+                  const signalType = (ev.signal_type ?? ev.type ?? 'feedback') as SignalType
+                  const badgeStyle = signalTypeBadge[signalType] ?? {
+                    bg: '#f8fafc',
+                    text: '#475569',
+                  }
+                  return (
+                    <li key={i} className="flex items-start gap-2">
+                      <span
+                        className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium shrink-0 mt-0.5"
+                        style={{ backgroundColor: badgeStyle.bg, color: badgeStyle.text }}
+                      >
+                        {signalType}
+                      </span>
+                      <span className="text-sm" style={{ color: '#1a1a2e' }}>
+                        {ev.content ?? JSON.stringify(ev)}
+                      </span>
+                    </li>
+                  )
+                })}
+              </ul>
+            </SectionCard>
+          )}
+
+          {prd.thinking_traces && prd.thinking_traces.length > 0 && (
+            <SectionCard title="Thinking Traces">
+              <ol className="list-decimal list-inside space-y-1.5">
+                {prd.thinking_traces.map((trace, i) => (
+                  <li
+                    key={i}
+                    className="text-sm leading-relaxed"
+                    style={{ color: '#1a1a2e' }}
+                  >
+                    {trace}
+                  </li>
+                ))}
+              </ol>
+            </SectionCard>
+          )}
+
+          {prd.expected_impact && (
+            <SectionCard title="Expected Impact">
+              <p className="text-sm leading-relaxed" style={{ color: '#1a1a2e' }}>
+                {prd.expected_impact}
+              </p>
+            </SectionCard>
+          )}
+
+          {prd.solution && (
+            <SectionCard title="Solution">
+              <p className="text-sm leading-relaxed" style={{ color: '#1a1a2e' }}>
+                {prd.solution}
+              </p>
+            </SectionCard>
+          )}
+
+          {prd.acceptance_criteria && prd.acceptance_criteria.length > 0 && (
+            <SectionCard title="Acceptance Criteria">
+              <ul className="space-y-1.5">
+                {prd.acceptance_criteria.map((criterion, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm">
+                    <span
+                      className="mt-0.5 shrink-0 w-4 h-4 rounded border flex items-center justify-center"
+                      style={{ borderColor: '#e8e4de' }}
+                    >
+                      <span className="text-[10px]" style={{ color: '#8b8680' }}>
+                        {i + 1}
+                      </span>
+                    </span>
+                    <span style={{ color: '#1a1a2e' }}>{criterion}</span>
+                  </li>
+                ))}
+              </ul>
+            </SectionCard>
+          )}
+
+          {prd.files_to_modify && prd.files_to_modify.length > 0 && (
+            <SectionCard title="Files to Modify">
+              <ul className="space-y-2">
+                {prd.files_to_modify.map((file, i) => (
+                  <li key={i} className="text-sm">
+                    <code
+                      className="px-1.5 py-0.5 rounded text-xs font-mono"
+                      style={{ backgroundColor: '#f5f3ff', color: '#6366f1' }}
+                    >
+                      {file.path ?? String(file)}
+                    </code>
+                    {file.change && (
+                      <span className="ml-2" style={{ color: '#8b8680' }}>
+                        &mdash; {file.change}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </SectionCard>
+          )}
+
+          {((prd.risks && prd.risks.length > 0) || prd.rollback) && (
+            <SectionCard title="Risks & Rollback">
+              {prd.risks && prd.risks.length > 0 && (
+                <ul className="list-disc list-inside space-y-1 mb-3">
+                  {prd.risks.map((risk, i) => (
+                    <li
+                      key={i}
+                      className="text-sm"
+                      style={{ color: '#1a1a2e' }}
+                    >
+                      {risk}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {prd.rollback && (
+                <p className="text-sm" style={{ color: '#8b8680' }}>
+                  <strong style={{ color: '#1a1a2e' }}>Rollback:</strong>{' '}
+                  {prd.rollback}
+                </p>
+              )}
+            </SectionCard>
+          )}
+        </div>
+      ) : (
+        /* No PRD content yet */
+        <div
+          className="rounded-xl border bg-white px-6 py-12 text-center mb-6"
+          style={{ borderColor: '#e8e4de' }}
+        >
+          <p className="text-sm mb-4" style={{ color: '#8b8680' }}>
+            No PRD has been generated for this item yet.
+          </p>
+          <button
+            onClick={handleGeneratePRD}
+            disabled={loading}
+            className="px-4 py-2 rounded-lg text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50 cursor-pointer"
+            style={{ backgroundColor: '#6366f1' }}
+          >
+            {loading ? 'Generating...' : 'Generate PRD'}
+          </button>
+        </div>
+      )}
+
+      {/* Action buttons */}
+      <div className="flex flex-wrap items-center gap-3">
+        {/* Generate / Regenerate */}
+        {prd && (
+          <button
+            onClick={handleGeneratePRD}
+            disabled={loading}
+            className="px-4 py-2 rounded-lg text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50 cursor-pointer"
+            style={{ backgroundColor: '#6366f1' }}
+          >
+            {loading ? 'Generating...' : 'Regenerate PRD'}
+          </button>
+        )}
+
+        {/* Approve */}
+        {localItem.status === 'proposed' && (
+          <button
+            onClick={handleApprove}
+            className="px-4 py-2 rounded-lg text-sm font-medium text-white transition-opacity hover:opacity-90 cursor-pointer"
+            style={{ backgroundColor: '#059669' }}
+          >
+            Approve
+          </button>
+        )}
+
+        {/* Dismiss */}
+        {!dismissing ? (
+          <button
+            onClick={() => setDismissing(true)}
+            className="px-4 py-2 rounded-lg text-sm font-medium border transition-opacity hover:opacity-90 cursor-pointer"
+            style={{ borderColor: '#dc2626', color: '#dc2626' }}
+          >
+            Dismiss
+          </button>
+        ) : (
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={dismissReason}
+              onChange={(e) => setDismissReason(e.target.value)}
+              placeholder="Reason for dismissal..."
+              className="px-3 py-2 rounded-lg border text-sm"
+              style={{ borderColor: '#e8e4de', color: '#1a1a2e' }}
+            />
+            <button
+              onClick={handleDismiss}
+              className="px-3 py-2 rounded-lg text-sm font-medium text-white cursor-pointer"
+              style={{ backgroundColor: '#dc2626' }}
+            >
+              Confirm
+            </button>
+            <button
+              onClick={() => {
+                setDismissing(false)
+                setDismissReason('')
+              }}
+              className="px-3 py-2 rounded-lg text-sm font-medium cursor-pointer"
+              style={{ color: '#8b8680' }}
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+
+        {/* Feedback buttons */}
+        <div className="flex items-center gap-1 ml-auto">
+          <button
+            onClick={() => handleFeedback('up')}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-sm transition-colors hover:bg-green-50 cursor-pointer"
+            style={{ borderColor: '#e8e4de', color: '#059669' }}
+            aria-label="Thumbs up"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M7 10v12" />
+              <path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z" />
+            </svg>
+            <span className="tabular-nums text-xs">{localItem.feedback_up}</span>
+          </button>
+          <button
+            onClick={() => handleFeedback('down')}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-sm transition-colors hover:bg-red-50 cursor-pointer"
+            style={{ borderColor: '#e8e4de', color: '#dc2626' }}
+            aria-label="Thumbs down"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M17 14V2" />
+              <path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z" />
+            </svg>
+            <span className="tabular-nums text-xs">{localItem.feedback_down}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Dismiss info banner */}
+      {localItem.status === 'dismissed' && localItem.dismiss_reason && (
+        <div
+          className="mt-4 rounded-lg border p-3 text-sm"
+          style={{ borderColor: '#fecaca', backgroundColor: '#fef2f2', color: '#dc2626' }}
+        >
+          <strong>Dismissed:</strong> {localItem.dismiss_reason}
+        </div>
+      )}
+    </div>
+  )
+}
