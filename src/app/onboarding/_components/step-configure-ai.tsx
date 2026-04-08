@@ -1,10 +1,17 @@
 'use client'
 
-import { useState } from 'react'
-import { Brain, Sparkles, ChevronDown, Zap, GitPullRequest, Bot } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Brain, Sparkles, ChevronDown, Zap, GitPullRequest, Bot, CheckCircle2, Loader2 } from 'lucide-react'
 import type { RoiFocus } from '@/lib/types/database'
 
 type AutomationLevel = 'roadmap' | 'roadmap_implement' | 'full_autonomous'
+
+type ProductContextData = {
+  description: string
+  target_users: string
+  features: string
+  priority_suggestion: string
+}
 
 type StepConfigureAiProps = {
   roiFocus: RoiFocus
@@ -13,6 +20,8 @@ type StepConfigureAiProps = {
   setAutoImplement: (v: boolean) => void
   riskThreshold: number
   setRiskThreshold: (v: number) => void
+  productContext: ProductContextData | null
+  analyzingContext: boolean
 }
 
 type PriorityOption = {
@@ -78,14 +87,32 @@ export function StepConfigureAi({
   setAutoImplement,
   riskThreshold,
   setRiskThreshold,
+  productContext,
+  analyzingContext,
 }: StepConfigureAiProps) {
   const [productDescription, setProductDescription] = useState('')
   const [targetUsers, setTargetUsers] = useState('')
   const [currentFeatures, setCurrentFeatures] = useState('')
   const [priority, setPriority] = useState('balanced')
+  const [preFilled, setPreFilled] = useState(false)
   const [automationLevel, setAutomationLevel] = useState<AutomationLevel>(
     mapPropsToAutomation(autoImplement)
   )
+
+  // Auto-populate fields when product context arrives from background analysis
+  useEffect(() => {
+    if (productContext) {
+      if (!productDescription) setProductDescription(productContext.description)
+      if (!targetUsers) setTargetUsers(productContext.target_users)
+      if (!currentFeatures) setCurrentFeatures(productContext.features)
+      if (priority === 'balanced' && productContext.priority_suggestion) {
+        handlePriorityChange(productContext.priority_suggestion)
+      }
+      setPreFilled(true)
+    }
+    // Only run when productContext changes, not on every field edit
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productContext])
 
   const handleAutomationChange = (level: AutomationLevel) => {
     setAutomationLevel(level)
@@ -132,6 +159,30 @@ export function StepConfigureAi({
           </p>
         </div>
       </div>
+
+      {/* Pre-filled badge or loading indicator */}
+      {analyzingContext && (
+        <div
+          className="flex items-center gap-2 mb-3 px-3 py-2 rounded-xl"
+          style={{ backgroundColor: '#f5f3ef' }}
+        >
+          <Loader2 size={14} className="animate-spin" style={{ color: '#8b8680' }} />
+          <span className="text-xs" style={{ color: '#8b8680' }}>
+            Analyzing your product...
+          </span>
+        </div>
+      )}
+      {preFilled && !analyzingContext && (
+        <div
+          className="flex items-center gap-2 mb-3 px-3 py-2 rounded-xl"
+          style={{ backgroundColor: '#ecfdf5' }}
+        >
+          <CheckCircle2 size={14} style={{ color: '#059669' }} />
+          <span className="text-xs font-medium" style={{ color: '#059669' }}>
+            Pre-filled from your codebase
+          </span>
+        </div>
+      )}
 
       {/* Product description */}
       <div

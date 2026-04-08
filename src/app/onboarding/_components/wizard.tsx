@@ -39,6 +39,15 @@ export function OnboardingWizard({ orgId }: OnboardingWizardProps) {
   // Project ID created in step 1
   const [projectId, setProjectId] = useState<string | null>(null)
 
+  // Product context from AI analysis (fires after step 1)
+  const [productContext, setProductContext] = useState<{
+    description: string
+    target_users: string
+    features: string
+    priority_suggestion: string
+  } | null>(null)
+  const [analyzingContext, setAnalyzingContext] = useState(false)
+
   // Step 1: Connect Repo
   const [projectName, setProjectName] = useState('')
   const [repoUrl, setRepoUrl] = useState('')
@@ -86,6 +95,17 @@ export function OnboardingWizard({ orgId }: OnboardingWizardProps) {
 
       const { id } = await res.json()
       setProjectId(id)
+
+      // Fire analysis in background (don't await — let it complete while user goes through steps 2-3)
+      setAnalyzingContext(true)
+      fetch(`/api/projects/${id}/analyze`, { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+          if (!data.error) setProductContext(data)
+        })
+        .catch(() => {})
+        .finally(() => setAnalyzingContext(false))
+
       setStep(2)
     } catch (err) {
       // eslint-disable-next-line no-console
@@ -210,6 +230,8 @@ export function OnboardingWizard({ orgId }: OnboardingWizardProps) {
             setAutoImplement={setAutoImplement}
             riskThreshold={riskThreshold}
             setRiskThreshold={setRiskThreshold}
+            productContext={productContext}
+            analyzingContext={analyzingContext}
           />
         )}
         {step === 5 && (
