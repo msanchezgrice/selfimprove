@@ -234,26 +234,24 @@ ${roiFocusInstruction}
       generation_id: generationId,
     }))
 
-    await supabase.from('roadmap_items').insert(inserts)
-  }
-
-  // Notify about new roadmap items (fire-and-forget)
-  if (result.items.length > 0) {
-    notifyRoadmapReady(projectId, result.items.length).catch(() => {})
-  }
-
-  // Auto-generate PRDs in background (don't block the return)
-  if (result.items.length > 0) {
     const { data: insertedItems } = await supabase
       .from('roadmap_items')
+      .insert(inserts)
       .select('id')
-      .eq('generation_id', generationId)
 
-    if (insertedItems) {
-      // Fire-and-forget: generate PRDs for each inserted item
+    console.log(`[generateRoadmap] Inserted ${inserts.length} items with generationId=${generationId}`)
+
+    // Notify about new roadmap items (fire-and-forget)
+    notifyRoadmapReady(projectId, result.items.length).catch(() => {})
+
+    // Auto-generate PRDs in background (don't block the return)
+    if (insertedItems && insertedItems.length > 0) {
+      // Fire-and-forget: generate PRDs independently per item
       Promise.all(
         insertedItems.map(item =>
-          generatePRD(item.id).catch(() => {}) // Silent failure per item
+          generatePRD(item.id).catch(err => {
+            console.error(`[generateRoadmap] PRD generation failed for ${item.id}:`, err)
+          })
         )
       ).catch(() => {})
     }

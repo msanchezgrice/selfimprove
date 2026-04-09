@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getUserOrg } from '@/lib/supabase/auth-helpers'
 import { DashboardSidebar } from './_components/sidebar'
+import { TabNavigation } from './_components/tab-navigation'
 
 export default async function DashboardLayout({
   children,
@@ -17,7 +18,12 @@ export default async function DashboardLayout({
         orgName={(userOrg.org as { name?: string } | null)?.name ?? 'My Team'}
       />
       {/* Mobile top-bar spacer */}
-      <main className="flex-1 overflow-auto pt-14 md:pt-0">{children}</main>
+      <main className="flex-1 overflow-auto pt-14 md:pt-0">
+        <div className="p-6 lg:p-8">
+          <TabNavigation />
+          {children}
+        </div>
+      </main>
     </div>
   )
 }

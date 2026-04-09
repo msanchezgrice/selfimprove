@@ -1,11 +1,7 @@
-import { TabNavigation } from '../_components/tab-navigation'
-
 export default function BriefsPage() {
   return (
     <div className="flex flex-col h-full">
-      <TabNavigation />
-
-      <div className="flex-1 p-6">
+      <div className="flex-1">
         <div className="flex flex-col items-center justify-center h-full min-h-64">
           {/* Scroll icon */}
           <svg

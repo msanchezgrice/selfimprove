@@ -12,7 +12,7 @@ export default async function SignalsPage() {
     .limit(100)
 
   return (
-    <div className="p-6">
+    <div>
       <div className="mb-6">
         <h1 className="text-xl font-semibold" style={{ color: '#1a1a2e' }}>
           Signals

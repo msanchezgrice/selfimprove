@@ -42,6 +42,7 @@ function weightDotSize(weight: number): number {
 
 export function SignalsFeed({ signals }: SignalsFeedProps) {
   const [activeFilter, setActiveFilter] = useState<SignalType | 'all'>('all')
+  const [expandedId, setExpandedId] = useState<string | null>(null)
 
   const filtered =
     activeFilter === 'all'
@@ -91,11 +92,14 @@ export function SignalsFeed({ signals }: SignalsFeedProps) {
             const tags = Array.isArray(meta?.tags) ? (meta.tags as string[]) : []
             const dotSize = weightDotSize(signal.weight)
 
+            const isExpanded = expandedId === signal.id
+
             return (
               <div
                 key={signal.id}
-                className="rounded-xl border bg-white p-4 transition-colors duration-100 hover:bg-[#faf8f5]/60"
+                className="rounded-xl border bg-white p-4 transition-colors duration-100 hover:bg-[#faf8f5]/60 cursor-pointer"
                 style={{ borderColor: '#e8e4de' }}
+                onClick={() => setExpandedId(isExpanded ? null : signal.id)}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-2.5 min-w-0">
@@ -128,6 +132,10 @@ export function SignalsFeed({ signals }: SignalsFeedProps) {
                       }}
                       title={`Weight: ${signal.weight}`}
                     />
+                    {/* Expand indicator */}
+                    <span className="text-xs" style={{ color: '#8b8680' }}>
+                      {isExpanded ? '\u25B2' : '\u25BC'}
+                    </span>
                     {/* Timestamp */}
                     <span className="text-xs whitespace-nowrap" style={{ color: '#8b8680' }}>
                       {timeAgo(signal.created_at)}
@@ -138,7 +146,9 @@ export function SignalsFeed({ signals }: SignalsFeedProps) {
                 {/* Content */}
                 <p
                   className="mt-2 text-sm leading-relaxed"
-                  style={{
+                  style={isExpanded ? {
+                    color: '#1a1a2e',
+                  } : {
                     color: '#1a1a2e',
                     display: '-webkit-box',
                     WebkitLineClamp: 3,
@@ -149,7 +159,7 @@ export function SignalsFeed({ signals }: SignalsFeedProps) {
                   {signal.content}
                 </p>
 
-                {/* Metadata row */}
+                {/* Metadata row (always visible) */}
                 {(pageUrl || tags.length > 0) && (
                   <div className="mt-2.5 flex items-center gap-2 flex-wrap">
                     {pageUrl && (
@@ -159,6 +169,7 @@ export function SignalsFeed({ signals }: SignalsFeedProps) {
                         rel="noopener noreferrer"
                         className="text-xs truncate max-w-[240px] transition-colors hover:underline"
                         style={{ color: '#8b8680' }}
+                        onClick={(e) => e.stopPropagation()}
                       >
                         {pageUrl.replace(/^https?:\/\//, '')}
                       </a>
@@ -172,6 +183,27 @@ export function SignalsFeed({ signals }: SignalsFeedProps) {
                         {tag}
                       </span>
                     ))}
+                  </div>
+                )}
+
+                {/* Expanded detail */}
+                {isExpanded && (
+                  <div className="mt-3 pt-3 border-t" style={{ borderColor: '#e8e4de' }}>
+                    <div className="grid grid-cols-2 gap-2">
+                      {Object.entries(meta).map(([key, value]) => (
+                        value != null && (
+                          <div key={key}>
+                            <span className="text-xs font-medium uppercase" style={{ color: '#8b8680' }}>{key.replace(/_/g, ' ')}</span>
+                            <p className="text-xs break-all" style={{ color: '#1a1a2e' }}>{typeof value === 'object' ? JSON.stringify(value) : String(value)}</p>
+                          </div>
+                        )
+                      ))}
+                    </div>
+                    <div className="flex gap-4 mt-2 text-xs" style={{ color: '#8b8680' }}>
+                      <span>Weight: {signal.weight}</span>
+                      <span>Processed: {signal.processed ? 'Yes' : 'No'}</span>
+                      <span>Created: {new Date(signal.created_at).toLocaleString()}</span>
+                    </div>
                   </div>
                 )}
               </div>

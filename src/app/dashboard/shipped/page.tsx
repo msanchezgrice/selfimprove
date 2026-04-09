@@ -1,13 +1,54 @@
-import { TabNavigation } from '../_components/tab-navigation'
+import { createClient } from '@/lib/supabase/server'
+import { RoadmapTable } from '../_components/roadmap-table'
 
-export default function ShippedPage() {
+export default async function ShippedPage() {
+  const supabase = await createClient()
+
+  // Get user's first project
+  const { data: membership } = await supabase
+    .from('org_members')
+    .select('org_id')
+    .limit(1)
+    .single()
+
+  let projectId: string | null = null
+  if (membership) {
+    const { data: project } = await supabase
+      .from('projects')
+      .select('id')
+      .eq('org_id', membership.org_id)
+      .limit(1)
+      .single()
+    projectId = project?.id ?? null
+  }
+
+  const { data: items } = projectId
+    ? await supabase
+        .from('roadmap_items')
+        .select('*')
+        .eq('project_id', projectId)
+        .in('status', ['shipped'])
+        .order('rank', { ascending: true })
+    : { data: null }
+
   return (
-    <div className="flex flex-col h-full">
-      <TabNavigation />
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-xl font-semibold" style={{ color: '#1a1a2e' }}>
+            Shipped
+          </h1>
+          <p className="text-sm" style={{ color: '#8b8680' }}>
+            {items?.length ?? 0} items
+          </p>
+        </div>
+      </div>
 
-      <div className="flex-1 p-6">
-        <div className="flex flex-col items-center justify-center h-full min-h-64">
-          {/* Rocket icon */}
+      {!items || items.length === 0 ? (
+        <div
+          className="flex flex-col items-center justify-center rounded-xl border bg-white px-6 py-16 text-center"
+          style={{ borderColor: '#e8e4de' }}
+        >
           <svg
             width="48"
             height="48"
@@ -49,7 +90,9 @@ export default function ShippedPage() {
             Shipped features will appear here
           </p>
         </div>
-      </div>
+      ) : (
+        <RoadmapTable items={items} />
+      )}
     </div>
   )
 }

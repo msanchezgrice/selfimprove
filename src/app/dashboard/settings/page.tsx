@@ -20,7 +20,7 @@ export default async function SettingsPage() {
 
   if (!project) {
     return (
-      <div className="p-8">
+      <div>
         <h1 className="text-xl font-semibold" style={{ color: '#1a1a2e' }}>
           Settings
         </h1>
@@ -43,7 +43,7 @@ export default async function SettingsPage() {
   const orgTier: Tier = org?.tier ?? 'free'
 
   return (
-    <div className="p-6 lg:p-8 max-w-4xl">
+    <div className="max-w-4xl">
       <h1 className="text-xl font-semibold mb-6" style={{ color: '#1a1a2e' }}>
         Settings
       </h1>

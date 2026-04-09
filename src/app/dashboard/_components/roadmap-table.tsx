@@ -78,12 +78,26 @@ function ConfidenceBar({ value }: { value: number }) {
   )
 }
 
+/* ---------- Sort indicator ---------- */
+
+function SortIndicator({ field, sortField, sortDir }: { field: string; sortField: string; sortDir: 'asc' | 'desc' }) {
+  if (sortField !== field) return <span className="ml-1 opacity-0 group-hover:opacity-40">&#9650;</span>
+  return <span className="ml-1">{sortDir === 'asc' ? '\u25B2' : '\u25BC'}</span>
+}
+
 /* ---------- Desktop table ---------- */
 
-function DesktopTable({ items, onReorder }: RoadmapTableProps & { onReorder?: (fromIndex: number, toIndex: number) => void }) {
+function DesktopTable({ items, onReorder, sortField, sortDir, onSort }: RoadmapTableProps & {
+  onReorder?: (fromIndex: number, toIndex: number) => void
+  sortField: string
+  sortDir: 'asc' | 'desc'
+  onSort: (field: string) => void
+}) {
   const router = useRouter()
   const [dragIndex, setDragIndex] = useState<number | null>(null)
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
+
+  const thClass = "px-3 py-3 cursor-pointer select-none group transition-colors hover:text-gray-700"
 
   return (
     <div className="hidden md:block overflow-x-auto">
@@ -94,17 +108,17 @@ function DesktopTable({ items, onReorder }: RoadmapTableProps & { onReorder?: (f
             style={{ backgroundColor: '#faf8f5', color: '#8b8680' }}
           >
             <th className="px-3 py-3 w-8" />
-            <th className="px-3 py-3 w-10">#</th>
-            <th className="px-3 py-3 min-w-[180px]">Item</th>
-            <th className="px-3 py-3">Category</th>
-            <th className="hidden lg:table-cell px-3 py-3">Origin</th>
-            <th className="px-3 py-3">Confidence</th>
-            <th className="hidden lg:table-cell px-3 py-3">Scope</th>
-            <th className="hidden lg:table-cell px-3 py-3">Strategy</th>
-            <th className="hidden lg:table-cell px-3 py-3 text-right">Impact</th>
-            <th className="hidden lg:table-cell px-3 py-3">Upside</th>
-            <th className="hidden lg:table-cell px-3 py-3 text-right">Size</th>
-            <th className="px-3 py-3 text-right">ROI</th>
+            <th className={`${thClass} w-10`} onClick={() => onSort('rank')}>#<SortIndicator field="rank" sortField={sortField} sortDir={sortDir} /></th>
+            <th className={`${thClass} min-w-[180px]`} onClick={() => onSort('title')}>Item<SortIndicator field="title" sortField={sortField} sortDir={sortDir} /></th>
+            <th className={thClass} onClick={() => onSort('category')}>Category<SortIndicator field="category" sortField={sortField} sortDir={sortDir} /></th>
+            <th className={`hidden lg:table-cell ${thClass}`} onClick={() => onSort('origin')}>Origin<SortIndicator field="origin" sortField={sortField} sortDir={sortDir} /></th>
+            <th className={thClass} onClick={() => onSort('confidence')}>Confidence<SortIndicator field="confidence" sortField={sortField} sortDir={sortDir} /></th>
+            <th className={`hidden lg:table-cell ${thClass}`} onClick={() => onSort('scope')}>Scope<SortIndicator field="scope" sortField={sortField} sortDir={sortDir} /></th>
+            <th className={`hidden lg:table-cell ${thClass}`} onClick={() => onSort('strategy')}>Strategy<SortIndicator field="strategy" sortField={sortField} sortDir={sortDir} /></th>
+            <th className={`hidden lg:table-cell ${thClass} text-right`} onClick={() => onSort('impact')}>Impact<SortIndicator field="impact" sortField={sortField} sortDir={sortDir} /></th>
+            <th className={`hidden lg:table-cell ${thClass}`} onClick={() => onSort('upside')}>Upside<SortIndicator field="upside" sortField={sortField} sortDir={sortDir} /></th>
+            <th className={`hidden lg:table-cell ${thClass} text-right`} onClick={() => onSort('size')}>Size<SortIndicator field="size" sortField={sortField} sortDir={sortDir} /></th>
+            <th className={`${thClass} text-right`} onClick={() => onSort('roi_score')}>ROI<SortIndicator field="roi_score" sortField={sortField} sortDir={sortDir} /></th>
             <th className="px-3 py-3 w-10" />
           </tr>
         </thead>
@@ -283,6 +297,33 @@ function MobileCards({ items }: RoadmapTableProps) {
 export function RoadmapTable({ items }: RoadmapTableProps) {
   const router = useRouter()
   const [localItems, setLocalItems] = useState(items)
+  const [sortField, setSortField] = useState<string>('rank')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortField(field)
+      setSortDir('asc')
+    }
+  }
+
+  const sortedItems = [...localItems].sort((a, b) => {
+    let aVal = a[sortField as keyof typeof a]
+    let bVal = b[sortField as keyof typeof b]
+
+    if (typeof aVal === 'string') aVal = aVal.toLowerCase()
+    if (typeof bVal === 'string') bVal = bVal.toLowerCase()
+
+    if (aVal == null && bVal == null) return 0
+    if (aVal == null) return sortDir === 'asc' ? 1 : -1
+    if (bVal == null) return sortDir === 'asc' ? -1 : 1
+
+    if (aVal < bVal) return sortDir === 'asc' ? -1 : 1
+    if (aVal > bVal) return sortDir === 'asc' ? 1 : -1
+    return 0
+  })
 
   const handleReorder = async (fromIndex: number, toIndex: number) => {
     const reordered = [...localItems]
@@ -311,8 +352,14 @@ export function RoadmapTable({ items }: RoadmapTableProps) {
       className="rounded-xl border bg-white overflow-hidden"
       style={{ borderColor: '#e8e4de' }}
     >
-      <DesktopTable items={localItems} onReorder={handleReorder} />
-      <MobileCards items={localItems} />
+      <DesktopTable
+        items={sortedItems}
+        onReorder={handleReorder}
+        sortField={sortField}
+        sortDir={sortDir}
+        onSort={handleSort}
+      />
+      <MobileCards items={sortedItems} />
     </div>
   )
 }
