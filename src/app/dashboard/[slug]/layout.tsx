@@ -11,7 +11,7 @@ export default async function ProjectLayout({
   const { slug } = await params
   const supabase = await createClient()
 
-  // Find project by slug
+  // Find project by slug and set cookie
   const { data: project } = await supabase
     .from('projects')
     .select('id, slug')
@@ -19,9 +19,13 @@ export default async function ProjectLayout({
     .single()
 
   if (project) {
-    // Set the active project cookie
-    const cookieStore = await cookies()
-    cookieStore.set('selfimprove_project', project.id, { path: '/', maxAge: 31536000 })
+    try {
+      const cookieStore = await cookies()
+      cookieStore.set('selfimprove_project', project.id, { path: '/', maxAge: 31536000 })
+    } catch {
+      // Cookie setting may fail in certain rendering contexts — that's ok,
+      // the sidebar client component also sets the cookie
+    }
   }
 
   return <>{children}</>
