@@ -3,6 +3,7 @@ import type { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { callClaude } from '@/lib/ai/call-claude'
+import { getGitHubToken } from '@/lib/github/get-token'
 
 interface ProductContext {
   description: string
@@ -83,8 +84,7 @@ export async function POST(
 
   // 2. Read GitHub repo README + package.json if repo connected
   if (project.repo_url) {
-    const { data: { session } } = await supabase.auth.getSession()
-    const providerToken = session?.provider_token
+    const providerToken = await getGitHubToken()
 
     if (providerToken) {
       // Extract owner/repo from URL

@@ -19,6 +19,16 @@ export async function GET(request: Request) {
         // Use admin client to bypass RLS for first-time user setup
         const admin = createAdminClient()
 
+        // Persist GitHub provider_token so it survives JWT refresh
+        const { data: { session } } = await supabase.auth.getSession()
+        const providerToken = session?.provider_token
+        if (providerToken) {
+          await admin
+            .from('org_members')
+            .update({ github_token: providerToken })
+            .eq('user_id', user.id)
+        }
+
         const { data: membership } = await admin
           .from('org_members')
           .select('id')

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createGitHubIssue } from '@/lib/ai/github-issue'
+import { getGitHubToken } from '@/lib/github/get-token'
 
 export async function PATCH(
   req: Request,
@@ -63,8 +64,7 @@ export async function PATCH(
   // Auto-create GitHub Issue when approved
   let githubIssue: { url: string; number: number } | null = null
   if (updates.status === 'approved') {
-    const { data: { session } } = await supabase.auth.getSession()
-    const providerToken = session?.provider_token
+    const providerToken = await getGitHubToken()
     if (providerToken) {
       try {
         githubIssue = await createGitHubIssue(id, providerToken)

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getGitHubToken } from '@/lib/github/get-token'
 
 export async function GET() {
   const supabase = await createClient()
@@ -8,12 +9,11 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // Get the GitHub provider token from the user's session
-  const { data: { session } } = await supabase.auth.getSession()
-  const providerToken = session?.provider_token
+  // Get the GitHub provider token (session first, then DB fallback)
+  const providerToken = await getGitHubToken()
 
   if (!providerToken) {
-    return NextResponse.json({ error: 'No GitHub token. Re-login with GitHub.' }, { status: 400 })
+    return NextResponse.json({ error: 'No GitHub token. Please re-login with GitHub.' }, { status: 400 })
   }
 
   try {
