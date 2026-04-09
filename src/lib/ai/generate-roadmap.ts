@@ -244,16 +244,18 @@ ${roiFocusInstruction}
     // Notify about new roadmap items (fire-and-forget)
     notifyRoadmapReady(projectId, result.items.length).catch(() => {})
 
-    // Auto-generate PRDs in background (don't block the return)
+    // Auto-generate PRDs sequentially in background (avoids rate limits)
     if (insertedItems && insertedItems.length > 0) {
-      // Fire-and-forget: generate PRDs independently per item
-      Promise.all(
-        insertedItems.map(item =>
-          generatePRD(item.id).catch(err => {
-            console.error(`[generateRoadmap] PRD generation failed for ${item.id}:`, err)
-          })
-        )
-      ).catch(() => {})
+      ;(async () => {
+        for (const item of insertedItems) {
+          try {
+            await generatePRD(item.id)
+            console.log(`[generateRoadmap] PRD generated for ${item.id}`)
+          } catch (err) {
+            console.error(`[generateRoadmap] PRD failed for ${item.id}:`, err)
+          }
+        }
+      })().catch(() => {})
     }
   }
 

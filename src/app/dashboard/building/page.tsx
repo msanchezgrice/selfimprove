@@ -27,7 +27,7 @@ export default async function BuildingPage() {
         .from('roadmap_items')
         .select('*')
         .eq('project_id', projectId)
-        .in('status', ['building'])
+        .in('status', ['approved', 'building'])
         .order('rank', { ascending: true })
     : { data: null }
 
