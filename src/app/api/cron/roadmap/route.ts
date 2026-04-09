@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { generateRoadmap } from '@/lib/ai/generate-roadmap'
+import { generatePRD } from '@/lib/ai/generate-prd'
 
 export async function GET(request: Request) {
   // Verify cron secret (Vercel sets this header)
@@ -38,16 +39,43 @@ export async function GET(request: Request) {
   let processed = 0
   const errors: string[] = []
 
-  // Process one at a time to avoid rate limits
+  const generationIds: string[] = []
+
   for (const projectId of toProcess) {
     try {
-      await generateRoadmap(projectId)
+      const result = await generateRoadmap(projectId)
+      generationIds.push(result.generationId)
       processed++
     } catch (err) {
       errors.push(
         `${projectId}: ${err instanceof Error ? err.message : 'Unknown error'}`,
       )
     }
+  }
+
+  // Queue PRD generation for all new items after response
+  if (generationIds.length > 0) {
+    after(async () => {
+      const db = createAdminClient()
+      for (const genId of generationIds) {
+        const { data: items } = await db
+          .from('roadmap_items')
+          .select('id')
+          .eq('generation_id', genId)
+          .is('prd_content', null)
+
+        if (items) {
+          for (const item of items) {
+            try {
+              await generatePRD(item.id)
+              console.log(`[cron/after] PRD generated for ${item.id}`)
+            } catch (err) {
+              console.error(`[cron/after] PRD failed for ${item.id}:`, err)
+            }
+          }
+        }
+      }
+    })
   }
 
   return NextResponse.json({ processed, total: toProcess.length, errors })

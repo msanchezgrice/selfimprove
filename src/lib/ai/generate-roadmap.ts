@@ -1,6 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { callClaude } from './call-claude'
-import { generatePRD } from './generate-prd'
 import { summarizeSignals, formatSummaryForPrompt } from './summarize-signals'
 import { notifyRoadmapReady } from '@/lib/notifications'
 import type { SignalRow, RoadmapItemInsert } from '@/lib/types/database'
@@ -247,20 +246,6 @@ ${roiFocusInstruction}
 
     // Notify about new roadmap items (fire-and-forget)
     notifyRoadmapReady(projectId, result.items.length).catch(() => {})
-
-    // Auto-generate PRDs sequentially in background (avoids rate limits)
-    if (insertedItems && insertedItems.length > 0) {
-      ;(async () => {
-        for (const item of insertedItems) {
-          try {
-            await generatePRD(item.id)
-            console.log(`[generateRoadmap] PRD generated for ${item.id}`)
-          } catch (err) {
-            console.error(`[generateRoadmap] PRD failed for ${item.id}:`, err)
-          }
-        }
-      })().catch(() => {})
-    }
   }
 
   return { items: result.items, generationId }
