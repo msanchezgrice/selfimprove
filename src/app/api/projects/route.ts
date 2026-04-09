@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { seedProjectSignals } from '@/lib/ai/cold-start'
 import { generateRoadmap } from '@/lib/ai/generate-roadmap'
+import { importGitHubIssues } from '@/lib/ai/import-github-issues'
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -71,6 +72,19 @@ export async function POST(request: Request) {
         }
       })
       .catch(() => {})
+  }
+
+  // Import GitHub Issues as signals if repo_url is provided (non-blocking)
+  if (repo_url) {
+    const { data: { session } } = await supabase.auth.getSession()
+    const providerToken = session?.provider_token
+    if (providerToken) {
+      const repoMatch = repo_url.match(/github\.com\/([^/]+\/[^/]+)/)
+      if (repoMatch) {
+        const repoName = repoMatch[1].replace(/\.git$/, '')
+        importGitHubIssues(project.id, repoName, providerToken).catch(() => {})
+      }
+    }
   }
 
   return NextResponse.json({ id: project.id })
