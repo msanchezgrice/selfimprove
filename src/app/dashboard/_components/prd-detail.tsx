@@ -125,6 +125,8 @@ type PRDContent = {
   files_to_modify?: { path?: string; change?: string }[]
   risks?: string[]
   rollback?: string
+  success_metrics?: Array<{ metric: string; baseline: string; target: string; measurement: string }>
+  analytics_events?: Array<{ event_name: string; properties: string; trigger: string }>
 }
 
 /* ---------- Main component ---------- */
@@ -380,22 +382,46 @@ export function PRDDetail({ item }: PRDDetailProps) {
               {prd.risks && prd.risks.length > 0 && (
                 <ul className="list-disc list-inside space-y-1 mb-3">
                   {prd.risks.map((risk, i) => (
-                    <li
-                      key={i}
-                      className="text-sm"
-                      style={{ color: '#1a1a2e' }}
-                    >
-                      {risk}
-                    </li>
+                    <li key={i} className="text-sm" style={{ color: '#1a1a2e' }}>{risk}</li>
                   ))}
                 </ul>
               )}
               {prd.rollback && (
                 <p className="text-sm" style={{ color: '#8b8680' }}>
-                  <strong style={{ color: '#1a1a2e' }}>Rollback:</strong>{' '}
-                  {prd.rollback}
+                  <strong style={{ color: '#1a1a2e' }}>Rollback:</strong> {prd.rollback}
                 </p>
               )}
+            </SectionCard>
+          )}
+
+          {prd.success_metrics && (prd.success_metrics as unknown[]).length > 0 && (
+            <SectionCard title="Success Metrics">
+              <div className="space-y-3">
+                {(prd.success_metrics as Array<{ metric: string; baseline: string; target: string; measurement: string }>).map((m, i) => (
+                  <div key={i} className="rounded-lg p-3" style={{ backgroundColor: '#f5f0eb' }}>
+                    <p className="text-sm font-medium" style={{ color: '#1a1a2e' }}>{m.metric}</p>
+                    <div className="flex gap-4 mt-1 text-xs" style={{ color: '#8b8680' }}>
+                      <span>Baseline: <strong style={{ color: '#1a1a2e' }}>{m.baseline}</strong></span>
+                      <span>Target: <strong style={{ color: '#059669' }}>{m.target}</strong></span>
+                    </div>
+                    <p className="text-xs mt-1" style={{ color: '#8b8680' }}>Measured via: {m.measurement}</p>
+                  </div>
+                ))}
+              </div>
+            </SectionCard>
+          )}
+
+          {prd.analytics_events && (prd.analytics_events as unknown[]).length > 0 && (
+            <SectionCard title="Analytics Events to Implement">
+              <div className="space-y-2">
+                {(prd.analytics_events as Array<{ event_name: string; properties: string; trigger: string }>).map((e, i) => (
+                  <div key={i} className="rounded-lg border p-3" style={{ borderColor: '#e8e4de' }}>
+                    <code className="text-sm font-medium" style={{ color: '#6366f1' }}>{e.event_name}</code>
+                    <p className="text-xs mt-1" style={{ color: '#8b8680' }}>Properties: {e.properties}</p>
+                    <p className="text-xs" style={{ color: '#8b8680' }}>Trigger: {e.trigger}</p>
+                  </div>
+                ))}
+              </div>
             </SectionCard>
           )}
         </div>
