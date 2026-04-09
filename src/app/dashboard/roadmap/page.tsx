@@ -5,11 +5,32 @@ import { RoadmapEmpty } from '../_components/roadmap-empty'
 export default async function RoadmapPage() {
   const supabase = await createClient()
 
-  const { data: items } = await supabase
-    .from('roadmap_items')
-    .select('*')
-    .in('status', ['proposed', 'approved'])
-    .order('rank', { ascending: true })
+  // Get user's first project
+  const { data: membership } = await supabase
+    .from('org_members')
+    .select('org_id')
+    .limit(1)
+    .single()
+
+  let projectId: string | null = null
+  if (membership) {
+    const { data: project } = await supabase
+      .from('projects')
+      .select('id')
+      .eq('org_id', membership.org_id)
+      .limit(1)
+      .single()
+    projectId = project?.id ?? null
+  }
+
+  const { data: items } = projectId
+    ? await supabase
+        .from('roadmap_items')
+        .select('*')
+        .eq('project_id', projectId)
+        .in('status', ['proposed', 'approved'])
+        .order('rank', { ascending: true })
+    : { data: null }
 
   return (
     <div>
@@ -25,7 +46,7 @@ export default async function RoadmapPage() {
       </div>
 
       {!items || items.length === 0 ? (
-        <RoadmapEmpty />
+        <RoadmapEmpty projectId={projectId} />
       ) : (
         <RoadmapTable items={items} />
       )}

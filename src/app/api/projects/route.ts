@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { seedProjectSignals } from '@/lib/ai/cold-start'
+import { generateRoadmap } from '@/lib/ai/generate-roadmap'
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -61,8 +62,15 @@ export async function POST(request: Request) {
   }
 
   // Trigger cold-start analysis (non-blocking)
+  // After seeding signals, also generate the initial roadmap
   if (site_url) {
-    seedProjectSignals(project.id, site_url).catch(() => {})
+    seedProjectSignals(project.id, site_url)
+      .then((count) => {
+        if (count > 0) {
+          return generateRoadmap(project.id)
+        }
+      })
+      .catch(() => {})
   }
 
   return NextResponse.json({ id: project.id })
