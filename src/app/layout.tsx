@@ -27,7 +27,14 @@ export default function RootLayout({
       lang="en"
       className={`${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-[var(--bg)]">{children}</body>
+      <body className="min-h-full flex flex-col bg-[var(--bg)]">
+        {children}
+        <script
+          src="https://selfimprove-iota.vercel.app/widget.js"
+          data-project="bb7ec56a-5ef9-4bc1-af84-b206af76e039"
+          async
+        />
+      </body>
     </html>
   );
 }
