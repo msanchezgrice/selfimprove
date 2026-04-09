@@ -20,6 +20,9 @@ const buildStatusConfig: Record<string, { label: string; color: string; bg: stri
   approved: { label: 'Ready to build', color: '#6366f1', bg: '#eef2ff' },
   pr_creating: { label: 'Creating PR...', color: '#d97706', bg: '#fffbeb' },
   pr_created: { label: 'PR open', color: '#0891b2', bg: '#ecfeff' },
+  reviewed_approved: { label: 'Approved', color: '#059669', bg: '#ecfdf5' },
+  reviewed_flagged: { label: 'Needs Review', color: '#d97706', bg: '#fffbeb' },
+  reviewed_rejected: { label: 'Changes Needed', color: '#dc2626', bg: '#fef2f2' },
   merged: { label: 'Merged', color: '#059669', bg: '#ecfdf5' },
 }
 
@@ -28,6 +31,18 @@ export function BuildingCards({ items }: { items: RoadmapItemRow[] }) {
   const router = useRouter()
   const slug = pathname.match(/^\/dashboard\/([^/]+)/)?.[1] || ''
   const [buildingId, setBuildingId] = useState<string | null>(null)
+  const [reviewingId, setReviewingId] = useState<string | null>(null)
+
+  const handleReview = async (itemId: string) => {
+    setReviewingId(itemId)
+    try {
+      await fetch(`/api/roadmap/${itemId}/review`, { method: 'POST' })
+      router.refresh()
+    } catch {
+      // Review request failed — UI will remain on current state
+    }
+    setReviewingId(null)
+  }
 
   return (
     <div className="grid gap-4">
@@ -130,6 +145,31 @@ export function BuildingCards({ items }: { items: RoadmapItemRow[] }) {
                 >
                   {buildingId === item.id ? 'Building...' : 'Build Now'}
                 </button>
+              )}
+
+              {/* AI Review button for open PRs */}
+              {item.build_status === 'pr_created' && item.pr_url && (
+                <button
+                  onClick={() => handleReview(item.id)}
+                  disabled={reviewingId === item.id}
+                  className="text-xs font-medium px-3 py-1.5 rounded-lg text-white transition-opacity disabled:opacity-60"
+                  style={{ backgroundColor: '#0891b2' }}
+                >
+                  {reviewingId === item.id ? 'Reviewing...' : 'AI Review'}
+                </button>
+              )}
+
+              {/* Merge button for approved PRs */}
+              {item.build_status === 'reviewed_approved' && item.pr_url && (
+                <a
+                  href={item.pr_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg text-white no-underline"
+                  style={{ backgroundColor: '#059669' }}
+                >
+                  Merge PR
+                </a>
               )}
 
               {/* PRD link */}
