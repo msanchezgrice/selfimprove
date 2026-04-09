@@ -18,6 +18,35 @@
     return;
   }
 
+  // Fetch remote config from API, fall back to data-attributes on failure
+  async function loadConfig() {
+    try {
+      const apiBase = config.api || (script.src ? new URL(script.src).origin : '');
+      if (!apiBase) return true;
+      const res = await fetch(apiBase + '/api/projects/' + config.projectId + '/widget-config', {
+        signal: AbortSignal.timeout(3000),
+      });
+      if (res.ok) {
+        const remote = await res.json();
+        if (remote.enabled === false) return false;
+        if (remote.color) config.color = remote.color;
+        if (remote.position) config.position = remote.position;
+        if (remote.style) config.style = remote.style;
+        if (remote.text) config.text = remote.text;
+        if (remote.tags) config.tags = remote.tags;
+        if (remote.voice !== undefined) config.voice = remote.voice;
+      }
+    } catch (_) { /* fall back to data attributes */ }
+    return true;
+  }
+
+  loadConfig().then(function (enabled) {
+    if (enabled === false) return;
+    render();
+  });
+
+  function render() {
+
   const isLeft = config.position === 'bottom-left';
   const supportsVoice = config.voice && typeof MediaRecorder !== 'undefined';
 
@@ -364,4 +393,6 @@
       }
     });
   }
+
+  } // end render
 })();
