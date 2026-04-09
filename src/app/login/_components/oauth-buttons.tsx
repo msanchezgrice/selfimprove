@@ -5,11 +5,14 @@ import { createClient } from '@/lib/supabase/browser'
 export function OAuthButtons() {
   const handleLogin = async (provider: 'github' | 'google') => {
     const supabase = createClient()
+    const params = new URLSearchParams(window.location.search)
+    const plan = params.get('plan')
+    const redirectTo = plan
+      ? `${window.location.origin}/auth/callback?next=/dashboard?upgrade=${plan}`
+      : `${window.location.origin}/auth/callback`
     await supabase.auth.signInWithOAuth({
       provider,
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
+      options: { redirectTo },
     })
   }
 
