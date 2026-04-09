@@ -1,8 +1,9 @@
 'use client'
 
+import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { Compass, Radio, Settings, LogOut } from 'lucide-react'
+import { usePathname, useRouter } from 'next/navigation'
+import { Compass, Radio, Settings, LogOut, ChevronDown, Plus, Menu, X } from 'lucide-react'
 
 type SidebarUser = {
   id: string
@@ -32,6 +33,45 @@ function getInitials(email: string | undefined): string {
 
 export function DashboardSidebar({ user, orgName }: DashboardSidebarProps) {
   const pathname = usePathname()
+  const router = useRouter()
+  const [projects, setProjects] = useState<Array<{ id: string; name: string; framework: string | null }>>([])
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
+  const [showProjectPicker, setShowProjectPicker] = useState(false)
+  const projectPickerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    fetch('/api/projects/list')
+      .then(r => r.json())
+      .then(data => {
+        setProjects(data.projects || [])
+        const saved = document.cookie.match(/selfimprove_project=([^;]+)/)?.[1]
+        if (saved && data.projects?.some((p: { id: string }) => p.id === saved)) {
+          setSelectedProjectId(saved)
+        } else if (data.projects?.length > 0) {
+          setSelectedProjectId(data.projects[0].id)
+          document.cookie = `selfimprove_project=${data.projects[0].id};path=/;max-age=31536000`
+        }
+      })
+      .catch(() => {})
+  }, [])
+
+  // Close project picker on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (projectPickerRef.current && !projectPickerRef.current.contains(e.target as Node)) {
+        setShowProjectPicker(false)
+      }
+    }
+    if (showProjectPicker) document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [showProjectPicker])
+
+  const switchProject = (id: string) => {
+    setSelectedProjectId(id)
+    document.cookie = `selfimprove_project=${id};path=/;max-age=31536000`
+    setShowProjectPicker(false)
+    router.refresh()
+  }
 
   return (
     <>
@@ -56,6 +96,52 @@ export function DashboardSidebar({ user, orgName }: DashboardSidebarProps) {
           >
             {orgName}
           </div>
+        </div>
+
+        {/* Project selector */}
+        <div className="relative px-3 mb-4" ref={projectPickerRef}>
+          <button
+            onClick={() => setShowProjectPicker(!showProjectPicker)}
+            className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+            style={{ color: '#1a1a2e', backgroundColor: showProjectPicker ? '#f5f0eb' : 'transparent' }}
+          >
+            <span className="truncate">
+              {projects.find(p => p.id === selectedProjectId)?.name || 'Select project'}
+            </span>
+            <ChevronDown size={14} style={{ color: '#8b8680' }} />
+          </button>
+
+          {showProjectPicker && (
+            <div
+              className="absolute left-3 right-3 mt-1 rounded-lg border bg-white shadow-lg z-50 overflow-hidden"
+              style={{ borderColor: '#e8e4de' }}
+            >
+              {projects.map(p => (
+                <button
+                  key={p.id}
+                  onClick={() => switchProject(p.id)}
+                  className="w-full flex items-center px-3 py-2 text-sm text-left transition-colors hover:bg-[#f5f0eb]"
+                  style={{
+                    color: p.id === selectedProjectId ? '#6366f1' : '#1a1a2e',
+                    backgroundColor: p.id === selectedProjectId ? '#eef2ff' : undefined,
+                  }}
+                >
+                  <span className="truncate">{p.name}</span>
+                  {p.framework && (
+                    <span className="ml-auto text-xs" style={{ color: '#8b8680' }}>{p.framework}</span>
+                  )}
+                </button>
+              ))}
+              <Link
+                href="/onboarding"
+                className="flex items-center gap-2 px-3 py-2 text-sm font-medium border-t"
+                style={{ color: '#6366f1', borderColor: '#e8e4de' }}
+              >
+                <Plus size={14} />
+                Add new project
+              </Link>
+            </div>
+          )}
         </div>
 
         {/* Navigation */}
@@ -153,9 +239,6 @@ export function DashboardSidebar({ user, orgName }: DashboardSidebarProps) {
 }
 
 /* ---------- Mobile dropdown ---------- */
-
-import { useState, useRef, useEffect } from 'react'
-import { Menu, X } from 'lucide-react'
 
 function MobileMenu({
   user,

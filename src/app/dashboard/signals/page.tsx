@@ -1,15 +1,20 @@
 import { createClient } from '@/lib/supabase/server'
+import { getActiveProject } from '@/lib/supabase/get-active-project'
 import { SignalsFeed } from '../_components/signals-feed'
 import { SignalsEmpty } from '../_components/signals-empty'
 
 export default async function SignalsPage() {
+  const project = await getActiveProject()
   const supabase = await createClient()
 
-  const { data: signals } = await supabase
-    .from('signals')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(100)
+  const { data: signals } = project
+    ? await supabase
+        .from('signals')
+        .select('*')
+        .eq('project_id', project.id)
+        .order('created_at', { ascending: false })
+        .limit(100)
+    : { data: null }
 
   return (
     <div>

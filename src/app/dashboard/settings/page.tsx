@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { getUserOrg } from '@/lib/supabase/auth-helpers'
+import { getActiveProject } from '@/lib/supabase/get-active-project'
 import { redirect } from 'next/navigation'
 import type { Tier } from '@/lib/types/database'
 import { SettingsForm } from '../_components/settings-form'
@@ -10,13 +11,7 @@ export default async function SettingsPage() {
 
   const supabase = await createClient()
 
-  // Get first project for this org (multi-project selection is a TODO)
-  const { data: project } = await supabase
-    .from('projects')
-    .select('*')
-    .eq('org_id', userOrg.orgId)
-    .limit(1)
-    .single()
+  const project = await getActiveProject()
 
   if (!project) {
     return (

@@ -1,27 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
+import { getActiveProject } from '@/lib/supabase/get-active-project'
 import { RoadmapTable } from '../../_components/roadmap-table'
 
 export default async function ArchivePage() {
+  const project = await getActiveProject()
+  const projectId = project?.id ?? null
+
   const supabase = await createClient()
-
-  // Get user's first project
-  const { data: membership } = await supabase
-    .from('org_members')
-    .select('org_id')
-    .limit(1)
-    .single()
-
-  let projectId: string | null = null
-  if (membership) {
-    const { data: project } = await supabase
-      .from('projects')
-      .select('id')
-      .eq('org_id', membership.org_id)
-      .limit(1)
-      .single()
-    projectId = project?.id ?? null
-  }
-
   const { data: items } = projectId
     ? await supabase
         .from('roadmap_items')
