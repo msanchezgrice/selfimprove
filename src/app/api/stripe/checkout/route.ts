@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getStripe } from '@/lib/stripe/client'
 import { TIERS, type TierName } from '@/lib/constants/tiers'
+import { ensureTierPrices } from '@/lib/stripe/products'
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -49,6 +50,12 @@ export async function POST(request: Request) {
       .eq('id', org.id)
   }
 
+  const prices = await ensureTierPrices()
+  const tierPrice = prices[tier]
+  if (!tierPrice) {
+    return NextResponse.json({ error: 'Price not configured' }, { status: 400 })
+  }
+
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
   const session = await getStripe().checkout.sessions.create({
@@ -56,12 +63,7 @@ export async function POST(request: Request) {
     mode: 'subscription',
     line_items: [
       {
-        price_data: {
-          currency: 'usd',
-          product_data: { name: `SelfImprove ${TIERS[tier].name}` },
-          unit_amount: TIERS[tier].price,
-          recurring: { interval: 'month' },
-        },
+        price: tierPrice.priceId,
         quantity: 1,
       },
     ],

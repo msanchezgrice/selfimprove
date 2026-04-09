@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { reviewPR, type PRDiff } from '@/lib/ai/approval-agent'
+import { notifyPRCreated } from '@/lib/notifications'
 import type { ProjectSettingsRow } from '@/lib/types/database'
 
 interface ImplementWebhookPayload {
@@ -36,6 +37,17 @@ export async function POST(request: Request) {
       pr_number: payload.pr_number,
     })
     .eq('id', payload.change_id)
+
+  // Notify about PR creation (fire-and-forget)
+  const { data: changeForNotify } = await supabase
+    .from('shipped_changes')
+    .select('roadmap_item_id, roadmap_items(title)')
+    .eq('id', payload.change_id)
+    .single()
+  if (changeForNotify?.roadmap_items) {
+    const itemTitle = (changeForNotify.roadmap_items as unknown as { title: string }).title
+    notifyPRCreated(payload.project_id, payload.pr_url, itemTitle).catch(() => {})
+  }
 
   // Get project settings for approval thresholds
   const { data: settings } = await supabase

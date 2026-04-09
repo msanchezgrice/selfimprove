@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getStripe } from '@/lib/stripe/client'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { notifyTierChanged } from '@/lib/notifications'
 import type { TierName } from '@/lib/constants/tiers'
 
 export async function POST(request: Request) {
@@ -30,6 +31,14 @@ export async function POST(request: Request) {
       const orgId = session.metadata?.org_id
       const tier = session.metadata?.tier as TierName
       if (orgId && tier) {
+        // Get old tier before updating
+        const { data: orgBefore } = await supabase
+          .from('orgs')
+          .select('tier')
+          .eq('id', orgId)
+          .single()
+        const oldTier = (orgBefore?.tier as string) || 'free'
+
         await supabase
           .from('orgs')
           .update({
@@ -37,6 +46,17 @@ export async function POST(request: Request) {
             stripe_subscription_id: session.subscription as string,
           })
           .eq('id', orgId)
+
+        // Notify about tier change (fire-and-forget)
+        const { data: orgProject } = await supabase
+          .from('projects')
+          .select('id')
+          .eq('org_id', orgId)
+          .limit(1)
+          .single()
+        if (orgProject) {
+          notifyTierChanged(orgProject.id, oldTier, tier).catch(() => {})
+        }
       }
       break
     }
