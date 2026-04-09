@@ -142,6 +142,10 @@ export function OnboardingWizard({ orgId }: OnboardingWizardProps) {
         throw new Error(body.error ?? 'Failed to update project')
       }
 
+      // Set the active project cookie so dashboard loads the new project
+      if (projectId) {
+        document.cookie = `selfimprove_project=${projectId};path=/;max-age=31536000`
+      }
       router.push('/dashboard')
     } catch (err) {
       // eslint-disable-next-line no-console

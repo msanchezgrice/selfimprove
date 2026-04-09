@@ -12,7 +12,10 @@ export function OAuthButtons() {
       : `${window.location.origin}/auth/callback`
     await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo },
+      options: {
+        redirectTo,
+        ...(provider === 'github' ? { scopes: 'repo' } : {}),
+      },
     })
   }
 

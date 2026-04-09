@@ -8,7 +8,7 @@ import type { SignalRow, RoadmapItemInsert } from '@/lib/types/database'
 interface GeneratedRoadmapItem {
   title: string
   description: string
-  category: 'bug' | 'feature' | 'improvement' | 'infrastructure'
+  category: 'bug' | 'feature' | 'improvement' | 'infrastructure' | 'retention' | 'revenue' | 'reach'
   origin: string
   confidence: number
   scope: 'small' | 'medium' | 'large'
@@ -41,7 +41,7 @@ const ROADMAP_SCHEMA = {
           description: { type: 'string' },
           category: {
             type: 'string',
-            enum: ['bug', 'feature', 'improvement', 'infrastructure'],
+            enum: ['bug', 'feature', 'improvement', 'infrastructure', 'retention', 'revenue', 'reach'],
           },
           origin: {
             type: 'string',
@@ -160,14 +160,18 @@ export async function generateRoadmap(
       ? `\n\n## Existing Roadmap Items (do NOT duplicate these)\n${existingItems.map((i) => `- [${i.status}] ${i.title}`).join('\n')}`
       : ''
 
-  const roiFocusInstruction =
-    roiFocus === 'impact'
-      ? 'Prioritize high-impact items even if they require more effort.'
-      : roiFocus === 'effort'
-        ? 'Prioritize quick wins — low effort items with reasonable impact.'
-        : roiFocus === 'confidence'
-          ? 'Prioritize items with strong evidence from multiple signal sources.'
-          : 'Balance impact, effort, and confidence equally.'
+  const roiFocusInstructions: Record<string, string> = {
+    impact: 'Prioritize high-impact items even if they require more effort.',
+    effort: 'Prioritize quick wins — low effort items with reasonable impact.',
+    confidence: 'Prioritize items with strong evidence from multiple signal sources.',
+    bugs: 'Focus on bug fixes and stability improvements. Prioritize items that fix existing broken behavior, reduce errors, and improve reliability.',
+    ux: 'Focus on usability and UX improvements. Prioritize items that reduce friction, improve navigation, and make the product more intuitive.',
+    features: 'Focus on new feature development. Prioritize items that add new capabilities users are asking for.',
+    retention: 'Focus on features that improve user retention — reduce churn, increase engagement, improve onboarding completion. Use the "retention" category for these items.',
+    revenue: 'Focus on features that increase revenue — pricing optimization, conversion funnels, upsell opportunities. Use the "revenue" category for these items.',
+    reach: 'Focus on features that increase reach/traffic — SEO, sharing, viral loops, content marketing support. Use the "reach" category for these items.',
+  }
+  const roiFocusInstruction = roiFocusInstructions[roiFocus] ?? 'Balance impact, effort, and confidence equally.'
 
   const prompt = `You are an AI Product Manager analyzing user signals to generate a prioritized product roadmap.
 

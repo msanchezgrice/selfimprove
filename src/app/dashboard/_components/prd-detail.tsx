@@ -22,6 +22,9 @@ const categoryConfig: Record<RoadmapCategory, { bg: string; text: string; label:
   feature: { bg: '#eef2ff', text: '#6366f1', label: 'Feature' },
   improvement: { bg: '#fffbeb', text: '#d97706', label: 'Improvement' },
   infrastructure: { bg: '#f8fafc', text: '#475569', label: 'Infra' },
+  retention: { bg: '#fdf4ff', text: '#a855f7', label: 'Retention' },
+  revenue: { bg: '#f0fdf4', text: '#16a34a', label: 'Revenue' },
+  reach: { bg: '#eff6ff', text: '#3b82f6', label: 'Reach' },
 }
 
 const scopeConfig: Record<RoadmapScope, { bg: string; text: string; label: string }> = {

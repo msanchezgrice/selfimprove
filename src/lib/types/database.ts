@@ -2,12 +2,12 @@ export type Tier = 'free' | 'pro' | 'autonomous';
 export type OrgMemberRole = 'owner' | 'admin' | 'member';
 export type ProjectStatus = 'active' | 'paused' | 'archived';
 export type SignalType = 'feedback' | 'voice' | 'analytics' | 'error' | 'builder';
-export type RoadmapCategory = 'bug' | 'feature' | 'improvement' | 'infrastructure';
+export type RoadmapCategory = 'bug' | 'feature' | 'improvement' | 'infrastructure' | 'retention' | 'revenue' | 'reach';
 export type RoadmapStatus = 'proposed' | 'approved' | 'building' | 'shipped' | 'archived' | 'dismissed';
 export type RoadmapScope = 'small' | 'medium' | 'large';
 export type ApprovalMethod = 'manual' | 'auto_approved' | 'auto_merged';
 export type ShippedChangeStatus = 'pending_review' | 'approved' | 'merged' | 'reverted';
-export type RoiFocus = 'balanced' | 'impact' | 'effort' | 'confidence';
+export type RoiFocus = 'balanced' | 'impact' | 'effort' | 'confidence' | 'bugs' | 'ux' | 'features' | 'retention' | 'revenue' | 'reach';
 export type WidgetPosition = 'bottom-right' | 'bottom-left';
 export type WidgetStyle = 'pill' | 'button' | 'tab';
 

@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { GitBranch, Search, Lock, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { GitBranch, Search, Lock, Loader2, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react'
+import { createClient } from '@/lib/supabase/browser'
 
 type GitHubRepo = {
   full_name: string
@@ -57,6 +58,18 @@ export function StepConnectRepo({
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedRepo, setSelectedRepo] = useState<GitHubRepo | null>(null)
   const [autoDetected, setAutoDetected] = useState<{ field: string; value: string }[]>([])
+  const [tokenExpired, setTokenExpired] = useState(false)
+
+  const handleReconnect = async () => {
+    const supabase = createClient()
+    await supabase.auth.signInWithOAuth({
+      provider: 'github',
+      options: {
+        redirectTo: `${window.location.origin}/onboarding`,
+        scopes: 'repo',
+      },
+    })
+  }
 
   const filteredRepos = useMemo(() => {
     if (!searchQuery) return repos
@@ -76,7 +89,8 @@ export function StepConnectRepo({
       if (!res.ok) {
         const body = await res.json()
         if (res.status === 400 && body.error?.includes('Re-login')) {
-          setRepoError('GitHub token expired. Please log out and sign in again with GitHub to connect repos.')
+          setTokenExpired(true)
+          setRepoError('GitHub token expired.')
         } else {
           setRepoError(body.error || 'Failed to fetch repos')
         }
@@ -174,10 +188,30 @@ export function StepConnectRepo({
           {repoError && (
             <div
               className="flex items-start gap-2 mt-2 p-3 rounded-xl text-sm"
-              style={{ backgroundColor: '#fef2f2', color: '#dc2626' }}
+              style={{ backgroundColor: tokenExpired ? '#fffbeb' : '#fef2f2', color: tokenExpired ? '#92400e' : '#dc2626' }}
             >
               <AlertCircle size={16} className="shrink-0 mt-0.5" />
-              <span>{repoError}</span>
+              <div className="flex flex-col gap-2">
+                {tokenExpired ? (
+                  <>
+                    <span>Your GitHub session has expired.</span>
+                    <button
+                      type="button"
+                      onClick={handleReconnect}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                      style={{
+                        backgroundColor: '#1a1a2e',
+                        color: '#ffffff',
+                      }}
+                    >
+                      <RefreshCw size={14} />
+                      Re-connect GitHub
+                    </button>
+                  </>
+                ) : (
+                  <span>{repoError}</span>
+                )}
+              </div>
             </div>
           )}
         </div>

@@ -33,6 +33,9 @@ const priorityOptions: PriorityOption[] = [
   { value: 'bugs', label: 'Fix bugs and improve stability' },
   { value: 'ux', label: 'Improve usability and UX' },
   { value: 'features', label: 'Add new features' },
+  { value: 'retention', label: 'Improve retention' },
+  { value: 'revenue', label: 'Increase revenue' },
+  { value: 'reach', label: 'Increase reach/traffic' },
   { value: 'balanced', label: 'Balanced (all of the above)' },
 ]
 
@@ -120,16 +123,10 @@ export function StepConfigureAi({
     setAutoImplement(mapped.autoImplement)
   }
 
-  // Map priority to roiFocus
+  // Map priority to roiFocus — the value is stored directly as RoiFocus
   const handlePriorityChange = (val: string) => {
     setPriority(val)
-    const focusMap: Record<string, RoiFocus> = {
-      bugs: 'confidence',
-      ux: 'impact',
-      features: 'effort',
-      balanced: 'balanced',
-    }
-    setRoiFocus(focusMap[val] ?? 'balanced')
+    setRoiFocus(val as RoiFocus)
   }
 
   // Unused but kept for prop interface compatibility
