@@ -1,0 +1,260 @@
+- generic [active] [ref=e1]:
+  - navigation [ref=e2]:
+    - generic [ref=e3]:
+      - link "SelfImprove" [ref=e4] [cursor=pointer]:
+        - /url: /
+      - generic [ref=e5]:
+        - link "How it works" [ref=e6] [cursor=pointer]:
+          - /url: "#how"
+        - link "Pricing" [ref=e7] [cursor=pointer]:
+          - /url: "#pricing"
+        - link "Docs" [ref=e8] [cursor=pointer]:
+          - /url: "#"
+        - link "Get Started" [ref=e9] [cursor=pointer]:
+          - /url: /dashboard
+  - generic [ref=e10]:
+    - generic [ref=e11]: AI Product Manager for developers
+    - heading "You built your v1. Now make it actually work." [level=1] [ref=e12]:
+      - text: You built your v1.
+      - text: Now make it actually work.
+    - paragraph [ref=e13]: SelfImprove watches your users, builds your roadmap, and ships the fixes. The AI product manager for developers who built something — and need what comes next.
+    - generic [ref=e14]:
+      - link "Get Started Free →" [ref=e15] [cursor=pointer]:
+        - /url: /dashboard
+      - link "See how it works" [ref=e16] [cursor=pointer]:
+        - /url: "#how"
+    - paragraph [ref=e17]: No credit card required · Free forever tier
+    - generic [ref=e18]:
+      - generic [ref=e19]:
+        - generic [ref=e20]:
+          - strong [ref=e21]: Live Roadmap
+          - text: · AI-Generated
+        - generic [ref=e22]: Synced
+      - generic [ref=e24]:
+        - generic [ref=e25]: "1"
+        - generic [ref=e26]:
+          - generic [ref=e27]: Fix checkout flow — users drop at payment step
+          - generic [ref=e28]: “It just hangs” — voice transcript, 3 users
+        - generic [ref=e29]: Bug
+        - generic [ref=e30]: "9.2"
+      - generic [ref=e31]:
+        - generic [ref=e32]: "2"
+        - generic [ref=e33]:
+          - generic [ref=e34]: Add dark mode toggle
+          - generic [ref=e35]: “Would love dark mode” — 5 feedback signals
+        - generic [ref=e36]: Feature
+        - generic [ref=e37]: "7.8"
+      - generic [ref=e38]:
+        - generic [ref=e39]: "3"
+        - generic [ref=e40]:
+          - generic [ref=e41]: Simplify onboarding — 40% abandon at step 3
+          - generic [ref=e42]: 42% drop-off at “connect account” — PostHog funnel
+        - generic [ref=e43]: UX
+        - generic [ref=e44]: "8.5"
+  - generic [ref=e46]:
+    - paragraph [ref=e47]: The Problem
+    - heading "Your users know what's broken. You're guessing." [level=2] [ref=e48]:
+      - text: Your users know what's broken.
+      - text: You're guessing.
+    - paragraph [ref=e49]: You shipped your app. But is it working for users? Are they hitting bugs? Dropping off? You have no idea — and no product team to figure it out.
+    - generic [ref=e50]:
+      - list [ref=e51]:
+        - listitem [ref=e52]:
+          - generic [ref=e53]: ⚠️
+          - text: Building blind — users hit bugs and leave silently. You never hear about it.
+        - listitem [ref=e54]:
+          - generic [ref=e55]: 🎯
+          - text: Guessing priorities — you don't know what to fix first, so you fix what's loudest.
+        - listitem [ref=e56]:
+          - generic [ref=e57]: 📋
+          - text: Never-ending backlog — tickets pile up but nothing gets triaged or ranked by impact.
+        - listitem [ref=e58]:
+          - generic [ref=e59]: 🚀
+          - text: Shipping wrong things — you build features nobody asked for while real problems fester.
+      - generic [ref=e60]:
+        - generic [ref=e61]: 80%
+        - generic [ref=e62]:
+          - text: of software cost is maintenance.
+          - text: SelfImprove handles it.
+  - generic [ref=e64]:
+    - paragraph [ref=e65]: How It Works
+    - heading "From signal to shipped in four steps" [level=2] [ref=e66]
+    - paragraph [ref=e67]: Connect once. SelfImprove runs forever.
+    - generic [ref=e68]:
+      - generic [ref=e69]:
+        - generic [ref=e70]: "1"
+        - heading "Collect" [level=3] [ref=e71]
+        - paragraph [ref=e72]: Widget collects feedback, voice, analytics, and errors. Users tag issues — bug, confusing, slow — in one click.
+      - generic [ref=e73]:
+        - generic [ref=e74]: "2"
+        - heading "Analyze" [level=3] [ref=e75]
+        - paragraph [ref=e76]: AI groups signals, weighs by type, and deduplicates. Every signal gets categorized, scored, and linked to evidence.
+      - generic [ref=e77]:
+        - generic [ref=e78]: "3"
+        - heading "Prioritize" [level=3] [ref=e79]
+        - paragraph [ref=e80]: Generates a live roadmap with ROI scores and evidence trails. Stack-ranked so you always know what matters most.
+      - generic [ref=e81]:
+        - generic [ref=e82]: "4"
+        - heading "Ship" [level=3] [ref=e83]
+        - paragraph [ref=e84]: Auto-implements changes via your coding agent. Reviews for safety, creates PRs, and merges — while you sleep.
+  - generic [ref=e86]:
+    - paragraph [ref=e87]: Features
+    - heading "Everything a PM does. Automated." [level=2] [ref=e88]
+    - paragraph [ref=e89]: "The full loop: signals in, improvements out."
+    - generic [ref=e90]:
+      - generic [ref=e91]:
+        - generic [ref=e92]: 📡
+        - heading "Smart Signal Collection" [level=3] [ref=e93]
+        - paragraph [ref=e94]: One-click feedback widget, voice companion, analytics integration, and error tracking — all feeding one system.
+      - generic [ref=e95]:
+        - generic [ref=e96]: 🧭
+        - heading "AI Roadmap Engine" [level=3] [ref=e97]
+        - paragraph [ref=e98]: Live, stack-ranked roadmap with ROI scores. Every item has an evidence trail, thinking trace, and full PRD.
+      - generic [ref=e99]:
+        - generic [ref=e100]: 📝
+        - heading "PRD Generation" [level=3] [ref=e101]
+        - paragraph [ref=e102]: Automatically writes product requirements grounded in your actual codebase and user signals.
+      - generic [ref=e103]:
+        - generic [ref=e104]: 🚀
+        - heading "Auto-Implement" [level=3] [ref=e105]
+        - paragraph [ref=e106]: One click creates a PR via your coding agent. Full autonomous mode approves, builds, tests, and merges.
+      - generic [ref=e107]:
+        - generic [ref=e108]: 🛡️
+        - heading "Safety Guardrails" [level=3] [ref=e109]
+        - paragraph [ref=e110]: Configurable risk thresholds, daily improvement caps, and full audit trails for every automated change.
+      - generic [ref=e111]:
+        - generic [ref=e112]: 🎤
+        - heading "Voice Companion" [level=3] [ref=e113]
+        - paragraph [ref=e114]: AI observer that listens during real sessions. Catches frustrations and feature requests users won't type.
+  - generic [ref=e116]:
+    - paragraph [ref=e117]: Your New AI Team Member
+    - heading "Give your AI PM its instructions" [level=2] [ref=e118]
+    - paragraph [ref=e119]: Configure how SelfImprove prioritizes, what it can auto-merge, and how aggressive it should be.
+    - generic [ref=e120]:
+      - generic [ref=e121]: // selfimprove.config.ts
+      - generic [ref=e122]: "export default { project: \"my-saas-app\", signals: [\"widget\", \"voice\", \"posthog\", \"sentry\"], autoMerge: { enabled: true, riskThreshold: \"low\", dailyCap: 5, }, priority: \"roi-weighted\", agent: \"claude-code\", }"
+    - link "Start Building →" [ref=e124] [cursor=pointer]:
+      - /url: /dashboard
+  - generic [ref=e126]:
+    - paragraph [ref=e127]: Trusted by Developers
+    - heading "Developers ship faster with SelfImprove" [level=2] [ref=e128]
+    - generic [ref=e129]:
+      - generic [ref=e130]:
+        - paragraph [ref=e131]: “I shipped my SaaS in a weekend with Cursor. SelfImprove told me what was actually broken — users were dropping off at step 3 and I had no idea.”
+        - generic [ref=e132]:
+          - generic [ref=e133]: AC
+          - generic [ref=e134]:
+            - generic [ref=e135]: Alex Chen
+            - generic [ref=e136]: Indie Developer
+      - generic [ref=e137]:
+        - paragraph [ref=e138]: “It's like having a product manager that never sleeps. The roadmap updates itself and the PRs are surprisingly good. Saved me 10+ hours a week.”
+        - generic [ref=e139]:
+          - generic [ref=e140]: SK
+          - generic [ref=e141]:
+            - generic [ref=e142]: Sarah Kim
+            - generic [ref=e143]: Solo SaaS Founder
+      - generic [ref=e144]:
+        - paragraph [ref=e145]: “The autonomous mode is wild. I woke up to three merged PRs that fixed real user-reported bugs. All with evidence trails and test coverage.”
+        - generic [ref=e146]:
+          - generic [ref=e147]: MJ
+          - generic [ref=e148]:
+            - generic [ref=e149]: Marcus Johnson
+            - generic [ref=e150]: Full-Stack Developer
+  - generic [ref=e152]:
+    - paragraph [ref=e153]: Pricing
+    - heading "Start free. Scale as you grow." [level=2] [ref=e154]
+    - paragraph [ref=e155]: Simple pricing. No per-seat charges. Cancel anytime.
+    - generic [ref=e156]:
+      - generic [ref=e157]:
+        - heading "Free" [level=3] [ref=e158]
+        - generic [ref=e159]: $0 /mo
+        - paragraph [ref=e160]: For solo devs testing the waters.
+        - list [ref=e161]:
+          - listitem [ref=e162]:
+            - generic [ref=e163]: +
+            - text: 1 project
+          - listitem [ref=e164]:
+            - generic [ref=e165]: +
+            - text: Live stack-ranked roadmap
+          - listitem [ref=e166]:
+            - generic [ref=e167]: +
+            - text: Feedback widget
+          - listitem [ref=e168]:
+            - generic [ref=e169]: +
+            - text: Full PRDs with evidence
+          - listitem [ref=e170]:
+            - generic [ref=e171]: +
+            - text: Up to 100 signals/month
+        - link "Get started free" [ref=e172] [cursor=pointer]:
+          - /url: /dashboard
+      - generic [ref=e173]:
+        - generic [ref=e174]: Most popular
+        - heading "Pro" [level=3] [ref=e175]
+        - generic [ref=e176]: $49 /mo
+        - paragraph [ref=e177]: Roadmap + one-click implement + analytics.
+        - list [ref=e178]:
+          - listitem [ref=e179]:
+            - generic [ref=e180]: +
+            - text: 3 projects
+          - listitem [ref=e181]:
+            - generic [ref=e182]: +
+            - text: Everything in Free
+          - listitem [ref=e183]:
+            - generic [ref=e184]: +
+            - text: One-click implement (creates PRs)
+          - listitem [ref=e185]:
+            - generic [ref=e186]: +
+            - text: Voice companion
+          - listitem [ref=e187]:
+            - generic [ref=e188]: +
+            - text: PostHog + Sentry integration
+          - listitem [ref=e189]:
+            - generic [ref=e190]: +
+            - text: 10,000 signals/month
+        - link "Start 14-day trial" [ref=e191] [cursor=pointer]:
+          - /url: /dashboard
+      - generic [ref=e192]:
+        - heading "Autonomous" [level=3] [ref=e193]
+        - generic [ref=e194]: $199 /mo
+        - paragraph [ref=e195]: Full self-improving software.
+        - list [ref=e196]:
+          - listitem [ref=e197]:
+            - generic [ref=e198]: +
+            - text: Unlimited projects
+          - listitem [ref=e199]:
+            - generic [ref=e200]: +
+            - text: Everything in Pro
+          - listitem [ref=e201]:
+            - generic [ref=e202]: +
+            - text: Autonomous approval + merge
+          - listitem [ref=e203]:
+            - generic [ref=e204]: +
+            - text: Configurable risk thresholds
+          - listitem [ref=e205]:
+            - generic [ref=e206]: +
+            - text: Daily improvement cap
+          - listitem [ref=e207]:
+            - generic [ref=e208]: +
+            - text: Full audit trail
+        - link "Start 14-day trial" [ref=e209] [cursor=pointer]:
+          - /url: /dashboard
+  - generic [ref=e210]:
+    - heading "Ready to stop guessing?" [level=2] [ref=e211]
+    - paragraph [ref=e212]: Free for 1 project. Setup takes 5 minutes. First roadmap items appear within 24 hours.
+    - link "Get Started Free →" [ref=e213] [cursor=pointer]:
+      - /url: /dashboard
+    - paragraph [ref=e214]: No credit card required
+  - contentinfo [ref=e215]:
+    - generic [ref=e216]:
+      - generic [ref=e218]: SelfImprove
+      - generic [ref=e219]:
+        - link "Product" [ref=e220] [cursor=pointer]:
+          - /url: "#how"
+        - link "Pricing" [ref=e221] [cursor=pointer]:
+          - /url: "#pricing"
+        - link "Docs" [ref=e222] [cursor=pointer]:
+          - /url: "#"
+        - link "GitHub" [ref=e223] [cursor=pointer]:
+          - /url: "#"
+      - paragraph [ref=e224]: © 2026 SelfImprove. All rights reserved.
+  - alert [ref=e225]

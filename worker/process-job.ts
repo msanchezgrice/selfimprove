@@ -1,4 +1,4 @@
-import { execaCommand } from 'execa'
+import { execSync } from 'child_process'
 import { createClient } from '@supabase/supabase-js'
 import { mkdtemp, rm } from 'fs/promises'
 import { tmpdir } from 'os'
@@ -8,6 +8,16 @@ const supabase = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 )
+
+function run(cmd: string, opts: { cwd?: string; timeout?: number } = {}): string {
+  return execSync(cmd, {
+    cwd: opts.cwd,
+    timeout: opts.timeout || 120_000,
+    encoding: 'utf-8',
+    env: { ...process.env },
+    stdio: ['pipe', 'pipe', 'pipe'],
+  }).trim()
+}
 
 interface BuildJob {
   id: string
@@ -20,19 +30,16 @@ interface BuildJob {
 }
 
 export async function processJob(job: BuildJob): Promise<Record<string, unknown>> {
-  // Create temp directory
   const workDir = await mkdtemp(join(tmpdir(), 'selfimprove-'))
 
   try {
-    // Extract repo info
     const repoMatch = job.repo_url.match(/github\.com\/([^/]+\/[^/]+)/)
     if (!repoMatch) throw new Error('Invalid repo URL')
     const repo = repoMatch[1].replace(/\.git$/, '')
 
-    // Clone the repo
     const cloneUrl = `https://x-access-token:${job.github_token}@github.com/${repo}.git`
     console.log(`[worker] Cloning ${repo}...`)
-    await execaCommand(`git clone --depth 50 ${cloneUrl} ${workDir}`, { timeout: 120_000 })
+    run(`git clone --depth 50 ${cloneUrl} ${workDir}`)
 
     if (job.job_type === 'implement') {
       return await runImplement(job, workDir, repo)
@@ -40,52 +47,40 @@ export async function processJob(job: BuildJob): Promise<Record<string, unknown>
       return await runScan(job, workDir)
     }
   } finally {
-    // Cleanup
     await rm(workDir, { recursive: true, force: true }).catch(() => {})
   }
 }
 
 async function runImplement(job: BuildJob, workDir: string, repo: string): Promise<Record<string, unknown>> {
-  // Create a branch
   const branchName = `selfimprove/auto-${Date.now()}`
-  await execaCommand(`git checkout -b ${branchName}`, { cwd: workDir })
+  run(`git checkout -b ${branchName}`, { cwd: workDir })
 
-  // Run Claude Code with the implementation prompt
   console.log(`[worker] Running Claude Code for implementation...`)
-  const escapedPrompt = job.prompt.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n')
-  const { stdout } = await execaCommand(
-    `claude -p "${escapedPrompt}" --allowedTools Edit,Write,Bash,Read,Glob,Grep --output-format text`,
-    {
-      cwd: workDir,
-      timeout: 600_000, // 10 minute timeout
-      env: {
-        ...process.env,
-        ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
-      },
-    },
+
+  // Write prompt to a temp file to avoid shell escaping issues
+  const promptFile = join(workDir, '.selfimprove-prompt.txt')
+  const { writeFile } = await import('fs/promises')
+  await writeFile(promptFile, job.prompt)
+
+  const stdout = run(
+    `claude -p "$(cat ${promptFile})" --allowedTools Edit,Write,Bash,Read,Glob,Grep --output-format text`,
+    { cwd: workDir, timeout: 600_000 },
   )
 
   console.log(`[worker] Claude Code output: ${stdout.slice(0, 500)}`)
 
-  // Check if there are changes
-  const { stdout: diffStat } = await execaCommand('git diff --stat', { cwd: workDir })
-  const { stdout: untrackedFiles } = await execaCommand('git ls-files --others --exclude-standard', { cwd: workDir })
+  const diffStat = run('git diff --stat', { cwd: workDir })
+  const untrackedFiles = run('git ls-files --others --exclude-standard', { cwd: workDir })
 
-  if (!diffStat.trim() && !untrackedFiles.trim()) {
+  if (!diffStat && !untrackedFiles) {
     throw new Error('Claude Code made no changes')
   }
 
-  // Stage and commit
-  await execaCommand('git add -A', { cwd: workDir })
-  await execaCommand(
-    `git commit -m "feat: ${job.prompt.slice(0, 50)}...\n\nImplemented by SelfImprove AI"`,
-    { cwd: workDir },
-  )
+  run('git add -A', { cwd: workDir })
+  const commitMsg = `feat: ${job.prompt.slice(0, 50).replace(/"/g, "'").replace(/\n/g, ' ')}...\n\nImplemented by SelfImprove AI`
+  run(`git commit -m "${commitMsg}"`, { cwd: workDir })
+  run(`git push origin ${branchName}`, { cwd: workDir })
 
-  // Push
-  await execaCommand(`git push origin ${branchName}`, { cwd: workDir })
-
-  // Create PR
   const prBody = `## Auto-Implementation\n\n${job.prompt.slice(0, 500)}\n\n---\n*Auto-implemented by [SelfImprove](https://selfimprove-iota.vercel.app)*`
 
   const prRes = await fetch(`https://api.github.com/repos/${repo}/pulls`, {
@@ -111,7 +106,6 @@ async function runImplement(job: BuildJob, workDir: string, repo: string): Promi
 
   const pr = (await prRes.json()) as { html_url: string; number: number }
 
-  // Update roadmap item
   if (job.roadmap_item_id) {
     await supabase
       .from('roadmap_items')
@@ -133,22 +127,17 @@ async function runImplement(job: BuildJob, workDir: string, repo: string): Promi
 }
 
 async function runScan(job: BuildJob, workDir: string): Promise<Record<string, unknown>> {
-  // Run Claude Code with the scan prompt
   console.log(`[worker] Running Claude Code for codebase scan...`)
-  const escapedPrompt = job.prompt.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n')
-  const { stdout } = await execaCommand(
-    `claude -p "${escapedPrompt}" --allowedTools Read,Glob,Grep,Bash --output-format text`,
-    {
-      cwd: workDir,
-      timeout: 600_000,
-      env: {
-        ...process.env,
-        ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
-      },
-    },
+
+  const promptFile = join(workDir, '.selfimprove-prompt.txt')
+  const { writeFile } = await import('fs/promises')
+  await writeFile(promptFile, job.prompt)
+
+  const stdout = run(
+    `claude -p "$(cat ${promptFile})" --allowedTools Read,Glob,Grep,Bash --output-format text`,
+    { cwd: workDir, timeout: 600_000 },
   )
 
-  // Parse findings from Claude's output
   let findings: Array<Record<string, unknown>> = []
   try {
     const jsonMatch = stdout.match(/\{[\s\S]*"findings"[\s\S]*\}/)
@@ -157,11 +146,9 @@ async function runScan(job: BuildJob, workDir: string): Promise<Record<string, u
       findings = parsed.findings || []
     }
   } catch {
-    // If can't parse JSON, treat the whole output as a single finding
     findings = [{ category: 'quality', severity: 'medium', title: 'Codebase Analysis', description: stdout.slice(0, 5000) }]
   }
 
-  // Create signals from findings
   if (findings.length > 0) {
     const signals = findings.map(f => ({
       project_id: job.project_id,
@@ -184,6 +171,6 @@ async function runScan(job: BuildJob, workDir: string): Promise<Record<string, u
   return {
     type: 'scan',
     findingsCount: findings.length,
-    findings: findings.slice(0, 20), // Store first 20 in result
+    findings: findings.slice(0, 20),
   }
 }

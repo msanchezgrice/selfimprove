@@ -1,0 +1,227 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - navigation [ref=e3]:
+      - generic [ref=e4]:
+        - link "SelfImprove" [ref=e5] [cursor=pointer]:
+          - /url: /
+        - generic [ref=e6]:
+          - link "How it works" [ref=e7] [cursor=pointer]:
+            - /url: /#how-it-works
+          - link "Pricing" [ref=e8] [cursor=pointer]:
+            - /url: /pricing
+          - link "Docs" [ref=e9] [cursor=pointer]:
+            - /url: /docs
+        - link "Get Started" [ref=e10] [cursor=pointer]:
+          - /url: /login
+    - generic [ref=e11]:
+      - heading "Simple, transparent pricing" [level=1] [ref=e12]
+      - paragraph [ref=e13]: Start free, upgrade when you're ready.
+    - generic [ref=e14]:
+      - generic [ref=e15]:
+        - heading "Free" [level=2] [ref=e16]
+        - generic [ref=e17]:
+          - generic [ref=e18]: $0
+          - generic [ref=e19]: /mo
+        - list [ref=e20]:
+          - listitem [ref=e21]:
+            - img [ref=e22]
+            - text: 1 project
+          - listitem [ref=e24]:
+            - img [ref=e25]
+            - text: 100 signals/month
+          - listitem [ref=e27]:
+            - img [ref=e28]
+            - text: AI roadmap generation
+          - listitem [ref=e30]:
+            - img [ref=e31]
+            - text: Feedback widget
+          - listitem [ref=e33]:
+            - img [ref=e34]
+            - text: Community support
+        - link "Get Started Free" [ref=e36] [cursor=pointer]:
+          - /url: /login
+      - generic [ref=e37]:
+        - generic [ref=e38]: Most Popular
+        - heading "Pro" [level=2] [ref=e39]
+        - generic [ref=e40]:
+          - generic [ref=e41]: $49
+          - generic [ref=e42]: /mo
+        - list [ref=e43]:
+          - listitem [ref=e44]:
+            - img [ref=e45]
+            - text: 3 projects
+          - listitem [ref=e47]:
+            - img [ref=e48]
+            - text: 10,000 signals/month
+          - listitem [ref=e50]:
+            - img [ref=e51]
+            - text: "Everything in Free, plus:"
+          - listitem [ref=e53]:
+            - img [ref=e54]
+            - text: Auto-implement
+          - listitem [ref=e56]:
+            - img [ref=e57]
+            - text: Voice companion (100/mo)
+          - listitem [ref=e59]:
+            - img [ref=e60]
+            - text: PostHog integration
+          - listitem [ref=e62]:
+            - img [ref=e63]
+            - text: Sentry integration
+          - listitem [ref=e65]:
+            - img [ref=e66]
+            - text: Priority support
+        - link "Start Pro Trial" [ref=e68] [cursor=pointer]:
+          - /url: /login?plan=pro
+      - generic [ref=e69]:
+        - heading "Autonomous" [level=2] [ref=e70]
+        - generic [ref=e71]:
+          - generic [ref=e72]: $199
+          - generic [ref=e73]: /mo
+        - list [ref=e74]:
+          - listitem [ref=e75]:
+            - img [ref=e76]
+            - text: Unlimited projects
+          - listitem [ref=e78]:
+            - img [ref=e79]
+            - text: Unlimited signals
+          - listitem [ref=e81]:
+            - img [ref=e82]
+            - text: "Everything in Pro, plus:"
+          - listitem [ref=e84]:
+            - img [ref=e85]
+            - text: Auto-approve PRs
+          - listitem [ref=e87]:
+            - img [ref=e88]
+            - text: Auto-merge low-risk
+          - listitem [ref=e90]:
+            - img [ref=e91]
+            - text: Voice companion (500/mo)
+          - listitem [ref=e93]:
+            - img [ref=e94]
+            - text: Dedicated support
+        - link "Go Autonomous" [ref=e96] [cursor=pointer]:
+          - /url: /login?plan=autonomous
+    - generic [ref=e97]:
+      - heading "Feature comparison" [level=2] [ref=e98]
+      - table [ref=e100]:
+        - rowgroup [ref=e101]:
+          - row "Feature Free Pro Autonomous" [ref=e102]:
+            - columnheader "Feature" [ref=e103]
+            - columnheader "Free" [ref=e104]
+            - columnheader "Pro" [ref=e105]
+            - columnheader "Autonomous" [ref=e106]
+        - rowgroup [ref=e107]:
+          - row "Projects 1 3 Unlimited" [ref=e108]:
+            - cell "Projects" [ref=e109]
+            - cell "1" [ref=e110]
+            - cell "3" [ref=e111]
+            - cell "Unlimited" [ref=e112]
+          - row "Signals / mo 100 10,000 Unlimited" [ref=e113]:
+            - cell "Signals / mo" [ref=e114]
+            - cell "100" [ref=e115]
+            - cell "10,000" [ref=e116]
+            - cell "Unlimited" [ref=e117]
+          - row "Feedback Widget" [ref=e118]:
+            - cell "Feedback Widget" [ref=e119]
+            - cell [ref=e120]:
+              - img [ref=e121]
+            - cell [ref=e123]:
+              - img [ref=e124]
+            - cell [ref=e126]:
+              - img [ref=e127]
+          - row "Voice Companion 100 / mo 500 / mo" [ref=e129]:
+            - cell "Voice Companion" [ref=e130]
+            - cell [ref=e131]:
+              - img [ref=e132]
+            - cell "100 / mo" [ref=e133]
+            - cell "500 / mo" [ref=e134]
+          - row "AI Roadmap" [ref=e135]:
+            - cell "AI Roadmap" [ref=e136]
+            - cell [ref=e137]:
+              - img [ref=e138]
+            - cell [ref=e140]:
+              - img [ref=e141]
+            - cell [ref=e143]:
+              - img [ref=e144]
+          - row "PRD Generation" [ref=e146]:
+            - cell "PRD Generation" [ref=e147]
+            - cell [ref=e148]:
+              - img [ref=e149]
+            - cell [ref=e151]:
+              - img [ref=e152]
+            - cell [ref=e154]:
+              - img [ref=e155]
+          - row "Auto-Implement" [ref=e157]:
+            - cell "Auto-Implement" [ref=e158]
+            - cell [ref=e159]:
+              - img [ref=e160]
+            - cell [ref=e161]:
+              - img [ref=e162]
+            - cell [ref=e164]:
+              - img [ref=e165]
+          - row "Auto-Approve" [ref=e167]:
+            - cell "Auto-Approve" [ref=e168]
+            - cell [ref=e169]:
+              - img [ref=e170]
+            - cell [ref=e171]:
+              - img [ref=e172]
+            - cell [ref=e173]:
+              - img [ref=e174]
+          - row "Auto-Merge" [ref=e176]:
+            - cell "Auto-Merge" [ref=e177]
+            - cell [ref=e178]:
+              - img [ref=e179]
+            - cell [ref=e180]:
+              - img [ref=e181]
+            - cell [ref=e182]:
+              - img [ref=e183]
+          - row "PostHog" [ref=e185]:
+            - cell "PostHog" [ref=e186]
+            - cell [ref=e187]:
+              - img [ref=e188]
+            - cell [ref=e189]:
+              - img [ref=e190]
+            - cell [ref=e192]:
+              - img [ref=e193]
+          - row "Sentry" [ref=e195]:
+            - cell "Sentry" [ref=e196]
+            - cell [ref=e197]:
+              - img [ref=e198]
+            - cell [ref=e199]:
+              - img [ref=e200]
+            - cell [ref=e202]:
+              - img [ref=e203]
+          - row "Support Level Community Priority Dedicated" [ref=e205]:
+            - cell "Support Level" [ref=e206]
+            - cell "Community" [ref=e207]
+            - cell "Priority" [ref=e208]
+            - cell "Dedicated" [ref=e209]
+    - generic [ref=e210]:
+      - heading "Frequently asked questions" [level=2] [ref=e211]
+      - generic [ref=e212]:
+        - generic [ref=e213]:
+          - heading "Can I switch plans anytime?" [level=3] [ref=e214]
+          - paragraph [ref=e215]: Yes. You can upgrade, downgrade, or cancel at any time. Changes take effect at the start of your next billing cycle.
+        - generic [ref=e216]:
+          - heading "What happens when I hit my signal limit?" [level=3] [ref=e217]
+          - paragraph [ref=e218]: New signals stop being accepted for the remainder of the billing period. No data is lost — your existing signals and roadmap remain fully accessible.
+        - generic [ref=e219]:
+          - heading "Do I need a credit card for Free?" [level=3] [ref=e220]
+          - paragraph [ref=e221]: No. The Free plan requires no payment information. Just sign up and start collecting feedback.
+        - generic [ref=e222]:
+          - heading "Can I self-host?" [level=3] [ref=e223]
+          - paragraph [ref=e224]: Not yet. Self-hosting is planned for an upcoming enterprise tier. Reach out if you’d like early access.
+    - contentinfo [ref=e225]:
+      - generic [ref=e226]:
+        - link "SelfImprove" [ref=e227] [cursor=pointer]:
+          - /url: /
+        - generic [ref=e228]:
+          - link "Pricing" [ref=e229] [cursor=pointer]:
+            - /url: /pricing
+          - link "Docs" [ref=e230] [cursor=pointer]:
+            - /url: /docs
+          - link "Sign in" [ref=e231] [cursor=pointer]:
+            - /url: /login
+        - paragraph [ref=e232]: © 2026 SelfImprove. All rights reserved.
+  - alert [ref=e233]

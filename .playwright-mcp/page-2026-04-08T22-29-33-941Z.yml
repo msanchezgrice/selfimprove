@@ -1,0 +1,15 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - img [ref=e6]
+      - heading "Sign in to SelfImprove" [level=1] [ref=e10]
+      - paragraph [ref=e11]: Ship what your users actually want.
+    - generic [ref=e12]:
+      - button "Continue with GitHub" [ref=e13] [cursor=pointer]:
+        - img [ref=e14]
+        - text: Continue with GitHub
+      - button "Continue with Google" [ref=e16] [cursor=pointer]:
+        - img [ref=e17]
+        - text: Continue with Google
+    - paragraph [ref=e22]: By signing in, you agree to our Terms of Service
+  - alert [ref=e23]
