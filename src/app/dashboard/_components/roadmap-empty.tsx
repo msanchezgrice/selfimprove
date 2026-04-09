@@ -2,12 +2,15 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 
 export function RoadmapEmpty({ projectId }: { projectId: string | null }) {
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
+  const pathname = usePathname()
+  const slugMatch = pathname.match(/^\/dashboard\/([^/]+)/)
+  const slug = slugMatch?.[1] || ''
 
   const handleGenerate = async () => {
     if (!projectId) return
@@ -116,7 +119,7 @@ export function RoadmapEmpty({ projectId }: { projectId: string | null }) {
           </button>
         )}
         <Link
-          href="/dashboard/signals"
+          href={`/dashboard/${slug}/signals`}
           className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors"
           style={{ color: '#6366f1', border: '1px solid #e8e4de' }}
         >

@@ -15,10 +15,10 @@ type DashboardSidebarProps = {
   orgName: string
 }
 
-const navItems = [
-  { href: '/dashboard/roadmap', label: 'Roadmap', icon: Compass },
-  { href: '/dashboard/signals', label: 'Signals', icon: Radio },
-  { href: '/dashboard/settings', label: 'Settings', icon: Settings },
+const navDefs = [
+  { path: 'roadmap', label: 'Roadmap', icon: Compass },
+  { path: 'signals', label: 'Signals', icon: Radio },
+  { path: 'settings', label: 'Settings', icon: Settings },
 ]
 
 function getInitials(email: string | undefined): string {
@@ -31,13 +31,26 @@ function getInitials(email: string | undefined): string {
   return name.slice(0, 2).toUpperCase()
 }
 
+function useSlugFromPathname() {
+  const pathname = usePathname()
+  const match = pathname.match(/^\/dashboard\/([^/]+)/)
+  return match?.[1] || ''
+}
+
 export function DashboardSidebar({ user, orgName }: DashboardSidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
-  const [projects, setProjects] = useState<Array<{ id: string; name: string; framework: string | null }>>([])
+  const slug = useSlugFromPathname()
+  const [projects, setProjects] = useState<Array<{ id: string; slug: string; name: string; framework: string | null }>>([])
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
   const [showProjectPicker, setShowProjectPicker] = useState(false)
   const projectPickerRef = useRef<HTMLDivElement>(null)
+
+  const navItems = navDefs.map((d) => ({
+    href: `/dashboard/${slug}/${d.path}`,
+    label: d.label,
+    icon: d.icon,
+  }))
 
   useEffect(() => {
     fetch('/api/projects/list')
@@ -66,11 +79,11 @@ export function DashboardSidebar({ user, orgName }: DashboardSidebarProps) {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [showProjectPicker])
 
-  const switchProject = (id: string) => {
-    setSelectedProjectId(id)
-    document.cookie = `selfimprove_project=${id};path=/;max-age=31536000`
+  const switchProject = (project: { id: string; slug: string }) => {
+    setSelectedProjectId(project.id)
+    document.cookie = `selfimprove_project=${project.id};path=/;max-age=31536000`
     setShowProjectPicker(false)
-    router.refresh()
+    router.push(`/dashboard/${project.slug}/roadmap`)
   }
 
   return (
@@ -119,7 +132,7 @@ export function DashboardSidebar({ user, orgName }: DashboardSidebarProps) {
               {projects.map(p => (
                 <button
                   key={p.id}
-                  onClick={() => switchProject(p.id)}
+                  onClick={() => switchProject(p)}
                   className="w-full flex items-center px-3 py-2 text-sm text-left transition-colors hover:bg-[#f5f0eb]"
                   style={{
                     color: p.id === selectedProjectId ? '#6366f1' : '#1a1a2e',
@@ -232,7 +245,7 @@ export function DashboardSidebar({ user, orgName }: DashboardSidebarProps) {
         >
           SelfImprove
         </div>
-        <MobileMenu user={user} orgName={orgName} pathname={pathname} />
+        <MobileMenu user={user} orgName={orgName} pathname={pathname} slug={slug} />
       </div>
     </>
   )
@@ -244,13 +257,21 @@ function MobileMenu({
   user,
   orgName,
   pathname,
+  slug,
 }: {
   user: SidebarUser
   orgName: string
   pathname: string
+  slug: string
 }) {
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+
+  const navItems = navDefs.map((d) => ({
+    href: `/dashboard/${slug}/${d.path}`,
+    label: d.label,
+    icon: d.icon,
+  }))
 
   // Close on outside click
   useEffect(() => {

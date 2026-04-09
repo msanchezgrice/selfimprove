@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import type {
   RoadmapItemRow,
   RoadmapCategory,
@@ -131,6 +131,9 @@ type PRDContent = {
 
 export function PRDDetail({ item }: PRDDetailProps) {
   const router = useRouter()
+  const pathname = usePathname()
+  const slugMatch = pathname.match(/^\/dashboard\/([^/]+)/)
+  const slug = slugMatch?.[1] || ''
   const [loading, setLoading] = useState(false)
   const [dismissing, setDismissing] = useState(false)
   const [dismissReason, setDismissReason] = useState('')
@@ -223,7 +226,7 @@ export function PRDDetail({ item }: PRDDetailProps) {
     <div className="p-6 max-w-3xl mx-auto">
       {/* Back button */}
       <Link
-        href="/dashboard/roadmap"
+        href={`/dashboard/${slug}/roadmap`}
         className="inline-flex items-center gap-1 text-sm font-medium mb-6 transition-colors hover:opacity-70"
         style={{ color: '#6366f1' }}
       >

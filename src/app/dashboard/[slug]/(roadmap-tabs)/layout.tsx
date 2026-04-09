@@ -1,4 +1,4 @@
-import { TabNavigation } from '../_components/tab-navigation'
+import { TabNavigation } from '../../_components/tab-navigation'
 
 export default function RoadmapTabsLayout({
   children,

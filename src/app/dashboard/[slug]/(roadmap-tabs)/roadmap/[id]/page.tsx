@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
-import { PRDDetail } from '../../../_components/prd-detail'
+import { PRDDetail } from '../../../../_components/prd-detail'
 
 export default async function PRDPage({
   params,

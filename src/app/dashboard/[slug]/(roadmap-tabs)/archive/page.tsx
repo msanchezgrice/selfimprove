@@ -1,8 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { getActiveProject } from '@/lib/supabase/get-active-project'
-import { RoadmapTable } from '../../_components/roadmap-table'
+import { RoadmapTable } from '../../../_components/roadmap-table'
 
-export default async function BuildingPage() {
+export default async function ArchivePage() {
   const project = await getActiveProject()
   const projectId = project?.id ?? null
 
@@ -12,7 +12,7 @@ export default async function BuildingPage() {
         .from('roadmap_items')
         .select('*')
         .eq('project_id', projectId)
-        .in('status', ['approved', 'building'])
+        .in('status', ['archived', 'dismissed'])
         .order('rank', { ascending: true })
     : { data: null }
 
@@ -21,7 +21,7 @@ export default async function BuildingPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-semibold" style={{ color: '#1a1a2e' }}>
-            Building
+            Archive
           </h1>
           <p className="text-sm" style={{ color: '#8b8680' }}>
             {items?.length ?? 0} items
@@ -42,22 +42,51 @@ export default async function BuildingPage() {
             xmlns="http://www.w3.org/2000/svg"
             className="mb-4"
           >
+            <rect
+              x="8"
+              y="8"
+              width="32"
+              height="12"
+              rx="2"
+              stroke="#6366f1"
+              strokeWidth="1.5"
+            />
+            <rect
+              x="8"
+              y="24"
+              width="32"
+              height="12"
+              rx="2"
+              stroke="#6366f1"
+              strokeWidth="1.5"
+            />
             <path
-              d="M14 34L28.5 19.5M34 14C34 14 36 12 34 10C32 8 30 10 30 10L20 20C20 20 16 18 12 22C8 26 12 32 12 32L16 36C16 36 22 40 26 36C30 32 28 28 28 28L38 18C38 18 40 16 38 14C36 12 34 14 34 14Z"
+              d="M20 14H28"
               stroke="#6366f1"
               strokeWidth="1.5"
               strokeLinecap="round"
-              strokeLinejoin="round"
+            />
+            <path
+              d="M20 30H28"
+              stroke="#6366f1"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+            />
+            <path
+              d="M8 40H40"
+              stroke="#6366f1"
+              strokeWidth="1.5"
+              strokeLinecap="round"
             />
           </svg>
           <h2
             className="font-semibold mb-2"
             style={{ fontSize: '1.2rem', color: '#1a1a2e' }}
           >
-            Nothing building yet
+            Nothing archived yet
           </h2>
           <p style={{ fontSize: '0.85rem', color: '#8b8680' }}>
-            Move features to &quot;Building&quot; when you start work
+            Archived features are kept here for reference
           </p>
         </div>
       ) : (

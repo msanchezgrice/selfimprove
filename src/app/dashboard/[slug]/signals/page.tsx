@@ -1,9 +1,14 @@
 import { createClient } from '@/lib/supabase/server'
 import { getActiveProject } from '@/lib/supabase/get-active-project'
-import { SignalsFeed } from '../_components/signals-feed'
-import { SignalsEmpty } from '../_components/signals-empty'
+import { SignalsFeed } from '../../_components/signals-feed'
+import { SignalsEmpty } from '../../_components/signals-empty'
 
-export default async function SignalsPage() {
+export default async function SignalsPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>
+}) {
+  const { slug } = await params
   const project = await getActiveProject()
   const supabase = await createClient()
 
@@ -28,7 +33,7 @@ export default async function SignalsPage() {
       </div>
 
       {!signals || signals.length === 0 ? (
-        <SignalsEmpty />
+        <SignalsEmpty slug={slug} />
       ) : (
         <SignalsFeed signals={signals} />
       )}

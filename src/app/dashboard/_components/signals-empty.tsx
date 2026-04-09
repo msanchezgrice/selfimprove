@@ -1,6 +1,6 @@
 import Link from 'next/link'
 
-export function SignalsEmpty() {
+export function SignalsEmpty({ slug }: { slug: string }) {
   return (
     <div
       className="flex flex-col items-center justify-center rounded-xl border bg-white px-6 py-16 text-center"
@@ -59,7 +59,7 @@ export function SignalsEmpty() {
       </p>
 
       <Link
-        href="/dashboard/settings"
+        href={`/dashboard/${slug}/settings`}
         className="mt-6 inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
         style={{ backgroundColor: '#6366f1' }}
       >

@@ -3,17 +3,25 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
-const tabs = [
-  { href: '/dashboard/roadmap', label: 'Roadmap' },
-  { href: '/dashboard/building', label: 'Building' },
-  { href: '/dashboard/shipped', label: 'Shipped' },
-  { href: '/dashboard/signals', label: 'Signals' },
-  { href: '/dashboard/briefs', label: 'Briefs' },
-  { href: '/dashboard/archive', label: 'Archive' },
+const tabDefs = [
+  { path: 'roadmap', label: 'Roadmap' },
+  { path: 'building', label: 'Building' },
+  { path: 'shipped', label: 'Shipped' },
+  { path: 'signals', label: 'Signals' },
+  { path: 'briefs', label: 'Briefs' },
+  { path: 'archive', label: 'Archive' },
 ]
 
 export function TabNavigation() {
   const pathname = usePathname()
+  // Extract slug from /dashboard/[slug]/...
+  const slugMatch = pathname.match(/^\/dashboard\/([^/]+)/)
+  const slug = slugMatch?.[1] || ''
+
+  const tabs = tabDefs.map((t) => ({
+    href: `/dashboard/${slug}/${t.path}`,
+    label: t.label,
+  }))
 
   return (
     <div

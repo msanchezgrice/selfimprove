@@ -3,7 +3,7 @@ import { getUserOrg } from '@/lib/supabase/auth-helpers'
 import { getActiveProject } from '@/lib/supabase/get-active-project'
 import { redirect } from 'next/navigation'
 import type { Tier } from '@/lib/types/database'
-import { SettingsForm } from '../_components/settings-form'
+import { SettingsForm } from '../../_components/settings-form'
 
 export default async function SettingsPage() {
   const userOrg = await getUserOrg()

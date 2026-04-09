@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { getActiveProject } from '@/lib/supabase/get-active-project'
-import { RoadmapTable } from '../../_components/roadmap-table'
+import { RoadmapTable } from '../../../_components/roadmap-table'
 
 export default async function ShippedPage() {
   const project = await getActiveProject()

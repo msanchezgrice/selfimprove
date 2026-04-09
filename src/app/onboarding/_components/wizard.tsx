@@ -36,8 +36,9 @@ export function OnboardingWizard({ orgId }: OnboardingWizardProps) {
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
 
-  // Project ID created in step 1
+  // Project ID and slug created in step 1
   const [projectId, setProjectId] = useState<string | null>(null)
+  const [projectSlug, setProjectSlug] = useState<string | null>(null)
 
   // Product context from AI analysis (fires after step 1)
   const [productContext, setProductContext] = useState<{
@@ -95,6 +96,7 @@ export function OnboardingWizard({ orgId }: OnboardingWizardProps) {
 
       const { id } = await res.json()
       setProjectId(id)
+      setProjectSlug(slugify(projectName))
 
       // Fire analysis in background (don't await — let it complete while user goes through steps 2-3)
       setAnalyzingContext(true)
@@ -146,7 +148,7 @@ export function OnboardingWizard({ orgId }: OnboardingWizardProps) {
       if (projectId) {
         document.cookie = `selfimprove_project=${projectId};path=/;max-age=31536000`
       }
-      router.push('/dashboard')
+      router.push(projectSlug ? `/dashboard/${projectSlug}/roadmap` : '/dashboard')
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('Onboarding error:', err)

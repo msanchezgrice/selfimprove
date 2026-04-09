@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/browser'
 import type { RoadmapItemRow, RoadmapCategory, RoadmapScope } from '@/lib/types/database'
 
@@ -90,11 +90,12 @@ function SortIndicator({ field, sortField, sortDir }: { field: string; sortField
 
 /* ---------- Desktop table ---------- */
 
-function DesktopTable({ items, onReorder, sortField, sortDir, onSort }: RoadmapTableProps & {
+function DesktopTable({ items, onReorder, sortField, sortDir, onSort, slug }: RoadmapTableProps & {
   onReorder?: (fromIndex: number, toIndex: number) => void
   sortField: string
   sortDir: 'asc' | 'desc'
   onSort: (field: string) => void
+  slug: string
 }) {
   const router = useRouter()
   const [dragIndex, setDragIndex] = useState<number | null>(null)
@@ -151,7 +152,7 @@ function DesktopTable({ items, onReorder, sortField, sortDir, onSort }: RoadmapT
                   setDragIndex(null)
                   setDragOverIndex(null)
                 }}
-                onClick={() => router.push(`/dashboard/roadmap/${item.id}`)}
+                onClick={() => router.push(`/dashboard/${slug}/roadmap/${item.id}`)}
                 className={`border-t cursor-pointer transition-colors duration-100 hover:bg-[#faf8f5]/60${dragIndex === index ? ' opacity-50' : ''}${dragOverIndex === index && dragIndex !== index ? ' bg-indigo-50/60' : ''}`}
                 style={{ borderColor: '#e8e4de' }}
               >
@@ -224,7 +225,7 @@ function DesktopTable({ items, onReorder, sortField, sortDir, onSort }: RoadmapT
                 </td>
                 <td className="px-3 py-3 text-right">
                   <Link
-                    href={`/dashboard/roadmap/${item.id}`}
+                    href={`/dashboard/${slug}/roadmap/${item.id}`}
                     onClick={(e) => e.stopPropagation()}
                     className="text-xs font-medium transition-colors hover:opacity-70"
                     style={{ color: '#6366f1' }}
@@ -244,7 +245,7 @@ function DesktopTable({ items, onReorder, sortField, sortDir, onSort }: RoadmapT
 
 /* ---------- Mobile card view ---------- */
 
-function MobileCards({ items }: RoadmapTableProps) {
+function MobileCards({ items, slug }: RoadmapTableProps & { slug: string }) {
   return (
     <div className="md:hidden space-y-3">
       {items.map((item) => {
@@ -253,7 +254,7 @@ function MobileCards({ items }: RoadmapTableProps) {
         return (
           <Link
             key={item.id}
-            href={`/dashboard/roadmap/${item.id}`}
+            href={`/dashboard/${slug}/roadmap/${item.id}`}
             className="block rounded-xl border bg-white p-4 transition-colors duration-100 hover:bg-[#faf8f5]/60"
             style={{ borderColor: '#e8e4de' }}
           >
@@ -299,6 +300,9 @@ function MobileCards({ items }: RoadmapTableProps) {
 
 export function RoadmapTable({ items }: RoadmapTableProps) {
   const router = useRouter()
+  const pathname = usePathname()
+  const slugMatch = pathname.match(/^\/dashboard\/([^/]+)/)
+  const slug = slugMatch?.[1] || ''
   const [localItems, setLocalItems] = useState(items)
   const [sortField, setSortField] = useState<string>('rank')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
@@ -361,8 +365,9 @@ export function RoadmapTable({ items }: RoadmapTableProps) {
         sortField={sortField}
         sortDir={sortDir}
         onSort={handleSort}
+        slug={slug}
       />
-      <MobileCards items={sortedItems} />
+      <MobileCards items={sortedItems} slug={slug} />
     </div>
   )
 }
