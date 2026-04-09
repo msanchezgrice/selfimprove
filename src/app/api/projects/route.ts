@@ -5,6 +5,7 @@ import { seedProjectSignals } from '@/lib/ai/cold-start'
 import { generateRoadmap } from '@/lib/ai/generate-roadmap'
 import { importGitHubIssues } from '@/lib/ai/import-github-issues'
 import { getGitHubToken } from '@/lib/github/get-token'
+import { queueScanJob } from '@/lib/ai/queue-build'
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -84,6 +85,9 @@ export async function POST(request: Request) {
         const repoName = repoMatch[1].replace(/\.git$/, '')
         importGitHubIssues(project.id, repoName, providerToken).catch(() => {})
       }
+
+      // Queue a codebase scan job (non-blocking)
+      queueScanJob(project.id, repo_url, providerToken).catch(() => {})
     }
   }
 

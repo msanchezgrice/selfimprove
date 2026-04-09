@@ -16,6 +16,7 @@ const categoryConfig: Record<string, { bg: string; text: string; label: string }
 }
 
 const buildStatusConfig: Record<string, { label: string; color: string; bg: string }> = {
+  queued: { label: 'Queued', color: '#8b8680', bg: '#f5f0eb' },
   approved: { label: 'Ready to build', color: '#6366f1', bg: '#eef2ff' },
   pr_creating: { label: 'Creating PR...', color: '#d97706', bg: '#fffbeb' },
   pr_created: { label: 'PR open', color: '#0891b2', bg: '#ecfeff' },

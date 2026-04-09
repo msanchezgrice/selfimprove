@@ -7,6 +7,9 @@ export type RoadmapStatus = 'proposed' | 'approved' | 'building' | 'shipped' | '
 export type RoadmapScope = 'small' | 'medium' | 'large';
 export type ApprovalMethod = 'manual' | 'auto_approved' | 'auto_merged';
 export type ShippedChangeStatus = 'pending_review' | 'approved' | 'merged' | 'reverted';
+export type BuildJobStatus = 'pending' | 'running' | 'completed' | 'failed';
+export type BuildJobType = 'implement' | 'scan';
+export type BuildStatus = 'queued' | 'approved' | 'pr_creating' | 'pr_created' | 'merged';
 export type RoiFocus = 'balanced' | 'impact' | 'effort' | 'confidence' | 'bugs' | 'ux' | 'features' | 'retention' | 'revenue' | 'reach';
 export type WidgetPosition = 'bottom-right' | 'bottom-left';
 export type WidgetStyle = 'pill' | 'button' | 'tab';
@@ -181,6 +184,24 @@ export type ShippedChangeInsert = Omit<ShippedChangeRow, 'id' | 'created_at' | '
 };
 
 export type ShippedChangeUpdate = Partial<ShippedChangeInsert>;
+
+// ---------------------------------------------------------------------------
+// build_jobs
+// ---------------------------------------------------------------------------
+
+export type BuildJobRow = BaseRow & {
+  roadmap_item_id: string | null;
+  project_id: string;
+  job_type: BuildJobType;
+  status: BuildJobStatus;
+  repo_url: string;
+  github_token: string;
+  prompt: string;
+  result: Record<string, unknown> | null;
+  error: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+};
 
 // ---------------------------------------------------------------------------
 // project_settings
