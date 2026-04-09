@@ -96,13 +96,18 @@ export function StepAddWidget({ projectId }: StepAddWidgetProps) {
   const pid = projectId ?? 'proj_xxx'
   const [tags, setTags] = useState('bug, confusing, slow, missing feature, love it')
 
-  const scriptSnippet = `<script src="https://selfimprove.dev/widget.js"\n  data-project="${pid}"></script>`
+  const widgetHost = 'https://selfimprove-iota.vercel.app'
+  const dashboardUrl = `${widgetHost}/dashboard`
+
+  const scriptSnippet = `<script src="${widgetHost}/widget.js"\n  data-project="${pid}"></script>`
   const reactSnippet = `// npm install @selfimprove/react\nimport { FeedbackWidget } from '@selfimprove/react'\n\n<FeedbackWidget projectId="${pid}" />`
-  const agentPrompt = `Add the SelfImprove feedback widget to my app. Add this script tag just before </body> in my root layout: <script src='https://selfimprove.dev/widget.js' data-project='${pid}'></script>. That's it, one line.`
+  const agentPrompt = `Add the SelfImprove feedback widget to my app. Add this script tag just before </body> in my root layout: <script src='${widgetHost}/widget.js' data-project='${pid}'></script>. That's it, one line.`
 
   const agentInstructions = `## SelfImprove Integration
-This project uses SelfImprove (selfimprove.dev) for AI product management.
-Dashboard: https://selfimprove.dev/p/${pid}
+This project uses SelfImprove for AI product management.
+Dashboard: ${dashboardUrl}
+Widget: ${widgetHost}/widget.js (project: ${pid})
+Signals API: ${widgetHost}/api/signals
 
 ### Context for coding agents
 - A feedback widget is embedded on all pages (bottom-right corner)
@@ -110,9 +115,9 @@ Dashboard: https://selfimprove.dev/p/${pid}
 - Each roadmap item has: evidence trail, thinking traces, acceptance criteria, and a full PRD
 - When implementing features from the roadmap, follow the PRD's acceptance criteria
 - Reference the roadmap item in commit messages: "Implements roadmap #<id>"
-- The feedback widget is at /api/feedback (POST) if you need to test it`
+- POST feedback to ${widgetHost}/api/signals with {project_id, type, content, metadata}`
 
-  const agentQuickPrompt = `Check the SelfImprove dashboard at selfimprove.dev/p/${pid} for the highest-priority roadmap item. Read the PRD and acceptance criteria, then implement it.`
+  const agentQuickPrompt = `Check the SelfImprove dashboard at ${dashboardUrl} for the highest-priority roadmap item. Read the PRD and acceptance criteria, then implement it.`
 
   return (
     <div>
@@ -176,7 +181,7 @@ Dashboard: https://selfimprove.dev/p/${pid}
         <span style={{ color: '#7dd3fc' }}>&lt;script</span>{' '}
         <span style={{ color: '#fbbf24' }}>src</span>
         <span style={{ color: '#94a3b8' }}>=</span>
-        <span style={{ color: '#a5f3c4' }}>&quot;https://selfimprove.dev/widget.js&quot;</span>
+        <span style={{ color: '#a5f3c4' }}>&quot;{widgetHost}/widget.js&quot;</span>
         {'\n'}
         {'  '}
         <span style={{ color: '#fbbf24' }}>data-project</span>
