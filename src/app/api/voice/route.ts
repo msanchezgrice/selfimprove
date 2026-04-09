@@ -20,10 +20,17 @@ export async function POST(request: Request) {
   if (audioFile && !transcript) {
     try {
       const buffer = await audioFile.arrayBuffer()
-      transcript = await transcribeAudio(buffer, audioFile.type)
-    } catch {
+      if (buffer.byteLength === 0) {
+        return NextResponse.json(
+          { error: 'Empty audio file' },
+          { status: 400 },
+        )
+      }
+      transcript = await transcribeAudio(buffer, audioFile.type || 'audio/webm')
+    } catch (err) {
+      console.error('[voice] Transcription failed:', err instanceof Error ? err.message : err)
       return NextResponse.json(
-        { error: 'Failed to transcribe audio' },
+        { error: `Transcription failed: ${err instanceof Error ? err.message : 'Unknown error'}` },
         { status: 422 },
       )
     }
@@ -60,6 +67,8 @@ export async function POST(request: Request) {
       content: transcript,
       metadata: {
         page_url: formData.get('page_url') || '',
+        page_title: formData.get('page_title') || '',
+        viewport: formData.get('viewport') || '',
         source: 'voice_companion',
       },
       weight: SIGNAL_WEIGHTS.voice,

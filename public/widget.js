@@ -326,7 +326,13 @@
           metadata: {
             tags: selectedTags,
             page_url: window.location.href,
+            page_title: document.title,
+            referrer: document.referrer,
+            viewport: window.innerWidth + 'x' + window.innerHeight,
+            scroll_depth: Math.round((window.scrollY / (document.body.scrollHeight - window.innerHeight || 1)) * 100),
+            selected_text: (window.getSelection() || '').toString().slice(0, 500),
             user_agent: navigator.userAgent,
+            timestamp_local: new Date().toISOString(),
           },
         }),
       });
@@ -371,6 +377,8 @@
             form.append('audio', blob, 'feedback.webm');
             form.append('project_id', config.projectId);
             form.append('page_url', window.location.href);
+            form.append('page_title', document.title);
+            form.append('viewport', window.innerWidth + 'x' + window.innerHeight);
 
             const res = await fetch(`${config.api}/api/voice`, {
               method: 'POST',
