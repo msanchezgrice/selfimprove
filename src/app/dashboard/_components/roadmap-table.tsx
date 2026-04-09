@@ -1,7 +1,9 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/browser'
 import type { RoadmapItemRow, RoadmapCategory, RoadmapScope } from '@/lib/types/database'
 
 type RoadmapTableProps = {
@@ -78,8 +80,10 @@ function ConfidenceBar({ value }: { value: number }) {
 
 /* ---------- Desktop table ---------- */
 
-function DesktopTable({ items }: RoadmapTableProps) {
+function DesktopTable({ items, onReorder }: RoadmapTableProps & { onReorder?: (fromIndex: number, toIndex: number) => void }) {
   const router = useRouter()
+  const [dragIndex, setDragIndex] = useState<number | null>(null)
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
 
   return (
     <div className="hidden md:block overflow-x-auto">
@@ -89,6 +93,7 @@ function DesktopTable({ items }: RoadmapTableProps) {
             className="sticky top-0 z-10 text-left text-xs font-medium"
             style={{ backgroundColor: '#faf8f5', color: '#8b8680' }}
           >
+            <th className="px-3 py-3 w-8" />
             <th className="px-3 py-3 w-10">#</th>
             <th className="px-3 py-3 min-w-[180px]">Item</th>
             <th className="px-3 py-3">Category</th>
@@ -104,17 +109,56 @@ function DesktopTable({ items }: RoadmapTableProps) {
           </tr>
         </thead>
         <tbody>
-          {items.map((item) => {
+          {items.map((item, index) => {
             const cat = categoryConfig[item.category]
             const scope = scopeConfig[item.scope]
 
             return (
               <tr
                 key={item.id}
+                draggable
+                onDragStart={() => setDragIndex(index)}
+                onDragOver={(e) => {
+                  e.preventDefault()
+                  setDragOverIndex(index)
+                }}
+                onDragLeave={() => setDragOverIndex(null)}
+                onDrop={() => {
+                  if (dragIndex !== null && dragIndex !== index) {
+                    onReorder?.(dragIndex, index)
+                  }
+                  setDragIndex(null)
+                  setDragOverIndex(null)
+                }}
+                onDragEnd={() => {
+                  setDragIndex(null)
+                  setDragOverIndex(null)
+                }}
                 onClick={() => router.push(`/dashboard/roadmap/${item.id}`)}
-                className="border-t cursor-pointer transition-colors duration-100 hover:bg-[#faf8f5]/60"
+                className={`border-t cursor-pointer transition-colors duration-100 hover:bg-[#faf8f5]/60${dragIndex === index ? ' opacity-50' : ''}${dragOverIndex === index && dragIndex !== index ? ' bg-indigo-50/60' : ''}`}
                 style={{ borderColor: '#e8e4de' }}
               >
+                <td
+                  className="px-2 py-3 cursor-grab active:cursor-grabbing"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#8b8680"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  >
+                    <circle cx="9" cy="5" r="1" fill="#8b8680" />
+                    <circle cx="15" cy="5" r="1" fill="#8b8680" />
+                    <circle cx="9" cy="12" r="1" fill="#8b8680" />
+                    <circle cx="15" cy="12" r="1" fill="#8b8680" />
+                    <circle cx="9" cy="19" r="1" fill="#8b8680" />
+                    <circle cx="15" cy="19" r="1" fill="#8b8680" />
+                  </svg>
+                </td>
                 <td className="px-3 py-3 tabular-nums" style={{ color: '#8b8680' }}>
                   {item.rank}
                 </td>
@@ -165,11 +209,11 @@ function DesktopTable({ items }: RoadmapTableProps) {
                   <Link
                     href={`/dashboard/roadmap/${item.id}`}
                     onClick={(e) => e.stopPropagation()}
-                    className="text-sm transition-colors hover:opacity-70"
+                    className="text-xs font-medium transition-colors hover:opacity-70"
                     style={{ color: '#6366f1' }}
                     aria-label={`View ${item.title}`}
                   >
-                    &rarr;
+                    Open
                   </Link>
                 </td>
               </tr>
@@ -237,13 +281,38 @@ function MobileCards({ items }: RoadmapTableProps) {
 /* ---------- Exported component ---------- */
 
 export function RoadmapTable({ items }: RoadmapTableProps) {
+  const router = useRouter()
+  const [localItems, setLocalItems] = useState(items)
+
+  const handleReorder = async (fromIndex: number, toIndex: number) => {
+    const reordered = [...localItems]
+    const [moved] = reordered.splice(fromIndex, 1)
+    reordered.splice(toIndex, 0, moved)
+
+    // Update local state immediately for responsiveness
+    setLocalItems(reordered)
+
+    // Persist new ranks to DB
+    const supabase = createClient()
+    await Promise.all(
+      reordered.map((item, i) =>
+        supabase
+          .from('roadmap_items')
+          .update({ rank: i + 1 })
+          .eq('id', item.id)
+      )
+    )
+
+    router.refresh()
+  }
+
   return (
     <div
       className="rounded-xl border bg-white overflow-hidden"
       style={{ borderColor: '#e8e4de' }}
     >
-      <DesktopTable items={items} />
-      <MobileCards items={items} />
+      <DesktopTable items={localItems} onReorder={handleReorder} />
+      <MobileCards items={localItems} />
     </div>
   )
 }

@@ -190,9 +190,10 @@
       }
       .si-trigger--tab{display:none;}
       .si-panel,.si-panel--tab{
-        left:0;right:0;bottom:0;top:auto;
-        width:100%;max-height:85vh;border-radius:16px 16px 0 0;
+        left:0;right:0;bottom:48px;top:auto;
+        width:100%;max-height:calc(100vh - 80px);border-radius:16px 16px 0 0;
         transform:translateY(100%);
+        overflow-y:auto;
       }
       .si-panel.si-open,.si-panel--tab.si-open{transform:translateY(0);}
     }

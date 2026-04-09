@@ -71,7 +71,7 @@ const PRD_SCHEMA = {
   ],
 }
 
-export async function generatePRD(roadmapItemId: string): Promise<PRDContent> {
+export async function generatePRD(roadmapItemId: string, feedback?: string): Promise<PRDContent> {
   const supabase = createAdminClient()
 
   const { data: item } = await supabase
@@ -138,7 +138,7 @@ ${filesToModify.join('\n- ')}
 ## Known Risks
 ${risks.join('\n- ')}
 
-Generate a complete PRD with problem statement, solution approach, detailed acceptance criteria, technical implementation plan, file-by-file changes, test requirements, and rollback plan.`
+Generate a complete PRD with problem statement, solution approach, detailed acceptance criteria, technical implementation plan, file-by-file changes, test requirements, and rollback plan.${feedback ? `\n\n## Refinement Feedback\nThe user has provided the following feedback on the previous PRD. Incorporate these changes:\n${feedback}` : ''}`
 
   const prd = await callClaude<PRDContent>({
     prompt,

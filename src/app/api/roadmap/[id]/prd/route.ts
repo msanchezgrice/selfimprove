@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { generatePRD } from '@/lib/ai/generate-prd'
 
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   ctx: RouteContext<'/api/roadmap/[id]/prd'>,
 ) {
   const { id } = await ctx.params
@@ -17,6 +17,10 @@ export async function POST(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  // Parse optional feedback from request body
+  const body = await req.json().catch(() => ({}))
+  const feedback = (body as Record<string, unknown>)?.feedback as string | undefined
+
   // Verify user has access to this roadmap item's project
   const { data: item } = await supabase
     .from('roadmap_items')
@@ -28,13 +32,13 @@ export async function POST(
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
 
-  // If PRD already exists, return it
-  if (item.prd_content) {
+  // If PRD already exists and no feedback for refinement, return cached
+  if (item.prd_content && !feedback) {
     return NextResponse.json({ prd: item.prd_content, cached: true })
   }
 
   try {
-    const prd = await generatePRD(id)
+    const prd = await generatePRD(id, feedback)
     return NextResponse.json({ prd, cached: false })
   } catch (err) {
     return NextResponse.json(

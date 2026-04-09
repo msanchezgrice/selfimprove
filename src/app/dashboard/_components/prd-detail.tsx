@@ -124,21 +124,29 @@ export function PRDDetail({ item }: PRDDetailProps) {
   const [dismissing, setDismissing] = useState(false)
   const [dismissReason, setDismissReason] = useState('')
   const [localItem, setLocalItem] = useState(item)
+  const [showRefineInput, setShowRefineInput] = useState(false)
+  const [refineFeedback, setRefineFeedback] = useState('')
+  const [feedbackDirection, setFeedbackDirection] = useState<'up' | 'down' | null>(null)
+  const [feedbackNote, setFeedbackNote] = useState('')
 
   const prd = localItem.prd_content as PRDContent | null
   const cat = categoryConfig[localItem.category]
   const scope = scopeConfig[localItem.scope]
   const status = statusConfig[localItem.status]
 
-  async function handleGeneratePRD() {
+  async function handleGeneratePRD(feedback?: string) {
     setLoading(true)
     try {
       const res = await fetch(`/api/roadmap/${localItem.id}/prd`, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(feedback ? { feedback } : {}),
       })
       if (res.ok) {
         const data = await res.json()
         setLocalItem((prev) => ({ ...prev, prd_content: data.prd }))
+        setShowRefineInput(false)
+        setRefineFeedback('')
       }
     } finally {
       setLoading(false)
@@ -173,7 +181,7 @@ export function PRDDetail({ item }: PRDDetailProps) {
     }
   }
 
-  async function handleFeedback(direction: 'up' | 'down') {
+  async function handleFeedback(direction: 'up' | 'down', note: string) {
     const res = await fetch(`/api/roadmap/${localItem.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -189,6 +197,8 @@ export function PRDDetail({ item }: PRDDetailProps) {
         feedback_up: direction === 'up' ? prev.feedback_up + 1 : prev.feedback_up,
         feedback_down: direction === 'down' ? prev.feedback_down + 1 : prev.feedback_down,
       }))
+      setFeedbackDirection(null)
+      setFeedbackNote('')
     }
   }
 
@@ -379,7 +389,7 @@ export function PRDDetail({ item }: PRDDetailProps) {
             No PRD has been generated for this item yet.
           </p>
           <button
-            onClick={handleGeneratePRD}
+            onClick={() => handleGeneratePRD()}
             disabled={loading}
             className="px-4 py-2 rounded-lg text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50 cursor-pointer"
             style={{ backgroundColor: '#6366f1' }}
@@ -391,16 +401,47 @@ export function PRDDetail({ item }: PRDDetailProps) {
 
       {/* Action buttons */}
       <div className="flex flex-wrap items-center gap-3">
-        {/* Generate / Regenerate */}
-        {prd && (
+        {/* Refine PRD */}
+        {prd && !showRefineInput && (
           <button
-            onClick={handleGeneratePRD}
+            onClick={() => setShowRefineInput(true)}
             disabled={loading}
             className="px-4 py-2 rounded-lg text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50 cursor-pointer"
             style={{ backgroundColor: '#6366f1' }}
           >
-            {loading ? 'Generating...' : 'Regenerate PRD'}
+            Refine PRD
           </button>
+        )}
+
+        {prd && showRefineInput && (
+          <div className="flex items-start gap-2 flex-1 min-w-[260px]">
+            <textarea
+              value={refineFeedback}
+              onChange={(e) => setRefineFeedback(e.target.value)}
+              placeholder="Describe how to refine the PRD..."
+              rows={2}
+              className="flex-1 px-3 py-2 rounded-lg border text-sm resize-none"
+              style={{ borderColor: '#e8e4de', color: '#1a1a2e' }}
+            />
+            <button
+              onClick={() => handleGeneratePRD(refineFeedback)}
+              disabled={loading || !refineFeedback.trim()}
+              className="px-3 py-2 rounded-lg text-sm font-medium text-white cursor-pointer disabled:opacity-50"
+              style={{ backgroundColor: '#6366f1' }}
+            >
+              {loading ? 'Refining...' : 'Submit'}
+            </button>
+            <button
+              onClick={() => {
+                setShowRefineInput(false)
+                setRefineFeedback('')
+              }}
+              className="px-3 py-2 rounded-lg text-sm font-medium cursor-pointer"
+              style={{ color: '#8b8680' }}
+            >
+              Cancel
+            </button>
+          </div>
         )}
 
         {/* Approve */}
@@ -456,9 +497,9 @@ export function PRDDetail({ item }: PRDDetailProps) {
         {/* Feedback buttons */}
         <div className="flex items-center gap-1 ml-auto">
           <button
-            onClick={() => handleFeedback('up')}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-sm transition-colors hover:bg-green-50 cursor-pointer"
-            style={{ borderColor: '#e8e4de', color: '#059669' }}
+            onClick={() => setFeedbackDirection(feedbackDirection === 'up' ? null : 'up')}
+            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-sm transition-colors hover:bg-green-50 cursor-pointer${feedbackDirection === 'up' ? ' bg-green-50' : ''}`}
+            style={{ borderColor: feedbackDirection === 'up' ? '#059669' : '#e8e4de', color: '#059669' }}
             aria-label="Thumbs up"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -468,9 +509,9 @@ export function PRDDetail({ item }: PRDDetailProps) {
             <span className="tabular-nums text-xs">{localItem.feedback_up}</span>
           </button>
           <button
-            onClick={() => handleFeedback('down')}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-sm transition-colors hover:bg-red-50 cursor-pointer"
-            style={{ borderColor: '#e8e4de', color: '#dc2626' }}
+            onClick={() => setFeedbackDirection(feedbackDirection === 'down' ? null : 'down')}
+            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-sm transition-colors hover:bg-red-50 cursor-pointer${feedbackDirection === 'down' ? ' bg-red-50' : ''}`}
+            style={{ borderColor: feedbackDirection === 'down' ? '#dc2626' : '#e8e4de', color: '#dc2626' }}
             aria-label="Thumbs down"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -481,6 +522,41 @@ export function PRDDetail({ item }: PRDDetailProps) {
           </button>
         </div>
       </div>
+
+      {/* Feedback note input */}
+      {feedbackDirection && (
+        <div
+          className="mt-3 flex items-start gap-2 rounded-lg border p-3"
+          style={{ borderColor: feedbackDirection === 'up' ? '#bbf7d0' : '#fecaca', backgroundColor: feedbackDirection === 'up' ? '#f0fdf4' : '#fef2f2' }}
+        >
+          <input
+            type="text"
+            value={feedbackNote}
+            onChange={(e) => setFeedbackNote(e.target.value)}
+            placeholder={feedbackDirection === 'down' ? 'Reason for downvote (required)' : 'Add a note (optional)'}
+            className="flex-1 px-3 py-1.5 rounded-lg border text-sm"
+            style={{ borderColor: '#e8e4de', color: '#1a1a2e' }}
+          />
+          <button
+            onClick={() => handleFeedback(feedbackDirection, feedbackNote)}
+            disabled={feedbackDirection === 'down' && !feedbackNote.trim()}
+            className="px-3 py-1.5 rounded-lg text-sm font-medium text-white cursor-pointer disabled:opacity-50"
+            style={{ backgroundColor: feedbackDirection === 'up' ? '#059669' : '#dc2626' }}
+          >
+            Submit
+          </button>
+          <button
+            onClick={() => {
+              setFeedbackDirection(null)
+              setFeedbackNote('')
+            }}
+            className="px-3 py-1.5 rounded-lg text-sm font-medium cursor-pointer"
+            style={{ color: '#8b8680' }}
+          >
+            Cancel
+          </button>
+        </div>
+      )}
 
       {/* Dismiss info banner */}
       {localItem.status === 'dismissed' && localItem.dismiss_reason && (
