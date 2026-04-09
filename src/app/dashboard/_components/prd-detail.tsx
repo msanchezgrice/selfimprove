@@ -136,8 +136,7 @@ export function PRDDetail({ item }: PRDDetailProps) {
   const [refineFeedback, setRefineFeedback] = useState('')
   const [feedbackDirection, setFeedbackDirection] = useState<'up' | 'down' | null>(null)
   const [feedbackNote, setFeedbackNote] = useState('')
-  const [creatingIssue, setCreatingIssue] = useState(false)
-  const [issueUrl, setIssueUrl] = useState<string | null>(() => {
+  const [issueUrl] = useState<string | null>(() => {
     const trail = (item.evidence_trail as Array<Record<string, unknown>>) || []
     const existing = trail.find(e => e.type === 'github_issue')
     return (existing?.url as string | null) ?? null
@@ -216,19 +215,6 @@ export function PRDDetail({ item }: PRDDetailProps) {
     }
   }
 
-  const handleCreateIssue = async () => {
-    setCreatingIssue(true)
-    try {
-      const res = await fetch(`/api/roadmap/${item.id}/github-issue`, { method: 'POST' })
-      const data = await res.json()
-      if (res.ok) {
-        setIssueUrl(data.url)
-      }
-    } catch {
-      // Silently handle network errors
-    }
-    setCreatingIssue(false)
-  }
 
   return (
     <div className="p-6 max-w-3xl mx-auto">
@@ -483,8 +469,8 @@ export function PRDDetail({ item }: PRDDetailProps) {
           </button>
         )}
 
-        {/* GitHub Issue */}
-        {issueUrl ? (
+        {/* GitHub Issue link (auto-created on approve) */}
+        {issueUrl && (
           <a
             href={issueUrl}
             target="_blank"
@@ -495,16 +481,6 @@ export function PRDDetail({ item }: PRDDetailProps) {
             <GitHubIcon size={16} />
             View Issue #{issueUrl.split('/').pop()}
           </a>
-        ) : (
-          <button
-            onClick={handleCreateIssue}
-            disabled={creatingIssue}
-            className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium border cursor-pointer disabled:opacity-50"
-            style={{ borderColor: '#e8e4de', color: '#1a1a2e' }}
-          >
-            <GitHubIcon size={16} />
-            {creatingIssue ? 'Creating...' : 'Create GitHub Issue'}
-          </button>
         )}
 
         {/* Dismiss */}

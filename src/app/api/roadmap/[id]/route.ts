@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { createGitHubIssue } from '@/lib/ai/github-issue'
 
 export async function PATCH(
   req: Request,
@@ -57,6 +58,17 @@ export async function PATCH(
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  // Auto-create GitHub Issue when approved
+  if (updates.status === 'approved') {
+    const { data: { session } } = await supabase.auth.getSession()
+    const providerToken = session?.provider_token
+    if (providerToken) {
+      createGitHubIssue(id, providerToken).catch(err => {
+        console.error('[approve] GitHub issue creation failed:', err)
+      })
+    }
   }
 
   return NextResponse.json({ id, ...updates })
