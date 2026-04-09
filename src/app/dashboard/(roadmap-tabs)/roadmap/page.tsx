@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
-import { RoadmapTable } from '../_components/roadmap-table'
-import { RoadmapEmpty } from '../_components/roadmap-empty'
+import { RoadmapTable } from '../../_components/roadmap-table'
+import { RoadmapEmpty } from '../../_components/roadmap-empty'
 
 export default async function RoadmapPage() {
   const supabase = await createClient()

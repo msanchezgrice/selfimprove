@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
-import { RoadmapTable } from '../_components/roadmap-table'
+import { RoadmapTable } from '../../_components/roadmap-table'
 
-export default async function ArchivePage() {
+export default async function ShippedPage() {
   const supabase = await createClient()
 
   // Get user's first project
@@ -27,7 +27,7 @@ export default async function ArchivePage() {
         .from('roadmap_items')
         .select('*')
         .eq('project_id', projectId)
-        .in('status', ['archived', 'dismissed'])
+        .in('status', ['shipped'])
         .order('rank', { ascending: true })
     : { data: null }
 
@@ -36,7 +36,7 @@ export default async function ArchivePage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-semibold" style={{ color: '#1a1a2e' }}>
-            Archive
+            Shipped
           </h1>
           <p className="text-sm" style={{ color: '#8b8680' }}>
             {items?.length ?? 0} items
@@ -57,51 +57,37 @@ export default async function ArchivePage() {
             xmlns="http://www.w3.org/2000/svg"
             className="mb-4"
           >
-            <rect
-              x="8"
-              y="8"
-              width="32"
-              height="12"
-              rx="2"
-              stroke="#6366f1"
-              strokeWidth="1.5"
-            />
-            <rect
-              x="8"
-              y="24"
-              width="32"
-              height="12"
-              rx="2"
-              stroke="#6366f1"
-              strokeWidth="1.5"
-            />
             <path
-              d="M20 14H28"
+              d="M24 8C24 8 20 16 20 24C20 32 24 40 24 40C24 40 28 32 28 24C28 16 24 8 24 8Z"
               stroke="#6366f1"
               strokeWidth="1.5"
               strokeLinecap="round"
+              strokeLinejoin="round"
             />
             <path
-              d="M20 30H28"
+              d="M20 24L12 28L16 32L20 28"
               stroke="#6366f1"
               strokeWidth="1.5"
               strokeLinecap="round"
+              strokeLinejoin="round"
             />
             <path
-              d="M8 40H40"
+              d="M28 24L36 28L32 32L28 28"
               stroke="#6366f1"
               strokeWidth="1.5"
               strokeLinecap="round"
+              strokeLinejoin="round"
             />
+            <circle cx="24" cy="18" r="2" stroke="#6366f1" strokeWidth="1.5" />
           </svg>
           <h2
             className="font-semibold mb-2"
             style={{ fontSize: '1.2rem', color: '#1a1a2e' }}
           >
-            Nothing archived yet
+            Nothing shipped yet
           </h2>
           <p style={{ fontSize: '0.85rem', color: '#8b8680' }}>
-            Archived features are kept here for reference
+            Shipped features will appear here
           </p>
         </div>
       ) : (

@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { RoadmapTable } from '../_components/roadmap-table'
+import { RoadmapTable } from '../../_components/roadmap-table'
 
 export default async function BuildingPage() {
   const supabase = await createClient()
