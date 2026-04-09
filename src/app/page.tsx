@@ -1,4 +1,7 @@
-export default function Home() {
+import { getUser } from '@/lib/supabase/auth-helpers'
+
+export default async function Home() {
+  const user = await getUser()
   return (
     <>
       {/* ===== FIXED NAV ===== */}
@@ -33,12 +36,29 @@ export default function Home() {
             >
               Docs
             </a>
-            <a
-              href="/dashboard"
-              className="bg-accent text-white px-[18px] py-2 rounded-lg text-sm font-semibold no-underline hover:bg-accent-hover transition-colors"
-            >
-              Get Started
-            </a>
+            {user ? (
+              <a
+                href="/dashboard"
+                className="bg-accent text-white px-[18px] py-2 rounded-lg text-sm font-semibold no-underline hover:bg-accent-hover transition-colors"
+              >
+                Dashboard
+              </a>
+            ) : (
+              <>
+                <a
+                  href="/login"
+                  className="text-text-secondary text-sm font-medium no-underline hover:text-text transition-colors hidden sm:inline"
+                >
+                  Log in
+                </a>
+                <a
+                  href="/login"
+                  className="bg-accent text-white px-[18px] py-2 rounded-lg text-sm font-semibold no-underline hover:bg-accent-hover transition-colors"
+                >
+                  Get Started
+                </a>
+              </>
+            )}
           </div>
         </div>
       </nav>
