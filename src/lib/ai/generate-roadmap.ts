@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { callClaude } from './call-claude'
+import { generatePRD } from './generate-prd'
 import { summarizeSignals, formatSummaryForPrompt } from './summarize-signals'
 import type { SignalRow, RoadmapItemInsert } from '@/lib/types/database'
 
@@ -233,6 +234,23 @@ ${roiFocusInstruction}
     }))
 
     await supabase.from('roadmap_items').insert(inserts)
+  }
+
+  // Auto-generate PRDs in background (don't block the return)
+  if (result.items.length > 0) {
+    const { data: insertedItems } = await supabase
+      .from('roadmap_items')
+      .select('id')
+      .eq('generation_id', generationId)
+
+    if (insertedItems) {
+      // Fire-and-forget: generate PRDs for each inserted item
+      Promise.all(
+        insertedItems.map(item =>
+          generatePRD(item.id).catch(() => {}) // Silent failure per item
+        )
+      ).catch(() => {})
+    }
   }
 
   return { items: result.items, generationId }
