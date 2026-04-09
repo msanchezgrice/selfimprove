@@ -74,6 +74,11 @@ export async function PATCH(
     } else {
       console.warn('[approve] No GitHub provider token — issue not created')
     }
+
+    if (!githubIssue) {
+      // build_status not yet set by createGitHubIssue, set it directly
+      await admin.from('roadmap_items').update({ build_status: 'approved' }).eq('id', id)
+    }
   }
 
   return NextResponse.json({ id, ...updates, githubIssue })

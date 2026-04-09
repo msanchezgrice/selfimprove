@@ -67,6 +67,9 @@ export async function createGitHubIssue(
   await admin
     .from('roadmap_items')
     .update({
+      github_issue_url: issue.html_url,
+      github_issue_number: issue.number,
+      build_status: 'approved',
       evidence_trail: [
         ...existingEvidence,
         { type: 'github_issue', url: issue.html_url, number: issue.number },

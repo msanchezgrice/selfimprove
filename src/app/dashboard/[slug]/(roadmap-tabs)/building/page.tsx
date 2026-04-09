@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { getActiveProject } from '@/lib/supabase/get-active-project'
-import { RoadmapTable } from '../../../_components/roadmap-table'
+import { BuildingCards } from '../../../_components/building-card'
 
 export default async function BuildingPage() {
   const project = await getActiveProject()
@@ -61,7 +61,7 @@ export default async function BuildingPage() {
           </p>
         </div>
       ) : (
-        <RoadmapTable items={items} />
+        <BuildingCards items={items} />
       )}
     </div>
   )

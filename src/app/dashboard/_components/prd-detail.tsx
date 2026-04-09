@@ -145,6 +145,9 @@ export function PRDDetail({ item }: PRDDetailProps) {
   const [feedbackDirection, setFeedbackDirection] = useState<'up' | 'down' | null>(null)
   const [feedbackNote, setFeedbackNote] = useState('')
   const [issueUrl] = useState<string | null>(() => {
+    // Check direct fields first
+    if (item.github_issue_url) return item.github_issue_url
+    // Fall back to evidence trail
     const trail = (item.evidence_trail as Array<Record<string, unknown>>) || []
     const existing = trail.find(e => e.type === 'github_issue')
     return (existing?.url as string | null) ?? null

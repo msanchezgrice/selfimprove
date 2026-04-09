@@ -133,9 +133,14 @@ export type RoadmapItemRow = BaseRow & {
   dismiss_reason: string | null;
   prd_content: Record<string, unknown> | null;
   generation_id: string | null;
+  build_status: string | null;
+  github_issue_url: string | null;
+  github_issue_number: number | null;
+  pr_url: string | null;
+  pr_number: number | null;
 };
 
-export type RoadmapItemInsert = Omit<RoadmapItemRow, 'id' | 'created_at' | 'updated_at' | 'roi_score' | 'status' | 'rank' | 'feedback_up' | 'feedback_down' | 'dismiss_reason' | 'prd_content' | 'generation_id'> & {
+export type RoadmapItemInsert = Omit<RoadmapItemRow, 'id' | 'created_at' | 'updated_at' | 'roi_score' | 'status' | 'rank' | 'feedback_up' | 'feedback_down' | 'dismiss_reason' | 'prd_content' | 'generation_id' | 'build_status' | 'github_issue_url' | 'github_issue_number' | 'pr_url' | 'pr_number'> & {
   roi_score?: number;
   status?: RoadmapStatus;
   rank?: number;
@@ -144,6 +149,11 @@ export type RoadmapItemInsert = Omit<RoadmapItemRow, 'id' | 'created_at' | 'upda
   dismiss_reason?: string | null;
   prd_content?: Record<string, unknown> | null;
   generation_id?: string | null;
+  build_status?: string | null;
+  github_issue_url?: string | null;
+  github_issue_number?: number | null;
+  pr_url?: string | null;
+  pr_number?: number | null;
 };
 
 export type RoadmapItemUpdate = Partial<RoadmapItemInsert>;
