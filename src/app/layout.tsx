@@ -28,21 +28,11 @@ export const metadata: Metadata = {
     siteName: 'SelfImprove',
     locale: 'en_US',
     type: 'website',
-    images: [{
-      url: `${siteUrl}/og-image.png`,
-      width: 1200,
-      height: 630,
-      type: 'image/png',
-    }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'SelfImprove — AI Product Manager for Developers',
     description: 'You built your v1. Now make it actually work. AI-powered user analytics, roadmap generation, and fix shipping for indie devs.',
-    images: [{
-      url: `${siteUrl}/og-image.png`,
-      alt: 'SelfImprove: You built your v1. Now make it actually work.',
-    }],
   },
   icons: {
     icon: '/favicon.svg',
