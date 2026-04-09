@@ -1,8 +1,9 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createGitHubIssue } from '@/lib/ai/github-issue'
 import { getGitHubToken } from '@/lib/github/get-token'
+import { implementRoadmapItem } from '@/lib/ai/implement'
 
 export async function PATCH(
   req: Request,
@@ -78,6 +79,33 @@ export async function PATCH(
     if (!githubIssue) {
       // build_status not yet set by createGitHubIssue, set it directly
       await admin.from('roadmap_items').update({ build_status: 'approved' }).eq('id', id)
+    }
+
+    // Auto-implement if enabled and PRD exists
+    if (providerToken) {
+      const { data: settings } = await admin
+        .from('project_settings')
+        .select('automation_implement_enabled')
+        .eq('project_id', item.project_id)
+        .single()
+
+      if (settings?.automation_implement_enabled) {
+        const { data: fullItem } = await admin
+          .from('roadmap_items')
+          .select('prd_content')
+          .eq('id', id)
+          .single()
+
+        if (fullItem?.prd_content) {
+          after(async () => {
+            try {
+              await implementRoadmapItem(id, providerToken!)
+            } catch (err) {
+              console.error('[after/implement] Failed:', err)
+            }
+          })
+        }
+      }
     }
   }
 

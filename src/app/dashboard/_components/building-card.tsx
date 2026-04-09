@@ -1,7 +1,8 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import type { RoadmapItemRow } from '@/lib/types/database'
 
 const categoryConfig: Record<string, { bg: string; text: string; label: string }> = {
@@ -23,7 +24,9 @@ const buildStatusConfig: Record<string, { label: string; color: string; bg: stri
 
 export function BuildingCards({ items }: { items: RoadmapItemRow[] }) {
   const pathname = usePathname()
+  const router = useRouter()
   const slug = pathname.match(/^\/dashboard\/([^/]+)/)?.[1] || ''
+  const [buildingId, setBuildingId] = useState<string | null>(null)
 
   return (
     <div className="grid gap-4">
@@ -110,6 +113,22 @@ export function BuildingCards({ items }: { items: RoadmapItemRow[] }) {
               )}
               {!item.github_issue_url && !item.pr_url && (
                 <span className="text-xs" style={{ color: '#8b8680' }}>No GitHub links yet</span>
+              )}
+
+              {/* Build Now button for items ready to implement */}
+              {!item.pr_url && (item.build_status === 'approved' || !item.build_status) && (
+                <button
+                  onClick={async () => {
+                    setBuildingId(item.id)
+                    await fetch(`/api/roadmap/${item.id}/build`, { method: 'POST' })
+                    router.refresh()
+                  }}
+                  disabled={buildingId === item.id}
+                  className="text-xs font-medium px-3 py-1.5 rounded-lg text-white transition-opacity disabled:opacity-60"
+                  style={{ backgroundColor: '#6366f1' }}
+                >
+                  {buildingId === item.id ? 'Building...' : 'Build Now'}
+                </button>
               )}
 
               {/* PRD link */}
