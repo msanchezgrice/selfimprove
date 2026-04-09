@@ -134,8 +134,6 @@ function DesktopTable({ items, onReorder, sortField, sortDir, onSort, slug }: Ro
             return (
               <tr
                 key={item.id}
-                draggable
-                onDragStart={() => setDragIndex(index)}
                 onDragOver={(e) => {
                   e.preventDefault()
                   setDragOverIndex(index)
@@ -148,15 +146,20 @@ function DesktopTable({ items, onReorder, sortField, sortDir, onSort, slug }: Ro
                   setDragIndex(null)
                   setDragOverIndex(null)
                 }}
-                onDragEnd={() => {
-                  setDragIndex(null)
-                  setDragOverIndex(null)
-                }}
                 onClick={() => router.push(`/dashboard/${slug}/roadmap/${item.id}`)}
-                className={`border-t cursor-pointer transition-colors duration-100 hover:bg-[#faf8f5]/60${dragIndex === index ? ' opacity-50' : ''}${dragOverIndex === index && dragIndex !== index ? ' bg-indigo-50/60' : ''}`}
-                style={{ borderColor: '#e8e4de' }}
+                className={`border-t cursor-pointer transition-all duration-150 hover:bg-[#faf8f5]/60${dragIndex === index ? ' opacity-40 scale-[0.98]' : ''}${dragOverIndex === index && dragIndex !== index ? ' border-t-2 border-t-indigo-400' : ''}`}
+                style={{ borderColor: dragOverIndex === index && dragIndex !== index ? undefined : '#e8e4de' }}
               >
                 <td
+                  draggable
+                  onDragStart={(e) => {
+                    setDragIndex(index)
+                    e.dataTransfer.effectAllowed = 'move'
+                  }}
+                  onDragEnd={() => {
+                    setDragIndex(null)
+                    setDragOverIndex(null)
+                  }}
                   className="px-2 py-3 cursor-grab active:cursor-grabbing"
                   onClick={(e) => e.stopPropagation()}
                 >

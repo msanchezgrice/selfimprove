@@ -61,15 +61,20 @@ export async function PATCH(
   }
 
   // Auto-create GitHub Issue when approved
+  let githubIssue: { url: string; number: number } | null = null
   if (updates.status === 'approved') {
     const { data: { session } } = await supabase.auth.getSession()
     const providerToken = session?.provider_token
     if (providerToken) {
-      createGitHubIssue(id, providerToken).catch(err => {
+      try {
+        githubIssue = await createGitHubIssue(id, providerToken)
+      } catch (err) {
         console.error('[approve] GitHub issue creation failed:', err)
-      })
+      }
+    } else {
+      console.warn('[approve] No GitHub provider token — issue not created')
     }
   }
 
-  return NextResponse.json({ id, ...updates })
+  return NextResponse.json({ id, ...updates, githubIssue })
 }
