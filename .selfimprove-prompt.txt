@@ -1,21 +1,43 @@
-Implement this feature: Add User-Facing Feedback & Toast Notification System
+Implement this feature: Add sitemap.xml and robots.txt for SEO & Agent Discoverability
 
-Users have no visual feedback after performing actions in the dashboard. When a user clicks the "Approve" button on a PRD, nothing visibly happens — no confirmation, no error, no loading state. Similarly, state tab transitions are silent. This leaves users confused about whether their action succeeded, failed, or is still processing. The absence of a feedback layer erodes trust in the product and causes users to repeat actions or abandon workflows entirely.
+The Selfimprove site (https://selfimprove-iota.vercel.app/) is effectively invisible to search engine crawlers and AI agents due to multiple missing SEO fundamentals:
 
-Solution: Install and configure a global toast notification system using `sonner` (or `react-hot-toast` as fallback) in the Next.js App Router root layout. Create a shared `ToastProvider` component and a `showToast(type, message)` utility function that all existing and future async action handlers can call. Wire the toast utility into the three highest-priority action sites: PRD approval, item save, and status/state transitions. Toasts will be non-blocking, auto-dismissing, accessible, and stylistically consistent with the existing UI.
+1. **No sitemap.xml** — Search engines and AI crawlers (Googlebot, GPTBot, PerplexityBot, etc.) cannot discover or index the site's pages efficiently.
+2. **No robots.txt** — Crawlers have no guidance on which pages to index or avoid, and no pointer to the sitemap.
+3. **Missing or incomplete Open Graph / Twitter Card meta tags** — Social shares and link previews render poorly, reducing click-through rates from social and AI-generated summaries.
+4. **No canonical URL tags** — Duplicate content risks (e.g., trailing slash variants, www vs. non-www) go unresolved, diluting page authority.
+5. **No structured metadata defaults** — Page titles, descriptions, and viewport tags may be inconsistent or absent across routes, hurting ranking signals.
+
+Together, these gaps mean the site cannot grow organically through search or AI-driven discovery, regardless of content quality.
+
+Solution: Implement a comprehensive SEO foundation using Next.js App Router's native Metadata API, covering all major crawlability and discoverability gaps in a single small-scope ticket:
+
+1. **`app/sitemap.ts`** — Dynamically generate a valid XML sitemap listing all public routes with `lastModified`, `changeFrequency`, and `priority` hints.
+2. **`app/robots.ts`** — Generate a robots.txt that allows all public crawlers, explicitly references the sitemap URL, and optionally restricts auth-gated or private routes.
+3. **`app/layout.tsx` (root metadata)** — Add a comprehensive default `metadata` export covering: `title` (with template), `description`, `canonical` (via `metadataBase`), Open Graph tags (`og:title`, `og:description`, `og:image`, `og:url`, `og:type`), Twitter Card tags, `viewport`, `themeColor`, and `robots` directives.
+4. **Per-page `metadata` exports** — Add or update `metadata` / `generateMetadata()` exports on key route pages to provide page-specific titles, descriptions, and OG images.
+5. **`public/og-image.png`** — Add a default Open Graph image (1200×630px) used as the fallback for social previews.
+
+This approach uses zero third-party dependencies, is fully static-compatible, and leverages Next.js's built-in SEO primitives for maximum reliability and maintainability.
 
 Acceptance Criteria:
-sonner is listed as a dependency in package.json and installs without peer-dependency conflicts
-ToastProvider component exists at components/providers/ToastProvider.tsx and renders sonner's <Toaster /> with position='bottom-right', duration=4000, and richColors enabled
-<ToastProvider /> is mounted in app/layout.tsx at the root level, wrapping all page content
-lib/utils/toast.ts exports a showToast(type, message, options?) function that wraps sonner's toast API with types: 'success' | 'error' | 'info' | 'warning'
-Clicking the Approve button on a PRD detail page shows a success toast ('PRD approved successfully') on success
-Clicking the Approve button on a PRD detail page shows an error toast ('Failed to approve PRD. Please try again.') if the server action returns an error
-Saving an item shows a success toast ('Changes saved') on success and an error toast on failure
-A status/state transition shows an info or success toast confirming the new state (e.g., 'Status updated to In Review')
-All toasts auto-dismiss after 4 seconds without user interaction
-All toasts display an X button that allows manual dismissal before auto-dismiss
-Toasts render inside an ARIA live region (role='status' or role='alert') so screen readers announce them — verified via DOM inspection
-No more than one toast is shown per user action (no duplicate toasts on double-click)
-showToast utility is documented with JSDoc comments in lib/utils/toast.ts describing each parameter and usage example
-Toasts do not appear for background/polling operations that the user did not explicitly trigger
+GET https://selfimprove-iota.vercel.app/sitemap.xml returns HTTP 200 with Content-Type: application/xml
+sitemap.xml is valid XML and passes W3C sitemap schema validation (https://www.sitemaps.org/schemas/sitemap/0.9)
+sitemap.xml contains a <url> entry for every public route (at minimum: /, and all other non-auth pages)
+Every <url> entry in sitemap.xml includes <loc>, <lastModified>, <changefreq>, and <priority> elements
+No auth-gated, private, or /api/* routes appear in sitemap.xml
+GET https://selfimprove-iota.vercel.app/robots.txt returns HTTP 200 with Content-Type: text/plain
+robots.txt contains a 'Sitemap:' directive pointing to the full absolute URL of sitemap.xml
+robots.txt contains 'User-agent: *' with 'Allow: /' for all public pages
+robots.txt contains 'Disallow:' rules for any private/auth-gated paths (e.g., /api/, /dashboard if auth-protected)
+The root layout <head> includes a canonical <link> tag resolving to the correct absolute URL on every page
+The root layout <head> includes og:title, og:description, og:image, og:url, and og:type meta tags with non-empty values
+The root layout <head> includes twitter:card, twitter:title, twitter:description, and twitter:image meta tags
+og:image resolves to a valid 1200×630px image (public/og-image.png or equivalent)
+Each key page (home, and at least 2 other public routes) has a unique, page-specific <title> and meta description
+Page <title> tags follow the template pattern: '[Page Name] | Selfimprove'
+Meta description length is between 120–160 characters on all key pages
+Running 'npx next build' produces no warnings or errors related to metadata
+Lighthouse SEO score on the homepage is ≥ 90 after changes are deployed
+Sitemap URL is submitted to Google Search Console and returns no errors
+Open Graph preview renders correctly when the homepage URL is pasted into https://www.opengraph.xyz or LinkedIn post composer
