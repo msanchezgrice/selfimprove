@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { callClaude } from './call-claude'
 import { summarizeSignals, formatSummaryForPrompt } from './summarize-signals'
+import { deduplicateSignals } from './dedup-signals'
 import { notifyRoadmapReady } from '@/lib/notifications'
 import type { SignalRow, RoadmapItemInsert } from '@/lib/types/database'
 
@@ -161,6 +162,25 @@ export async function generateRoadmap(
     return { items: [], generationId }
   }
 
+  // Deduplicate similar signals before summarizing
+  const dedupResult = deduplicateSignals(signals as SignalRow[])
+  if (dedupResult.duplicatesFound > 0) {
+    console.log(
+      `[generateRoadmap] Deduplication: ${dedupResult.originalCount} signals → ${dedupResult.dedupedCount} unique (${dedupResult.duplicatesFound} duplicates merged)`
+    )
+
+    // Update dedup_group_id in DB for merged signals (fire-and-forget)
+    for (const group of dedupResult.groups) {
+      if (group.members.length > 1) {
+        const memberIds = group.members.map((m) => m.id)
+        void supabase
+          .from('signals')
+          .update({ dedup_group_id: group.canonical.id })
+          .in('id', memberIds)
+      }
+    }
+  }
+
   // Fetch existing roadmap items for context (avoid duplicates)
   const { data: existingItems } = await supabase
     .from('roadmap_items')
@@ -169,7 +189,7 @@ export async function generateRoadmap(
     .in('status', ['proposed', 'approved', 'building'])
     .limit(50)
 
-  const summary = summarizeSignals(signals as SignalRow[])
+  const summary = summarizeSignals(dedupResult.dedupedSignals)
   const summaryText = formatSummaryForPrompt(summary)
 
   const roiFocus =
