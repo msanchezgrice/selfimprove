@@ -142,14 +142,14 @@ export function StepSelectSources({
             <div className="mt-2">
               <input
                 type="text"
-                placeholder="phc_... or your PostHog API key"
+                placeholder="phx_... (Personal API key)"
                 value={posthogApiKey}
                 onChange={e => setPosthogApiKey(e.target.value)}
                 className="w-full px-3 py-2 rounded-lg border text-sm"
                 style={{ borderColor: '#e8e4de' }}
               />
               <p className="text-xs mt-1" style={{ color: '#8b8680' }}>
-                Find this in PostHog &rarr; Settings &rarr; Project API Key
+                Requires a <strong>Personal API key</strong> (phx_). Create at PostHog &rarr; Settings &rarr; Personal API Keys
               </p>
             </div>
           )}

@@ -773,10 +773,11 @@ export function SettingsForm({ project, settings, orgTier }: SettingsFormProps) 
         <div>
           <Label htmlFor="posthog-key">PostHog API key</Label>
           <p className="text-xs mb-2" style={{ color: C.secondary }}>
-            Find your API key at{' '}
-            <a href="https://us.posthog.com/settings/project#variables" target="_blank" rel="noopener noreferrer" style={{ color: C.accent, textDecoration: 'underline' }}>
-              PostHog → Settings → Project API Key
+            Requires a <strong>Personal API key</strong> (starts with <code>phx_</code>). Create one at{' '}
+            <a href="https://us.posthog.com/settings/user-api-keys" target="_blank" rel="noopener noreferrer" style={{ color: C.accent, textDecoration: 'underline' }}>
+              PostHog → Settings → Personal API Keys
             </a>
+            . The Project API key (<code>phc_</code>) won't work for reading events.
           </p>
           <div className="flex gap-2">
             <input
@@ -786,7 +787,7 @@ export function SettingsForm({ project, settings, orgTier }: SettingsFormProps) 
               onChange={(e: ChangeEvent<HTMLInputElement>) => setPosthogKey(e.target.value)}
               className={inputClass + ' flex-1'}
               style={inputStyle}
-              placeholder="phc_..."
+              placeholder="phx_..."
             />
             <button
               type="button"

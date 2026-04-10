@@ -1,0 +1,16 @@
+{
+  "name": "SelfImprove",
+  "short_name": "SelfImprove",
+  "description": "AI Product Manager for Developers",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#faf8f5",
+  "theme_color": "#0d9488",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
