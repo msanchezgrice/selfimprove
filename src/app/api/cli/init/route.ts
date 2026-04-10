@@ -6,6 +6,8 @@ import { seedProjectSignals } from '@/lib/ai/cold-start'
 import { importGitHubIssues } from '@/lib/ai/import-github-issues'
 import crypto from 'crypto'
 
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || '${APP_URL}'
+
 async function authenticateGitHub(token: string): Promise<{ userId: string; orgId: string; githubToken: string; loginUrl: string | null; isNewUser: boolean } | null> {
   // Verify the GitHub token by calling GitHub API
   const ghRes = await fetch('https://api.github.com/user', {
@@ -14,7 +16,8 @@ async function authenticateGitHub(token: string): Promise<{ userId: string; orgI
   if (!ghRes.ok) return null
 
   const ghUser = await ghRes.json()
-  const displayName = ghUser.name || ghUser.login
+  const username = ghUser.login
+  const displayName = ghUser.name || username
 
   // Get the user's verified emails (handles private email settings)
   let email = ghUser.email
@@ -28,13 +31,26 @@ async function authenticateGitHub(token: string): Promise<{ userId: string; orgI
       email = primary?.email || emails[0]?.email
     }
   }
-  if (!email) email = `${ghUser.login}@users.noreply.github.com`
+  if (!email) email = `${username}@users.noreply.github.com`
 
   const supabase = createAdminClient()
 
-  // Check if user already exists by email (check all known emails)
-  const { data: existingUsers } = await supabase.auth.admin.listUsers()
-  const existingUser = existingUsers?.users?.find(u => u.email === email)
+  // Try to find existing user by email, paginating through all users
+  let existingUser: { id: string; email?: string; user_metadata?: Record<string, unknown> } | undefined
+  let page = 1
+  while (true) {
+    const { data: { users }, error } = await supabase.auth.admin.listUsers({ page, perPage: 50 })
+    if (error || !users || users.length === 0) break
+    // Match by email OR by github username in metadata (handles OAuth email mismatch)
+    existingUser = users.find(u =>
+      u.email === email ||
+      u.user_metadata?.user_name === username ||
+      u.user_metadata?.github_login === username
+    )
+    if (existingUser) break
+    if (users.length < 50) break // last page
+    page++
+  }
 
   let userId: string
   let orgId: string
@@ -100,6 +116,9 @@ async function authenticateGitHub(token: string): Promise<{ userId: string; orgI
     const { data: linkData } = await supabase.auth.admin.generateLink({
       type: 'magiclink',
       email,
+      options: {
+        redirectTo: `${APP_URL}/auth/callback?next=${encodeURIComponent('/dashboard')}`,
+      },
     })
     if (linkData?.properties?.action_link) {
       loginUrl = linkData.properties.action_link
@@ -142,8 +161,15 @@ export async function POST(request: Request) {
     }, { status: 401 })
   }
 
-  const body = await request.json()
-  const { repo_url, site_url, name, framework, priority } = body
+  let body: Record<string, unknown>
+  try {
+    body = await request.json()
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+  }
+  const { repo_url, site_url, name, framework, priority } = body as {
+    repo_url?: string; site_url?: string; name?: string; framework?: string; priority?: string
+  }
 
   if (!repo_url && !name) {
     return NextResponse.json({
@@ -177,8 +203,8 @@ export async function POST(request: Request) {
       message: 'Project already exists',
       project_id: existing.id,
       slug: existing.slug,
-      dashboard_url: `https://selfimprove-iota.vercel.app/dashboard/${existing.slug}/roadmap`,
-      widget_snippet: `<script src="https://selfimprove-iota.vercel.app/widget.js" data-project="${existing.id}"></script>`,
+      dashboard_url: `${APP_URL}/dashboard/${existing.slug}/roadmap`,
+      widget_snippet: `<script src="${APP_URL}/widget.js" data-project="${existing.id}"></script>`,
     })
   }
 
@@ -192,7 +218,7 @@ export async function POST(request: Request) {
       repo_url: repo_url || null,
       site_url: site_url || null,
       framework: framework || null,
-      allowed_domains: site_url ? [new URL(site_url).hostname] : [],
+      allowed_domains: site_url ? (() => { try { return [new URL(site_url).hostname] } catch { return [] } })() : [],
     })
     .select('id, slug')
     .single()
@@ -224,14 +250,14 @@ export async function POST(request: Request) {
     }
   }
 
-  const dashboardUrl = `https://selfimprove-iota.vercel.app/dashboard/${project.slug}/roadmap`
-  const widgetSnippet = `<script src="https://selfimprove-iota.vercel.app/widget.js" data-project="${project.id}"></script>`
+  const dashboardUrl = `${APP_URL}/dashboard/${project.slug}/roadmap`
+  const widgetSnippet = `<script src="${APP_URL}/widget.js" data-project="${project.id}"></script>`
 
   const agentInstructions = `## SelfImprove Integration
 This project uses SelfImprove for AI product management.
 Dashboard: ${dashboardUrl}
-Widget: https://selfimprove-iota.vercel.app/widget.js (project: ${project.id})
-Signals API: https://selfimprove-iota.vercel.app/api/signals
+Widget: ${APP_URL}/widget.js (project: ${project.id})
+Signals API: ${APP_URL}/api/signals
 
 ### For coding agents
 - A feedback widget collects user signals from the live site
@@ -244,13 +270,13 @@ Signals API: https://selfimprove-iota.vercel.app/api/signals
     is_new_user: isNewUser,
     project_id: project.id,
     slug: project.slug,
-    dashboard_url: loginUrl ? `${loginUrl}&redirect_to=${encodeURIComponent(`/dashboard/${project.slug}/roadmap`)}` : dashboardUrl,
+    dashboard_url: loginUrl || dashboardUrl,
     login_url: loginUrl || null,
     widget_snippet: widgetSnippet,
     agent_instructions: agentInstructions,
     next_steps: [
       loginUrl
-        ? `Open this URL to sign in and view your dashboard: ${loginUrl}&redirect_to=${encodeURIComponent(`/dashboard/${project.slug}/roadmap`)}`
+        ? `Open this URL to sign in and view your dashboard: ${loginUrl}`
         : `Open your dashboard: ${dashboardUrl}`,
       'Your roadmap will populate within minutes as scans complete.',
       'You can add the feedback widget and configure settings from the dashboard.',

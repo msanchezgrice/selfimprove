@@ -105,7 +105,7 @@ async function runImplement(job: BuildJob, workDir: string, repo: string): Promi
   run('git', ['commit', '-m', commitMsg], cwdOpts)
   run('git', ['push', 'origin', branchName], cwdOpts)
 
-  const prBody = `## Auto-Implementation\n\n${job.prompt.slice(0, 500)}\n\n---\n*Auto-implemented by [SelfImprove](https://selfimprove-iota.vercel.app)*`
+  const prBody = `## Auto-Implementation\n\n${job.prompt.slice(0, 500)}\n\n---\n*Auto-implemented by [SelfImprove](${process.env.NEXT_PUBLIC_APP_URL || 'https://selfimprove-iota.vercel.app'})*`
 
   const prRes = await fetch(`https://api.github.com/repos/${repo}/pulls`, {
     method: 'POST',

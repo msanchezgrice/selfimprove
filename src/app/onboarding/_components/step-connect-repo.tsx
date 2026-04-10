@@ -29,7 +29,8 @@ type StepConnectRepoProps = {
 function CliOption() {
   const [expanded, setExpanded] = useState(false)
   const [copied, setCopied] = useState(false)
-  const prompt = `Set up SelfImprove for this project.\n\n1. Get my GitHub token by running: gh auth token\n2. Call POST https://selfimprove-iota.vercel.app/api/cli/init with Authorization: Bearer GITHUB_TOKEN and body: {"repo_url": "THIS_REPO_URL", "site_url": "PRODUCTION_URL"}\n3. Open the dashboard_url from the response in my browser.`
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://selfimprove-iota.vercel.app'
+  const prompt = `Set up SelfImprove for this project.\n\n1. Get my GitHub token by running: gh auth token\n2. Call POST ${appUrl}/api/cli/init with Authorization: Bearer GITHUB_TOKEN and body: {"repo_url": "THIS_REPO_URL", "site_url": "PRODUCTION_URL"}\n3. Open the dashboard_url from the response in my browser.`
 
   return (
     <div className="mb-4 rounded-xl border" style={{ borderColor: '#e8e4de' }}>

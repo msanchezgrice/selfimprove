@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { authenticateApiKey } from '@/lib/auth/api-key'
 import { createAdminClient } from '@/lib/supabase/admin'
 
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://selfimprove-iota.vercel.app'
+
 export async function GET(request: Request) {
   const auth = await authenticateApiKey(request)
   if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -56,6 +58,6 @@ export async function GET(request: Request) {
     briefs: briefCount,
     roadmap_items: roadmapCount,
     pending_jobs: pendingJobs,
-    dashboard_url: `https://selfimprove-iota.vercel.app/dashboard/${project?.slug}/roadmap`,
+    dashboard_url: `${APP_URL}/dashboard/${project?.slug}/roadmap`,
   })
 }

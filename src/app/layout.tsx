@@ -13,7 +13,7 @@ const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
 });
 
-const siteUrl = 'https://selfimprove-iota.vercel.app'
+const siteUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://selfimprove-iota.vercel.app'
 
 export const metadata: Metadata = {
   title: { default: 'SelfImprove — AI Product Manager for Developers', template: '%s | SelfImprove' },
@@ -64,7 +64,7 @@ export default function RootLayout({
         {children}
         <ToastProvider />
         <script
-          src="https://selfimprove-iota.vercel.app/widget.js"
+          src={`${siteUrl}/widget.js`}
           data-project="bb7ec56a-5ef9-4bc1-af84-b206af76e039"
           async
         />

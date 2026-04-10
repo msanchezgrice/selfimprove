@@ -9,7 +9,7 @@ Set up SelfImprove for this project by following these steps:
 Run: gh auth token
 
 ## Step 2: Create the project
-curl -X POST https://selfimprove-iota.vercel.app/api/cli/init \\
+curl -X POST ${process.env.NEXT_PUBLIC_APP_URL || 'https://selfimprove-iota.vercel.app'}/api/cli/init \\
   -H "Authorization: Bearer YOUR_GITHUB_TOKEN" \\
   -H "Content-Type: application/json" \\
   -d '{"repo_url": "YOUR_REPO_URL", "site_url": "YOUR_SITE_URL"}'

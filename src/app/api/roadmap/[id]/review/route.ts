@@ -89,7 +89,7 @@ ${assessment.reasons.length > 0 ? `### Concerns\n${assessment.reasons.map(r => `
 ${assessment.suggestions.length > 0 ? `### Suggestions\n${assessment.suggestions.map(s => `- ${s}`).join('\n')}` : ''}
 
 ---
-*Reviewed by [SelfImprove](https://selfimprove-iota.vercel.app) Approval Agent*`
+*Reviewed by [SelfImprove](${process.env.NEXT_PUBLIC_APP_URL || 'https://selfimprove-iota.vercel.app'}) Approval Agent*`
 
   await fetch(`https://api.github.com/repos/${repo}/issues/${item.pr_number}/comments`, {
     method: 'POST',

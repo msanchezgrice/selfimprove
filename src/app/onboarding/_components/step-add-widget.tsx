@@ -96,7 +96,7 @@ export function StepAddWidget({ projectId }: StepAddWidgetProps) {
   const pid = projectId ?? 'proj_xxx'
   const [tags, setTags] = useState('bug, confusing, slow, missing feature, love it')
 
-  const widgetHost = 'https://selfimprove-iota.vercel.app'
+  const widgetHost = process.env.NEXT_PUBLIC_APP_URL || 'https://selfimprove-iota.vercel.app'
   const dashboardUrl = `${widgetHost}/dashboard`
 
   const scriptSnippet = `<script src="${widgetHost}/widget.js"\n  data-project="${pid}"></script>`
