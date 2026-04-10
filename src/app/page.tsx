@@ -465,25 +465,30 @@ export default async function Home() {
             Paste this into Claude Code, Cursor, or Codex
           </h2>
           <p className="text-[15px] text-text-secondary leading-relaxed mb-6">
-            Your coding agent will call our API to create the project, install the widget, and add agent instructions to your repo. You just review and commit.
+            Your agent creates the account, installs the widget, and sets up your roadmap. No browser signup needed.
           </p>
 
-          <div className="bg-[#1a1a2e] rounded-[14px] p-6 font-mono text-[13px] leading-relaxed overflow-x-auto text-left" style={{ color: "#e2e0dc" }}>
-            <span style={{ color: "#a5f3c4" }}>&quot;Set up SelfImprove for this project.</span>{"\n\n"}
-            <span style={{ color: "#8b8680" }}>Step 1: Get my GitHub token</span>{"\n"}
-            <span style={{ color: "#e2e0dc" }}>Run: gh auth token</span>{"\n\n"}
-            <span style={{ color: "#8b8680" }}>Step 2: Create the project</span>{"\n"}
-            <span style={{ color: "#e2e0dc" }}>Call POST https://selfimprove-iota.vercel.app/api/cli/init</span>{"\n"}
-            <span style={{ color: "#e2e0dc" }}>  Authorization: Bearer GITHUB_TOKEN</span>{"\n"}
-            <span style={{ color: "#e2e0dc" }}>  Body: {`{`}&quot;repo_url&quot;: &quot;REPO_URL&quot;, &quot;site_url&quot;: &quot;SITE_URL&quot;{`}`}</span>{"\n\n"}
-            <span style={{ color: "#8b8680" }}>Step 3: Apply the response</span>{"\n"}
-            <span style={{ color: "#e2e0dc" }}>Add widget_snippet to the root layout.</span>{"\n"}
-            <span style={{ color: "#e2e0dc" }}>Create SELFIMPROVE.md with agent_instructions.</span>{"\n"}
-            <span style={{ color: "#e2e0dc" }}>Commit and push.&quot;</span>
-          </div>
+          <pre
+            className="bg-[#1a1a2e] rounded-[14px] p-6 font-mono text-[13px] leading-[1.8] overflow-x-auto text-left whitespace-pre-wrap"
+            style={{ color: "#e2e0dc", margin: 0 }}
+          >{`Set up SelfImprove for this project.
+
+1. Get my GitHub token by running: gh auth token
+
+2. Call this API to create the project:
+   curl -X POST https://selfimprove-iota.vercel.app/api/cli/init \\
+     -H "Authorization: Bearer GITHUB_TOKEN" \\
+     -H "Content-Type: application/json" \\
+     -d '{"repo_url": "THIS_REPO_URL", "site_url": "PRODUCTION_URL"}'
+
+3. From the JSON response:
+   - Add the "widget_snippet" to my root HTML layout
+   - Create a SELFIMPROVE.md file with the "agent_instructions"
+
+4. Commit and push the changes.`}</pre>
 
           <p className="text-xs text-text-secondary mt-4">
-            Uses your GitHub token to auto-create an account. No signup needed.
+            Uses your GitHub token to auto-create an account. No signup needed. Your agent fills in the repo and site URLs automatically.
           </p>
         </div>
       </section>
