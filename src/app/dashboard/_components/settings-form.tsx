@@ -772,7 +772,7 @@ export function SettingsForm({ project, settings, orgTier }: SettingsFormProps) 
 
         <div>
           <Label htmlFor="posthog-key">PostHog API key</Label>
-          <p className="text-xs mb-2" style={{ color: C.muted }}>
+          <p className="text-xs mb-2" style={{ color: C.secondary }}>
             Find your API key at{' '}
             <a href="https://us.posthog.com/settings/project#variables" target="_blank" rel="noopener noreferrer" style={{ color: C.accent, textDecoration: 'underline' }}>
               PostHog → Settings → Project API Key
@@ -798,8 +798,7 @@ export function SettingsForm({ project, settings, orgTier }: SettingsFormProps) 
                   .from('project_settings')
                   .update({ posthog_api_key: posthogKey })
                   .eq('project_id', project.id)
-                setSaveStatus('Saved')
-                setTimeout(() => setSaveStatus(null), 2000)
+                showToast('success', 'Saved')
               }}
               className="shrink-0 px-3 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-gray-50"
               style={{ color: C.accent, border: `1px solid ${C.border}` }}
@@ -842,7 +841,7 @@ export function SettingsForm({ project, settings, orgTier }: SettingsFormProps) 
 
         <div>
           <Label htmlFor="sentry-dsn">Sentry DSN</Label>
-          <p className="text-xs mb-2" style={{ color: C.muted }}>
+          <p className="text-xs mb-2" style={{ color: C.secondary }}>
             Find your DSN at{' '}
             <a href="https://sentry.io/settings/" target="_blank" rel="noopener noreferrer" style={{ color: C.accent, textDecoration: 'underline' }}>
               Sentry → Settings → Projects → Client Keys (DSN)
@@ -867,8 +866,7 @@ export function SettingsForm({ project, settings, orgTier }: SettingsFormProps) 
                   .from('project_settings')
                   .update({ sentry_dsn: sentryDsn })
                   .eq('project_id', project.id)
-                setSaveStatus('Saved')
-                setTimeout(() => setSaveStatus(null), 2000)
+                showToast('success', 'Saved')
               }}
               className="shrink-0 px-3 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-gray-50"
               style={{ color: C.accent, border: `1px solid ${C.border}` }}
