@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-const ONE_LINER = `Set up SelfImprove for this project. Run "gh auth token" to get my GitHub token, then call POST https://selfimprove-iota.vercel.app/api/cli/init with my token and repo URL. Open the dashboard_url from the response.`
+const ONE_LINER = `Read https://selfimprove-iota.vercel.app/setup and follow the instructions to set up SelfImprove`
 
 export function AgentOneLiner() {
   const [copied, setCopied] = useState(false)
@@ -24,7 +24,7 @@ export function AgentOneLiner() {
         {copied ? 'Copied!' : 'Copy'}
       </button>
       <pre
-        className="bg-[#1a1a2e] rounded-lg p-3 pr-14 font-mono text-[11px] leading-relaxed text-left whitespace-pre-wrap"
+        className="bg-[#1a1a2e] rounded-lg p-3 pr-14 font-mono text-[12px] leading-relaxed text-left whitespace-pre-wrap"
         style={{ color: '#a5f3c4', margin: 0 }}
       >
         {ONE_LINER}
