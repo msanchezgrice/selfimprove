@@ -789,6 +789,27 @@ export function SettingsForm({ project, settings, orgTier }: SettingsFormProps) 
             >
               Connect &rarr;
             </button>
+            <button
+              type="button"
+              onClick={async () => {
+                if (!posthogKey) return
+                const res = await fetch('/api/integrations/posthog', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ project_id: project.id }),
+                })
+                const data = await res.json()
+                if (res.ok) {
+                  alert(`Synced ${data.imported} signals from PostHog`)
+                } else {
+                  alert(`Sync failed: ${data.error || 'Unknown error'}`)
+                }
+              }}
+              className="shrink-0 px-3 py-1.5 text-sm font-medium rounded-lg"
+              style={{ backgroundColor: '#eef2ff', color: '#6366f1' }}
+            >
+              Sync Now
+            </button>
           </div>
         </div>
 

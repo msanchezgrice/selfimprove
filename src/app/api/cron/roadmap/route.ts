@@ -12,6 +12,41 @@ export async function GET(request: Request) {
 
   const supabase = createAdminClient()
 
+  // Sync PostHog events for projects with API keys
+  const { data: posthogProjects } = await supabase
+    .from('project_settings')
+    .select('project_id, posthog_api_key')
+    .not('posthog_api_key', 'is', null)
+
+  if (posthogProjects) {
+    for (const ps of posthogProjects) {
+      try {
+        // Fetch and create signals from PostHog
+        const eventsRes = await fetch('https://app.posthog.com/api/event/?limit=50&order_by=-timestamp', {
+          headers: { Authorization: `Bearer ${ps.posthog_api_key}` },
+        })
+        if (eventsRes.ok) {
+          const data = await eventsRes.json()
+          const events = data.results?.filter((e: any) =>
+            e.event?.includes('$exception') || e.event?.includes('$rageclick') || !e.event?.startsWith('$')
+          ) || []
+
+          if (events.length > 0) {
+            const signals = events.slice(0, 10).map((e: any) => ({
+              project_id: ps.project_id,
+              type: e.event?.includes('$exception') ? 'error' : 'analytics' as const,
+              title: `PostHog: ${e.event}`,
+              content: e.properties?.$exception_message || `Event "${e.event}" detected`,
+              metadata: { source: 'posthog', event_name: e.event },
+              weight: e.event?.includes('$exception') ? 3 : 2,
+            }))
+            await supabase.from('signals').insert(signals)
+          }
+        }
+      } catch { /* skip on error */ }
+    }
+  }
+
   // Find projects with unprocessed signals
   const { data: projects } = await supabase
     .from('signals')

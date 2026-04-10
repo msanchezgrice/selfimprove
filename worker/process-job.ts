@@ -1,6 +1,6 @@
 import { execSync } from 'child_process'
 import { createClient } from '@supabase/supabase-js'
-import { mkdtemp, rm } from 'fs/promises'
+import { mkdtemp, rm, writeFile } from 'fs/promises'
 import { tmpdir } from 'os'
 import { join } from 'path'
 
@@ -62,7 +62,6 @@ async function runImplement(job: BuildJob, workDir: string, repo: string): Promi
   console.log(`[worker] Running Claude Code for implementation...`)
 
   // Write prompt and constraints to temp files
-  const { writeFile } = await import('fs/promises')
   const promptFile = join(workDir, '.selfimprove-prompt.txt')
   await writeFile(promptFile, job.prompt)
 
@@ -76,10 +75,22 @@ async function runImplement(job: BuildJob, workDir: string, repo: string): Promi
 - Make minimal, focused changes
 `)
 
-  const stdout = run(
-    `claude -p "$(cat ${promptFile})" --allowedTools Edit,Write,Read,Glob,Grep --output-format text`,
-    { cwd: workDir, timeout: 600_000 },
-  )
+  let stdout = ''
+  try {
+    stdout = run(
+      `claude -p "$(cat ${promptFile})" --allowedTools Edit,Write,Read,Glob,Grep --output-format text`,
+      { cwd: workDir, timeout: 900_000 },
+    )
+  } catch (err) {
+    console.log('[worker] First attempt failed, retrying with simplified prompt...')
+    // Retry with a simpler, more focused prompt
+    const simplePromptFile = join(workDir, '.selfimprove-retry-prompt.txt')
+    await writeFile(simplePromptFile, `Make the following changes to the codebase. Be minimal and focused.\n\n${job.prompt.slice(0, 2000)}`)
+    stdout = run(
+      `claude -p "$(cat ${simplePromptFile})" --allowedTools Edit,Write,Read,Glob,Grep --output-format text`,
+      { cwd: workDir, timeout: 900_000 },
+    )
+  }
 
   console.log(`[worker] Claude Code output: ${stdout.slice(0, 500)}`)
 
@@ -143,7 +154,6 @@ async function runImplement(job: BuildJob, workDir: string, repo: string): Promi
 async function runScan(job: BuildJob, workDir: string): Promise<Record<string, unknown>> {
   console.log(`[worker] Running Claude Code for codebase scan...`)
 
-  const { writeFile } = await import('fs/promises')
   const promptFile = join(workDir, '.selfimprove-prompt.txt')
   await writeFile(promptFile, job.prompt)
 
@@ -155,10 +165,21 @@ async function runScan(job: BuildJob, workDir: string): Promise<Record<string, u
 - Focus on reading and analyzing the codebase
 `)
 
-  const stdout = run(
-    `claude -p "$(cat ${promptFile})" --allowedTools Read,Glob,Grep --output-format text`,
-    { cwd: workDir, timeout: 600_000 },
-  )
+  let stdout = ''
+  try {
+    stdout = run(
+      `claude -p "$(cat ${promptFile})" --allowedTools Read,Glob,Grep --output-format text`,
+      { cwd: workDir, timeout: 900_000 },
+    )
+  } catch (err) {
+    console.log('[worker] First scan attempt failed, retrying with simplified prompt...')
+    const simplePromptFile = join(workDir, '.selfimprove-retry-prompt.txt')
+    await writeFile(simplePromptFile, `Analyze this codebase. Be concise.\n\n${job.prompt.slice(0, 2000)}`)
+    stdout = run(
+      `claude -p "$(cat ${simplePromptFile})" --allowedTools Read,Glob,Grep --output-format text`,
+      { cwd: workDir, timeout: 900_000 },
+    )
+  }
 
   let findings: Array<Record<string, unknown>> = []
   try {

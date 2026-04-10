@@ -9,6 +9,14 @@ const supabase = createClient(
 const POLL_INTERVAL = 30_000 // 30 seconds
 
 async function pollForJobs() {
+  // Reset stale running jobs (worker crashed before updating status)
+  const twentyMinAgo = new Date(Date.now() - 20 * 60 * 1000).toISOString()
+  await supabase
+    .from('build_jobs')
+    .update({ status: 'pending', error: null, started_at: null })
+    .eq('status', 'running')
+    .lt('started_at', twentyMinAgo)
+
   // Grab the oldest pending job
   const { data: job } = await supabase
     .from('build_jobs')
