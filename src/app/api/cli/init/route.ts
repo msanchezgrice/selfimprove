@@ -6,7 +6,7 @@ import { seedProjectSignals } from '@/lib/ai/cold-start'
 import { importGitHubIssues } from '@/lib/ai/import-github-issues'
 import crypto from 'crypto'
 
-async function authenticateGitHub(token: string): Promise<{ userId: string; orgId: string; githubToken: string } | null> {
+async function authenticateGitHub(token: string): Promise<{ userId: string; orgId: string; githubToken: string; loginUrl: string | null; isNewUser: boolean } | null> {
   // Verify the GitHub token by calling GitHub API
   const ghRes = await fetch('https://api.github.com/user', {
     headers: { Authorization: `Bearer ${token}`, 'User-Agent': 'SelfImprove-App' },
@@ -58,8 +58,12 @@ async function authenticateGitHub(token: string): Promise<{ userId: string; orgI
       .from('org_members')
       .update({ github_token: token })
       .eq('user_id', userId)
-  } else {
-    // Create new user via Supabase admin API
+
+    return { userId, orgId, githubToken: token, loginUrl: null, isNewUser: false }
+  }
+
+  // New user — create via Supabase admin API
+  {
     const { data: newUser, error: userError } = await supabase.auth.admin.createUser({
       email,
       email_confirm: true,
@@ -90,9 +94,19 @@ async function authenticateGitHub(token: string): Promise<{ userId: string; orgI
       .from('org_members')
       .update({ api_key: apiKey })
       .eq('user_id', userId)
-  }
 
-  return { userId, orgId, githubToken: token }
+    // Generate magic login link so user can access dashboard without separate signup
+    let loginUrl: string | null = null
+    const { data: linkData } = await supabase.auth.admin.generateLink({
+      type: 'magiclink',
+      email,
+    })
+    if (linkData?.properties?.action_link) {
+      loginUrl = linkData.properties.action_link
+    }
+
+    return { userId, orgId, githubToken: token, loginUrl, isNewUser: true }
+  }
 }
 
 export async function POST(request: Request) {
@@ -101,17 +115,19 @@ export async function POST(request: Request) {
 
   let auth: { userId?: string; orgId: string } | null = null
   let githubToken: string | null = null
+  let loginUrl: string | null = null
+  let isNewUser = false
 
   if (bearerToken?.startsWith('si_')) {
-    // SelfImprove API key
     auth = await authenticateApiKey(request)
     githubToken = await getGitHubTokenFromApiKey(request)
   } else if (bearerToken?.startsWith('gho_') || bearerToken?.startsWith('ghp_') || bearerToken?.startsWith('github_pat_')) {
-    // GitHub token — auto-create account if needed
     const ghAuth = await authenticateGitHub(bearerToken)
     if (ghAuth) {
       auth = { orgId: ghAuth.orgId }
       githubToken = ghAuth.githubToken
+      loginUrl = ghAuth.loginUrl
+      isNewUser = ghAuth.isNewUser
     }
   }
 
@@ -225,15 +241,18 @@ Signals API: https://selfimprove-iota.vercel.app/api/signals
 
   return NextResponse.json({
     success: true,
+    is_new_user: isNewUser,
     project_id: project.id,
     slug: project.slug,
-    dashboard_url: dashboardUrl,
+    dashboard_url: loginUrl ? `${loginUrl}&redirect_to=${encodeURIComponent(`/dashboard/${project.slug}/roadmap`)}` : dashboardUrl,
+    login_url: loginUrl || null,
     widget_snippet: widgetSnippet,
     agent_instructions: agentInstructions,
     next_steps: [
-      `Add the widget to your HTML: ${widgetSnippet}`,
-      `Create SELFIMPROVE.md in your repo root with the agent instructions above`,
-      `Visit ${dashboardUrl} to see your roadmap (first items appear within minutes)`,
+      loginUrl
+        ? `Open this URL to sign in and view your dashboard (one-time magic link): ${loginUrl}&redirect_to=${encodeURIComponent(`/dashboard/${project.slug}/roadmap`)}`
+        : `Visit ${dashboardUrl} to see your roadmap`,
+      'First roadmap items appear within minutes from scans',
     ],
     scans: {
       site_scan: site_url ? 'queued' : 'skipped (no site_url)',
