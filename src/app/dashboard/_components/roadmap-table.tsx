@@ -123,6 +123,7 @@ function DesktopTable({ items, onReorder, sortField, sortDir, onSort, slug }: Ro
             <th className={`hidden lg:table-cell ${thClass}`} onClick={() => onSort('upside')}>Upside<SortIndicator field="upside" sortField={sortField} sortDir={sortDir} /></th>
             <th className={`hidden lg:table-cell ${thClass} text-right`} onClick={() => onSort('size')}>Size<SortIndicator field="size" sortField={sortField} sortDir={sortDir} /></th>
             <th className={`${thClass} text-right`} onClick={() => onSort('roi_score')}>ROI<SortIndicator field="roi_score" sortField={sortField} sortDir={sortDir} /></th>
+            <th className={`hidden lg:table-cell ${thClass}`} onClick={() => onSort('created_at')}>Created<SortIndicator field="created_at" sortField={sortField} sortDir={sortDir} /></th>
             <th className="px-3 py-3 w-10" />
           </tr>
         </thead>
@@ -237,6 +238,25 @@ function DesktopTable({ items, onReorder, sortField, sortDir, onSort, slug }: Ro
                   >
                     {item.roi_score.toFixed(1)}
                   </span>
+                </td>
+                <td className="hidden lg:table-cell px-3 py-3">
+                  {(() => {
+                    const created = new Date(item.created_at)
+                    const now = new Date()
+                    const diffHours = (now.getTime() - created.getTime()) / (1000 * 60 * 60)
+                    const isNew = diffHours < 24
+                    const dateStr = created.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                    return (
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs" style={{ color: '#8b8680' }}>{dateStr}</span>
+                        {isNew && (
+                          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: '#eef2ff', color: '#6366f1' }}>
+                            NEW
+                          </span>
+                        )}
+                      </div>
+                    )
+                  })()}
                 </td>
                 <td className="px-3 py-3 text-right">
                   <Link
