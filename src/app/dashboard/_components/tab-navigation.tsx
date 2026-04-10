@@ -4,11 +4,11 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 const tabDefs = [
+  { path: 'signals', label: 'Signals' },
+  { path: 'briefs', label: 'Briefs' },
   { path: 'roadmap', label: 'Roadmap' },
   { path: 'building', label: 'Building' },
   { path: 'shipped', label: 'Shipped' },
-  { path: 'signals', label: 'Signals' },
-  { path: 'briefs', label: 'Briefs' },
   { path: 'archive', label: 'Archive' },
 ]
 

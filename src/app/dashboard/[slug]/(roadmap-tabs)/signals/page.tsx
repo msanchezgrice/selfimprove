@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { getActiveProject } from '@/lib/supabase/get-active-project'
-import { SignalsFeed } from '../../_components/signals-feed'
-import { SignalsEmpty } from '../../_components/signals-empty'
+import { SignalsFeed } from '../../../_components/signals-feed'
+import { SignalsEmpty } from '../../../_components/signals-empty'
 
 export default async function SignalsPage({
   params,
