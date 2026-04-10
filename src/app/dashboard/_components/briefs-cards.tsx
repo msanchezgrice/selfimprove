@@ -105,8 +105,9 @@ export function BriefsCards({ items, roadmapCount }: { items: RoadmapItemRow[]; 
         return (
           <div
             key={item.id}
-            className="rounded-xl border bg-white p-5 transition-colors hover:bg-[#faf8f5]/60"
+            className="rounded-xl border bg-white p-5 transition-colors hover:bg-[#faf8f5]/60 cursor-pointer"
             style={{ borderColor: '#e8e4de' }}
+            onClick={() => router.push(`/dashboard/${slug}/roadmap/${item.id}`)}
           >
             {/* Header: title + category badge + NEW badge */}
             <div className="flex items-start justify-between gap-4 mb-3">
@@ -153,34 +154,26 @@ export function BriefsCards({ items, roadmapCount }: { items: RoadmapItemRow[]; 
             </div>
 
             {/* Actions row */}
-            <div className="flex items-center gap-3">
-              {/* Thumbs up/down */}
+            <div className="flex items-center gap-3" onClick={e => e.stopPropagation()}>
               <button
                 onClick={() => handleFeedback(item.id, 'up')}
-                className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md border transition-colors hover:bg-gray-50"
-                style={{ borderColor: '#e8e4de', color: '#8b8680' }}
+                className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md border transition-colors hover:bg-green-50"
+                style={{ borderColor: '#e8e4de', color: item.feedback_up > 0 ? '#059669' : '#8b8680' }}
               >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M14 9V5a3 3 0 00-6 0v4" />
-                  <path d="M3 15a2 2 0 002 2h2.586a1 1 0 01.707.293l2.414 2.414a1 1 0 001.414-.293L14 17h4a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2 2v6z" />
-                </svg>
-                {item.feedback_up > 0 && item.feedback_up}
+                <span style={{ fontSize: '14px' }}>+1</span>
+                {item.feedback_up > 0 && <span>{item.feedback_up}</span>}
               </button>
               <button
                 onClick={() => handleFeedback(item.id, 'down')}
-                className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md border transition-colors hover:bg-gray-50"
-                style={{ borderColor: '#e8e4de', color: '#8b8680' }}
+                className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md border transition-colors hover:bg-red-50"
+                style={{ borderColor: '#e8e4de', color: item.feedback_down > 0 ? '#dc2626' : '#8b8680' }}
               >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M10 15V19a3 3 0 006 0v-4" />
-                  <path d="M21 9a2 2 0 00-2-2h-2.586a1 1 0 01-.707-.293L13.293 4.293a1 1 0 00-1.414.293L10 7H6a2 2 0 00-2 2v6a2 2 0 002 2h14a2 2 0 002-2V9z" />
-                </svg>
-                {item.feedback_down > 0 && item.feedback_down}
+                <span style={{ fontSize: '14px' }}>-1</span>
+                {item.feedback_down > 0 && <span>{item.feedback_down}</span>}
               </button>
 
               <div className="flex-1" />
 
-              {/* Archive */}
               <button
                 onClick={() => handleArchive(item.id)}
                 disabled={archivingId === item.id}
@@ -190,7 +183,6 @@ export function BriefsCards({ items, roadmapCount }: { items: RoadmapItemRow[]; 
                 {archivingId === item.id ? 'Archiving...' : 'Archive'}
               </button>
 
-              {/* Add to Roadmap */}
               <button
                 onClick={() => handlePromote(item.id)}
                 disabled={isFull || promotingId === item.id}
