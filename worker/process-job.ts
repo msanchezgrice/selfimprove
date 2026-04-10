@@ -52,6 +52,10 @@ export async function processJob(job: BuildJob): Promise<Record<string, unknown>
 }
 
 async function runImplement(job: BuildJob, workDir: string, repo: string): Promise<Record<string, unknown>> {
+  // Set git identity for commits
+  run('git config user.email "bot@selfimprove.dev"', { cwd: workDir })
+  run('git config user.name "SelfImprove Bot"', { cwd: workDir })
+
   const branchName = `selfimprove/auto-${Date.now()}`
   run(`git checkout -b ${branchName}`, { cwd: workDir })
 
