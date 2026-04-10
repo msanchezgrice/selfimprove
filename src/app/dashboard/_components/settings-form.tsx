@@ -772,6 +772,12 @@ export function SettingsForm({ project, settings, orgTier }: SettingsFormProps) 
 
         <div>
           <Label htmlFor="posthog-key">PostHog API key</Label>
+          <p className="text-xs mb-2" style={{ color: C.muted }}>
+            Find your API key at{' '}
+            <a href="https://us.posthog.com/settings/project#variables" target="_blank" rel="noopener noreferrer" style={{ color: C.accent, textDecoration: 'underline' }}>
+              PostHog → Settings → Project API Key
+            </a>
+          </p>
           <div className="flex gap-2">
             <input
               id="posthog-key"
@@ -780,19 +786,40 @@ export function SettingsForm({ project, settings, orgTier }: SettingsFormProps) 
               onChange={(e: ChangeEvent<HTMLInputElement>) => setPosthogKey(e.target.value)}
               className={inputClass + ' flex-1'}
               style={inputStyle}
-              placeholder="phx_..."
+              placeholder="phc_..."
             />
-            <button
-              type="button"
-              className="shrink-0 px-3 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-gray-50"
-              style={{ color: C.accent, border: `1px solid ${C.border}` }}
-            >
-              Connect &rarr;
-            </button>
             <button
               type="button"
               onClick={async () => {
                 if (!posthogKey) return
+                // Save the key first
+                const supabase = createClient()
+                await supabase
+                  .from('project_settings')
+                  .update({ posthog_api_key: posthogKey })
+                  .eq('project_id', project.id)
+                setSaveStatus('Saved')
+                setTimeout(() => setSaveStatus(null), 2000)
+              }}
+              className="shrink-0 px-3 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-gray-50"
+              style={{ color: C.accent, border: `1px solid ${C.border}` }}
+            >
+              Save Key
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                if (!posthogKey) {
+                  alert('Enter your PostHog API key first')
+                  return
+                }
+                // Save key first, then sync
+                const supabase = createClient()
+                await supabase
+                  .from('project_settings')
+                  .update({ posthog_api_key: posthogKey })
+                  .eq('project_id', project.id)
+
                 const res = await fetch('/api/integrations/posthog', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
@@ -806,15 +833,21 @@ export function SettingsForm({ project, settings, orgTier }: SettingsFormProps) 
                 }
               }}
               className="shrink-0 px-3 py-1.5 text-sm font-medium rounded-lg"
-              style={{ backgroundColor: '#eef2ff', color: '#6366f1' }}
+              style={{ backgroundColor: '#eef2ff', color: C.accent }}
             >
-              Sync Now
+              Save &amp; Sync
             </button>
           </div>
         </div>
 
         <div>
           <Label htmlFor="sentry-dsn">Sentry DSN</Label>
+          <p className="text-xs mb-2" style={{ color: C.muted }}>
+            Find your DSN at{' '}
+            <a href="https://sentry.io/settings/" target="_blank" rel="noopener noreferrer" style={{ color: C.accent, textDecoration: 'underline' }}>
+              Sentry → Settings → Projects → Client Keys (DSN)
+            </a>
+          </p>
           <div className="flex gap-2">
             <input
               id="sentry-dsn"
@@ -827,10 +860,20 @@ export function SettingsForm({ project, settings, orgTier }: SettingsFormProps) 
             />
             <button
               type="button"
+              onClick={async () => {
+                if (!sentryDsn) return
+                const supabase = createClient()
+                await supabase
+                  .from('project_settings')
+                  .update({ sentry_dsn: sentryDsn })
+                  .eq('project_id', project.id)
+                setSaveStatus('Saved')
+                setTimeout(() => setSaveStatus(null), 2000)
+              }}
               className="shrink-0 px-3 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-gray-50"
               style={{ color: C.accent, border: `1px solid ${C.border}` }}
             >
-              Connect &rarr;
+              Save DSN
             </button>
           </div>
         </div>
