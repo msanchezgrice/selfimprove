@@ -26,6 +26,53 @@ type StepConnectRepoProps = {
   setFramework: (v: string) => void
 }
 
+function CliOption() {
+  const [expanded, setExpanded] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const prompt = `Set up SelfImprove for this project.\n\n1. Get my GitHub token by running: gh auth token\n2. Call POST https://selfimprove-iota.vercel.app/api/cli/init with Authorization: Bearer GITHUB_TOKEN and body: {"repo_url": "THIS_REPO_URL", "site_url": "PRODUCTION_URL"}\n3. Open the dashboard_url from the response in my browser.`
+
+  return (
+    <div className="mb-4 rounded-xl border" style={{ borderColor: '#e8e4de' }}>
+      <button
+        type="button"
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center justify-between px-4 py-3 text-sm"
+        style={{ color: '#8b8680' }}
+      >
+        <span>Or set up via CLI — paste into Claude Code, Cursor, or Codex</span>
+        <span style={{ fontSize: '12px' }}>{expanded ? '▲' : '▼'}</span>
+      </button>
+      {expanded && (
+        <div className="px-4 pb-4">
+          <div className="relative">
+            <button
+              type="button"
+              onClick={async () => {
+                await navigator.clipboard.writeText(prompt)
+                setCopied(true)
+                setTimeout(() => setCopied(false), 2000)
+              }}
+              className="absolute top-2 right-2 px-2.5 py-1 rounded-md text-xs font-medium z-10"
+              style={{
+                backgroundColor: copied ? 'rgba(5,150,105,0.2)' : 'rgba(255,255,255,0.15)',
+                color: copied ? '#6ee7b7' : '#94a3b8',
+              }}
+            >
+              {copied ? 'Copied!' : 'Copy'}
+            </button>
+            <pre
+              className="rounded-lg p-3 pr-16 text-xs leading-relaxed overflow-x-auto whitespace-pre-wrap"
+              style={{ backgroundColor: '#1a1a2e', color: '#e2e0dc', margin: 0 }}
+            >
+              {prompt}
+            </pre>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 const frameworks = [
   { value: 'nextjs', label: 'Next.js' },
   { value: 'react', label: 'React' },
@@ -158,6 +205,9 @@ export function StepConnectRepo({
           </p>
         </div>
       </div>
+
+      {/* CLI alternative */}
+      <CliOption />
 
       {/* GitHub repo picker */}
       {!reposFetched && !selectedRepo && (

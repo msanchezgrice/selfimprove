@@ -2,43 +2,43 @@
 
 import { useState } from 'react'
 
-const PROMPT = `Set up SelfImprove for this project.
-
-1. Get my GitHub token by running: gh auth token
-
-2. Call this API to create the project:
-   curl -X POST https://selfimprove-iota.vercel.app/api/cli/init \\
-     -H "Authorization: Bearer GITHUB_TOKEN" \\
-     -H "Content-Type: application/json" \\
-     -d '{"repo_url": "THIS_REPO_URL", "site_url": "PRODUCTION_URL"}'
-
-3. Open the dashboard_url from the response in my browser.`
+const PROMPT = `Set up SelfImprove for this project. Get my GitHub token with "gh auth token", then call POST https://selfimprove-iota.vercel.app/api/cli/init with Authorization: Bearer GITHUB_TOKEN and body: {"repo_url": "THIS_REPO_URL", "site_url": "PRODUCTION_URL"}. Open the dashboard_url from the response.`
 
 export function CopyPrompt() {
   const [copied, setCopied] = useState(false)
 
   return (
-    <div className="relative">
-      <button
-        onClick={async () => {
-          await navigator.clipboard.writeText(PROMPT)
-          setCopied(true)
-          setTimeout(() => setCopied(false), 2000)
-        }}
-        className="absolute top-3 right-3 px-3 py-1.5 rounded-lg text-xs font-medium transition-all z-10"
-        style={{
-          backgroundColor: copied ? 'rgba(5, 150, 105, 0.2)' : 'rgba(255,255,255,0.1)',
-          color: copied ? '#6ee7b7' : '#94a3b8',
-        }}
-      >
-        {copied ? 'Copied!' : 'Copy'}
-      </button>
-      <pre
-        className="bg-[#1a1a2e] rounded-[14px] p-6 pr-20 font-mono text-[13px] leading-[1.8] overflow-x-auto text-left whitespace-pre-wrap"
-        style={{ color: '#e2e0dc', margin: 0 }}
-      >
-        {PROMPT}
-      </pre>
+    <div className="rounded-[16px] border-2 p-6 text-center" style={{ borderColor: '#0d9488', backgroundColor: '#faf8f5' }}>
+      <p className="text-sm font-semibold mb-3" style={{ color: '#1a1a2e' }}>
+        Paste into your coding agent
+      </p>
+      <div className="relative">
+        <button
+          onClick={async () => {
+            await navigator.clipboard.writeText(PROMPT)
+            setCopied(true)
+            setTimeout(() => setCopied(false), 2000)
+          }}
+          className="absolute top-2 right-2 px-2.5 py-1 rounded-md text-xs font-medium z-10 transition-all"
+          style={{
+            backgroundColor: copied ? 'rgba(5,150,105,0.3)' : 'rgba(255,255,255,0.15)',
+            color: copied ? '#6ee7b7' : '#94a3b8',
+          }}
+        >
+          {copied ? 'Copied!' : 'Copy'}
+        </button>
+        <pre
+          className="bg-[#1a1a2e] rounded-xl p-4 pr-16 font-mono text-xs leading-relaxed text-left whitespace-pre-wrap"
+          style={{ color: '#a5f3c4', margin: 0 }}
+        >
+          {PROMPT}
+        </pre>
+      </div>
+      <ol className="text-left mt-4 space-y-1 text-xs" style={{ color: '#8b8680' }}>
+        <li><span className="font-semibold" style={{ color: '#0d9488' }}>1.</span> Paste the prompt above into Claude Code, Cursor, or Codex</li>
+        <li><span className="font-semibold" style={{ color: '#0d9488' }}>2.</span> Your agent creates the project and opens your dashboard</li>
+        <li><span className="font-semibold" style={{ color: '#0d9488' }}>3.</span> Your roadmap populates within minutes</li>
+      </ol>
     </div>
   )
 }
