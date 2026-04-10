@@ -382,3 +382,13 @@
 1775842033:/Users/miguel/selfimprove/vercel.json:root
 1775842035:/Users/miguel/selfimprove/src/app/auth/callback/route.ts:src
 1775842052:/Users/miguel/selfimprove/src/app/auth/callback/route.ts:src
+1775842519:/Users/miguel/selfimprove/src/app/api/cron/site-scan/route.ts:src
+1775842526:/Users/miguel/selfimprove/src/app/api/cron/codebase-scan/route.ts:src
+1775842540:/Users/miguel/selfimprove/src/app/api/cron/github-activity/route.ts:src
+1775842556:/Users/miguel/selfimprove/vercel.json:root
+1775842561:/Users/miguel/selfimprove/src/app/onboarding/_components/step-select-sources.tsx:src
+1775842571:/Users/miguel/selfimprove/src/app/onboarding/_components/step-select-sources.tsx:src
+1775842586:/Users/miguel/selfimprove/src/app/onboarding/_components/step-select-sources.tsx:src
+1775842593:/Users/miguel/selfimprove/src/app/onboarding/_components/wizard.tsx:src
+1775842599:/Users/miguel/selfimprove/src/app/onboarding/_components/wizard.tsx:src
+1775842612:/Users/miguel/selfimprove/src/app/onboarding/_components/wizard.tsx:src

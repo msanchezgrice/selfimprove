@@ -13,6 +13,10 @@ type Sources = {
 type StepSelectSourcesProps = {
   sources: Sources
   setSources: (s: Sources) => void
+  posthogApiKey: string
+  setPosthogApiKey: (k: string) => void
+  sentryDsn: string
+  setSentryDsn: (d: string) => void
 }
 
 type SourceCardProps = {
@@ -89,6 +93,10 @@ function SourceCard({
 export function StepSelectSources({
   sources,
   setSources,
+  posthogApiKey,
+  setPosthogApiKey,
+  sentryDsn,
+  setSentryDsn,
 }: StepSelectSourcesProps) {
   const toggle = (key: keyof Sources) => {
     setSources({ ...sources, [key]: !sources[key] })
@@ -121,22 +129,56 @@ export function StepSelectSources({
           enabled={sources.voice}
           onToggle={() => toggle('voice')}
         />
-        <SourceCard
-          icon={<BarChart3 size={18} style={{ color: '#6366f1' }} />}
-          name="PostHog Analytics"
-          description="Pull usage analytics and funnel insights from PostHog."
-          note="API key required"
-          enabled={sources.posthog}
-          onToggle={() => toggle('posthog')}
-        />
-        <SourceCard
-          icon={<AlertTriangle size={18} style={{ color: '#6366f1' }} />}
-          name="Sentry Errors"
-          description="Surface recurring errors and crashes from Sentry."
-          note="DSN required"
-          enabled={sources.sentry}
-          onToggle={() => toggle('sentry')}
-        />
+        <div className="flex flex-col">
+          <SourceCard
+            icon={<BarChart3 size={18} style={{ color: '#6366f1' }} />}
+            name="PostHog Analytics"
+            description="Pull usage analytics and funnel insights from PostHog."
+            note="API key required"
+            enabled={sources.posthog}
+            onToggle={() => toggle('posthog')}
+          />
+          {sources.posthog && (
+            <div className="mt-2">
+              <input
+                type="text"
+                placeholder="phc_... or your PostHog API key"
+                value={posthogApiKey}
+                onChange={e => setPosthogApiKey(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border text-sm"
+                style={{ borderColor: '#e8e4de' }}
+              />
+              <p className="text-xs mt-1" style={{ color: '#8b8680' }}>
+                Find this in PostHog &rarr; Settings &rarr; Project API Key
+              </p>
+            </div>
+          )}
+        </div>
+        <div className="flex flex-col">
+          <SourceCard
+            icon={<AlertTriangle size={18} style={{ color: '#6366f1' }} />}
+            name="Sentry Errors"
+            description="Surface recurring errors and crashes from Sentry."
+            note="DSN required"
+            enabled={sources.sentry}
+            onToggle={() => toggle('sentry')}
+          />
+          {sources.sentry && (
+            <div className="mt-2">
+              <input
+                type="text"
+                placeholder="https://...@sentry.io/... or your Sentry DSN"
+                value={sentryDsn}
+                onChange={e => setSentryDsn(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border text-sm"
+                style={{ borderColor: '#e8e4de' }}
+              />
+              <p className="text-xs mt-1" style={{ color: '#8b8680' }}>
+                Find this in Sentry &rarr; Settings &rarr; Client Keys (DSN)
+              </p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

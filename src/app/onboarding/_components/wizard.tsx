@@ -62,6 +62,8 @@ export function OnboardingWizard({ orgId }: OnboardingWizardProps) {
     posthog: false,
     sentry: false,
   })
+  const [posthogApiKey, setPosthogApiKey] = useState('')
+  const [sentryDsn, setSentryDsn] = useState('')
 
   // Step 4: Configure AI
   const [roiFocus, setRoiFocus] = useState<RoiFocus>('balanced')
@@ -135,6 +137,8 @@ export function OnboardingWizard({ orgId }: OnboardingWizardProps) {
             safety_risk_threshold: riskThreshold,
             widget_enabled: sources.widget,
             voice_enabled: sources.voice,
+            posthog_api_key: posthogApiKey || null,
+            sentry_dsn: sentryDsn || null,
           },
         }),
       })
@@ -225,7 +229,14 @@ export function OnboardingWizard({ orgId }: OnboardingWizardProps) {
           />
         )}
         {step === 2 && (
-          <StepSelectSources sources={sources} setSources={setSources} />
+          <StepSelectSources
+            sources={sources}
+            setSources={setSources}
+            posthogApiKey={posthogApiKey}
+            setPosthogApiKey={setPosthogApiKey}
+            sentryDsn={sentryDsn}
+            setSentryDsn={setSentryDsn}
+          />
         )}
         {step === 3 && <StepAddWidget projectId={projectId} />}
         {step === 4 && (
