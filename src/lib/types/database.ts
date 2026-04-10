@@ -111,6 +111,8 @@ export type SignalUpdate = Partial<SignalInsert>;
 // roadmap_items
 // ---------------------------------------------------------------------------
 
+export type RoadmapStage = 'brief' | 'roadmap';
+
 export type RoadmapItemRow = BaseRow & {
   project_id: string;
   title: string;
@@ -130,6 +132,7 @@ export type RoadmapItemRow = BaseRow & {
   files_to_modify: string[];
   risks: string[];
   status: RoadmapStatus;
+  stage: RoadmapStage;
   rank: number;
   feedback_up: number;
   feedback_down: number;
@@ -146,9 +149,10 @@ export type RoadmapItemRow = BaseRow & {
   estimate_accuracy: number | null;
 };
 
-export type RoadmapItemInsert = Omit<RoadmapItemRow, 'id' | 'created_at' | 'updated_at' | 'roi_score' | 'status' | 'rank' | 'feedback_up' | 'feedback_down' | 'dismiss_reason' | 'prd_content' | 'generation_id' | 'build_status' | 'github_issue_url' | 'github_issue_number' | 'pr_url' | 'pr_number' | 'impact_estimates' | 'impact_actuals' | 'estimate_accuracy'> & {
+export type RoadmapItemInsert = Omit<RoadmapItemRow, 'id' | 'created_at' | 'updated_at' | 'roi_score' | 'status' | 'stage' | 'rank' | 'feedback_up' | 'feedback_down' | 'dismiss_reason' | 'prd_content' | 'generation_id' | 'build_status' | 'github_issue_url' | 'github_issue_number' | 'pr_url' | 'pr_number' | 'impact_estimates' | 'impact_actuals' | 'estimate_accuracy'> & {
   roi_score?: number;
   status?: RoadmapStatus;
+  stage?: RoadmapStage;
   rank?: number;
   feedback_up?: number;
   feedback_down?: number;

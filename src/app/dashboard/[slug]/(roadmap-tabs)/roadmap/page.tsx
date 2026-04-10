@@ -15,6 +15,7 @@ export default async function RoadmapPage() {
         .from('roadmap_items')
         .select('*')
         .eq('project_id', projectId)
+        .eq('stage', 'roadmap')
         .in('status', ['proposed', 'approved'])
         .order('rank', { ascending: true })
     : { data: null }

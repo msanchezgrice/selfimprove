@@ -1,55 +1,46 @@
-export default function BriefsPage() {
+import { createClient } from '@/lib/supabase/server'
+import { getActiveProject } from '@/lib/supabase/get-active-project'
+import { BriefsCards } from '../../../_components/briefs-cards'
+
+export default async function BriefsPage() {
+  const project = await getActiveProject()
+  if (!project) return <div className="p-8"><p style={{ color: '#8b8680' }}>No project selected</p></div>
+
+  const supabase = await createClient()
+  const { data: items } = await supabase
+    .from('roadmap_items')
+    .select('*')
+    .eq('project_id', project.id)
+    .eq('stage', 'brief')
+    .in('status', ['proposed'])
+    .order('roi_score', { ascending: false })
+
+  // Count roadmap items for cap display
+  const { count: roadmapCount } = await supabase
+    .from('roadmap_items')
+    .select('*', { count: 'exact', head: true })
+    .eq('project_id', project.id)
+    .eq('stage', 'roadmap')
+    .in('status', ['proposed', 'approved', 'building'])
+
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex-1">
-        <div className="flex flex-col items-center justify-center h-full min-h-64">
-          {/* Scroll icon */}
-          <svg
-            width="48"
-            height="48"
-            viewBox="0 0 48 48"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            className="mb-4"
-          >
-            <path
-              d="M14 8H34C36.2 8 38 9.8 38 12V36C38 38.2 36.2 40 34 40H18C15.8 40 14 38.2 14 36V8Z"
-              stroke="#6366f1"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M14 8C14 8 10 8 10 12C10 16 14 16 14 16"
-              stroke="#6366f1"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M20 18H32"
-              stroke="#6366f1"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-            />
-            <path
-              d="M20 24H28"
-              stroke="#6366f1"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-            />
-          </svg>
-          <h2
-            className="font-semibold mb-2"
-            style={{ fontSize: '1.2rem', color: '#1a1a2e' }}
-          >
-            First brief coming soon
-          </h2>
-          <p style={{ fontSize: '0.85rem', color: '#8b8680' }}>
-            Briefs are generated from your signals and roadmap
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-xl font-semibold" style={{ color: '#1a1a2e' }}>Briefs</h1>
+          <p className="text-sm" style={{ color: '#8b8680' }}>
+            {items?.length ?? 0} ideas &middot; Roadmap: {roadmapCount ?? 0}/25
           </p>
         </div>
       </div>
+      {!items || items.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-xl border bg-white px-6 py-16 text-center" style={{ borderColor: '#e8e4de' }}>
+          <h2 className="text-lg font-semibold" style={{ color: '#1a1a2e' }}>No briefs yet</h2>
+          <p className="mt-2 text-sm" style={{ color: '#8b8680' }}>Briefs are generated automatically from your signals.</p>
+        </div>
+      ) : (
+        <BriefsCards items={items} roadmapCount={roadmapCount ?? 0} />
+      )}
     </div>
   )
 }

@@ -224,7 +224,8 @@ ${roiFocusInstruction}
    - Base estimates on the signal evidence — if "42% drop at step 3", predict "drop to 25%" not "improves UX"
    - Be realistic — small changes typically yield 5-20% improvements, not 50%+
    - Include reasoning that references the signal data
-9. Return 3-10 items, ranked by ROI score (highest first)`
+9. Generate ALL viable briefs from these signals. Group related signals. Assign confidence based on signal diversity.
+10. Rank items by ROI score (highest first)`
 
   const result = await callClaude<{ items: GeneratedRoadmapItem[] }>({
     prompt,
@@ -263,6 +264,7 @@ ${roiFocusInstruction}
       files_to_modify: item.files_to_modify,
       risks: item.risks,
       impact_estimates: item.impact_estimates,
+      stage: 'brief',
       rank: index + 1,
       generation_id: generationId,
     }))
@@ -278,5 +280,43 @@ ${roiFocusInstruction}
     notifyRoadmapReady(projectId, result.items.length).catch(() => {})
   }
 
+  // Auto-promote high-confidence briefs to the roadmap
+  await autoPromoteBriefs(projectId)
+
   return { items: result.items, generationId }
+}
+
+export async function autoPromoteBriefs(projectId: string) {
+  const supabase = createAdminClient()
+
+  // Count current roadmap items
+  const { count: roadmapCount } = await supabase
+    .from('roadmap_items')
+    .select('*', { count: 'exact', head: true })
+    .eq('project_id', projectId)
+    .eq('stage', 'roadmap')
+    .in('status', ['proposed', 'approved', 'building'])
+
+  const available = 25 - (roadmapCount ?? 0)
+  if (available <= 0) return
+
+  // Get top briefs by confidence + ROI
+  const { data: briefs } = await supabase
+    .from('roadmap_items')
+    .select('id, confidence, roi_score')
+    .eq('project_id', projectId)
+    .eq('stage', 'brief')
+    .eq('status', 'proposed')
+    .gte('confidence', 80)
+    .gte('roi_score', 4.0)
+    .order('roi_score', { ascending: false })
+    .limit(available)
+
+  if (!briefs || briefs.length === 0) return
+
+  const ids = briefs.map(b => b.id)
+  await supabase
+    .from('roadmap_items')
+    .update({ stage: 'roadmap' })
+    .in('id', ids)
 }

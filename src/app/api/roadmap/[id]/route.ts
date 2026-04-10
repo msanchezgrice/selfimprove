@@ -39,6 +39,7 @@ export async function PATCH(
     'feedback_up',
     'feedback_down',
     'rank',
+    'stage',
   ] as const
 
   const updates: Record<string, unknown> = {}
