@@ -470,18 +470,20 @@ export default async function Home() {
 
           <div className="bg-[#1a1a2e] rounded-[14px] p-6 font-mono text-[13px] leading-relaxed overflow-x-auto text-left" style={{ color: "#e2e0dc" }}>
             <span style={{ color: "#a5f3c4" }}>&quot;Set up SelfImprove for this project.</span>{"\n\n"}
-            <span style={{ color: "#e2e0dc" }}>1. Call POST https://selfimprove-iota.vercel.app/api/cli/init</span>{"\n"}
-            <span style={{ color: "#e2e0dc" }}>   with Authorization: Bearer MY_API_KEY</span>{"\n"}
-            <span style={{ color: "#e2e0dc" }}>   and body: {`{`}&quot;repo_url&quot;: &quot;REPO_URL&quot;, &quot;site_url&quot;: &quot;SITE_URL&quot;{`}`}</span>{"\n\n"}
-            <span style={{ color: "#e2e0dc" }}>2. Add the widget_snippet from the response to my root layout.</span>{"\n\n"}
-            <span style={{ color: "#e2e0dc" }}>3. Create SELFIMPROVE.md with the agent_instructions from the response.</span>{"\n\n"}
-            <span style={{ color: "#e2e0dc" }}>4. Commit and push.&quot;</span>
+            <span style={{ color: "#8b8680" }}>Step 1: Get my GitHub token</span>{"\n"}
+            <span style={{ color: "#e2e0dc" }}>Run: gh auth token</span>{"\n\n"}
+            <span style={{ color: "#8b8680" }}>Step 2: Create the project</span>{"\n"}
+            <span style={{ color: "#e2e0dc" }}>Call POST https://selfimprove-iota.vercel.app/api/cli/init</span>{"\n"}
+            <span style={{ color: "#e2e0dc" }}>  Authorization: Bearer GITHUB_TOKEN</span>{"\n"}
+            <span style={{ color: "#e2e0dc" }}>  Body: {`{`}&quot;repo_url&quot;: &quot;REPO_URL&quot;, &quot;site_url&quot;: &quot;SITE_URL&quot;{`}`}</span>{"\n\n"}
+            <span style={{ color: "#8b8680" }}>Step 3: Apply the response</span>{"\n"}
+            <span style={{ color: "#e2e0dc" }}>Add widget_snippet to the root layout.</span>{"\n"}
+            <span style={{ color: "#e2e0dc" }}>Create SELFIMPROVE.md with agent_instructions.</span>{"\n"}
+            <span style={{ color: "#e2e0dc" }}>Commit and push.&quot;</span>
           </div>
 
           <p className="text-xs text-text-secondary mt-4">
-            Get your API key after signing up at{" "}
-            <a href="/login" className="text-accent underline">selfimprove-iota.vercel.app/login</a>
-            {" "}&rarr; Settings &rarr; Team &amp; Billing
+            Uses your GitHub token to auto-create an account. No signup needed.
           </p>
         </div>
       </section>

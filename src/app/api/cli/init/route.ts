@@ -4,13 +4,112 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { queueScanJob } from '@/lib/ai/queue-build'
 import { seedProjectSignals } from '@/lib/ai/cold-start'
 import { importGitHubIssues } from '@/lib/ai/import-github-issues'
+import crypto from 'crypto'
+
+async function authenticateGitHub(token: string): Promise<{ userId: string; orgId: string; githubToken: string } | null> {
+  // Verify the GitHub token by calling GitHub API
+  const ghRes = await fetch('https://api.github.com/user', {
+    headers: { Authorization: `Bearer ${token}`, 'User-Agent': 'SelfImprove-App' },
+  })
+  if (!ghRes.ok) return null
+
+  const ghUser = await ghRes.json()
+  const email = ghUser.email || `${ghUser.login}@users.noreply.github.com`
+  const displayName = ghUser.name || ghUser.login
+
+  const supabase = createAdminClient()
+
+  // Check if user already exists by email
+  const { data: existingUsers } = await supabase.auth.admin.listUsers()
+  const existingUser = existingUsers?.users?.find(u => u.email === email)
+
+  let userId: string
+  let orgId: string
+
+  if (existingUser) {
+    userId = existingUser.id
+
+    // Get their org
+    const { data: membership } = await supabase
+      .from('org_members')
+      .select('org_id')
+      .eq('user_id', userId)
+      .limit(1)
+      .single()
+
+    if (!membership) return null
+    orgId = membership.org_id
+
+    // Update GitHub token
+    await supabase
+      .from('org_members')
+      .update({ github_token: token })
+      .eq('user_id', userId)
+  } else {
+    // Create new user via Supabase admin API
+    const { data: newUser, error: userError } = await supabase.auth.admin.createUser({
+      email,
+      email_confirm: true,
+      user_metadata: { full_name: displayName, avatar_url: ghUser.avatar_url, provider: 'github' },
+    })
+
+    if (userError || !newUser.user) return null
+    userId = newUser.user.id
+
+    // Create org + membership
+    const slug = displayName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+    const { data: org } = await supabase
+      .from('orgs')
+      .insert({ name: `${displayName}'s Team`, slug: `${slug}-${Date.now()}` })
+      .select('id')
+      .single()
+
+    if (!org) return null
+    orgId = org.id
+
+    await supabase
+      .from('org_members')
+      .insert({ org_id: orgId, user_id: userId, role: 'owner', github_token: token })
+
+    // Generate API key for future use
+    const apiKey = `si_${crypto.randomBytes(24).toString('hex')}`
+    await supabase
+      .from('org_members')
+      .update({ api_key: apiKey })
+      .eq('user_id', userId)
+  }
+
+  return { userId, orgId, githubToken: token }
+}
 
 export async function POST(request: Request) {
-  const auth = await authenticateApiKey(request)
+  const authHeader = request.headers.get('authorization')
+  const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null
+
+  let auth: { userId?: string; orgId: string } | null = null
+  let githubToken: string | null = null
+
+  if (bearerToken?.startsWith('si_')) {
+    // SelfImprove API key
+    auth = await authenticateApiKey(request)
+    githubToken = await getGitHubTokenFromApiKey(request)
+  } else if (bearerToken?.startsWith('gho_') || bearerToken?.startsWith('ghp_') || bearerToken?.startsWith('github_pat_')) {
+    // GitHub token — auto-create account if needed
+    const ghAuth = await authenticateGitHub(bearerToken)
+    if (ghAuth) {
+      auth = { orgId: ghAuth.orgId }
+      githubToken = ghAuth.githubToken
+    }
+  }
+
   if (!auth) {
     return NextResponse.json({
-      error: 'Authentication required. Pass your API key as: Authorization: Bearer si_...',
-      help: 'Get your API key at https://selfimprove-iota.vercel.app/dashboard/settings (Team & Billing tab)',
+      error: 'Authentication required.',
+      options: [
+        'Pass your GitHub token: Authorization: Bearer ghp_... (auto-creates account)',
+        'Or your SelfImprove API key: Authorization: Bearer si_...',
+        'Get a GitHub token by running: gh auth token',
+      ],
     }, { status: 401 })
   }
 
@@ -81,8 +180,7 @@ export async function POST(request: Request) {
       .eq('project_id', project.id)
   }
 
-  // Fire background tasks
-  const githubToken = await getGitHubTokenFromApiKey(request)
+  // Fire background tasks (githubToken already set from auth above)
 
   if (site_url) {
     seedProjectSignals(project.id, site_url).catch(() => {})
