@@ -1,5 +1,5 @@
 import { getUser } from '@/lib/supabase/auth-helpers'
-import { CopyPrompt } from './_components/copy-prompt'
+import { CopyPrompt, AgentOneLiner } from './_components/copy-prompt'
 
 export default async function Home() {
   const user = await getUser()
@@ -114,6 +114,13 @@ export default async function Home() {
         <p className="text-[13px] text-text-secondary mt-2">
           No credit card required &middot; Free forever tier
         </p>
+
+        <div className="mt-6 max-w-[480px] mx-auto rounded-xl border-2 p-4" style={{ borderColor: '#0d9488', backgroundColor: 'rgba(13,148,136,0.04)' }}>
+          <p className="text-xs font-semibold text-center mb-2" style={{ color: '#0d9488' }}>
+            Or paste this into your AI coding agent
+          </p>
+          <AgentOneLiner />
+        </div>
 
         {/* ===== LIVE ROADMAP PREVIEW ===== */}
         <div className="max-w-[680px] mx-auto mt-[60px] bg-surface border border-border rounded-[14px] overflow-hidden shadow-[0_4px_24px_rgba(0,0,0,0.06)] text-left">
