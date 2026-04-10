@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef, type KeyboardEvent, type ChangeEvent } from 'react'
 import { createClient } from '@/lib/supabase/browser'
+import { showToast } from '@/lib/utils/toast'
 import { TIERS } from '@/lib/constants/tiers'
 import type {
   ProjectRow,
@@ -231,7 +232,7 @@ function useToast() {
 export function SettingsForm({ project, settings, orgTier }: SettingsFormProps) {
   const [tab, setTab] = useState<Tab>('general')
   const [saving, setSaving] = useState(false)
-  const { toast, show: showToast } = useToast()
+  const { toast, show } = useToast()
 
   const tierConfig = TIERS[orgTier]
 
@@ -348,9 +349,11 @@ export function SettingsForm({ project, settings, orgTier }: SettingsFormProps) 
         if (error) throw error
       }
 
-      showToast('Saved')
+      show('Saved')
+      showToast('success', 'Changes saved', { id: 'settings-save' })
     } catch {
-      showToast('Save failed — try again')
+      show('Save failed — try again')
+      showToast('error', 'Failed to save changes. Please try again.', { id: 'settings-save' })
     } finally {
       setSaving(false)
     }

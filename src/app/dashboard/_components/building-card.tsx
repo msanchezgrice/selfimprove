@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import type { RoadmapItemRow } from '@/lib/types/database'
+import { showToast } from '@/lib/utils/toast'
 
 const categoryConfig: Record<string, { bg: string; text: string; label: string }> = {
   bug: { bg: '#fef2f2', text: '#dc2626', label: 'Bug' },
@@ -36,10 +37,15 @@ export function BuildingCards({ items }: { items: RoadmapItemRow[] }) {
   const handleReview = async (itemId: string) => {
     setReviewingId(itemId)
     try {
-      await fetch(`/api/roadmap/${itemId}/review`, { method: 'POST' })
-      router.refresh()
+      const res = await fetch(`/api/roadmap/${itemId}/review`, { method: 'POST' })
+      if (res.ok) {
+        showToast('success', 'PR review submitted', { id: `review-${itemId}` })
+        router.refresh()
+      } else {
+        showToast('error', 'Failed to submit review. Please try again.', { id: `review-${itemId}` })
+      }
     } catch {
-      // Review request failed — UI will remain on current state
+      showToast('error', 'Failed to submit review. Please try again.', { id: `review-${itemId}` })
     }
     setReviewingId(null)
   }
@@ -136,8 +142,14 @@ export function BuildingCards({ items }: { items: RoadmapItemRow[] }) {
                 <button
                   onClick={async () => {
                     setBuildingId(item.id)
-                    await fetch(`/api/roadmap/${item.id}/build`, { method: 'POST' })
-                    router.refresh()
+                    const res = await fetch(`/api/roadmap/${item.id}/build`, { method: 'POST' })
+                    if (res.ok) {
+                      showToast('success', 'Build queued successfully', { id: `build-${item.id}` })
+                      router.refresh()
+                    } else {
+                      showToast('error', 'Failed to queue build. Please try again.', { id: `build-${item.id}` })
+                    }
+                    setBuildingId(null)
                   }}
                   disabled={buildingId === item.id}
                   className="text-xs font-medium px-3 py-1.5 rounded-lg text-white transition-opacity disabled:opacity-60"
