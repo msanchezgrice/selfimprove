@@ -120,24 +120,31 @@ export async function POST(request: Request) {
     )
   }
 
-  // CORS headers for widget
+  // CORS headers for widget — only reflect a known origin, never wildcard
+  const corsHeaders: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+  }
+  if (origin) {
+    corsHeaders['Access-Control-Allow-Origin'] = origin
+  }
+
   return new NextResponse(
     JSON.stringify({ id: signal.id, received: true }),
     {
       status: 201,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': origin || '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-      },
+      headers: corsHeaders,
     },
   )
 }
 
-// CORS preflight
+// CORS preflight — only reflect an actual origin, never wildcard
 export async function OPTIONS(request: Request) {
-  const origin = request.headers.get('origin') || '*'
+  const origin = request.headers.get('origin')
+  if (!origin) {
+    return new NextResponse(null, { status: 204 })
+  }
   return new NextResponse(null, {
     status: 204,
     headers: {

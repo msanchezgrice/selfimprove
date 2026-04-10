@@ -19,11 +19,12 @@ export async function GET(request: Request) {
     return NextResponse.json({ projects })
   }
 
-  // Get project details
+  // Get project details — scoped to authenticated org
   const { data: project } = await supabase
     .from('projects')
     .select('*')
     .eq('id', projectId)
+    .eq('org_id', auth.orgId)
     .single()
 
   const { count: signalCount } = await supabase

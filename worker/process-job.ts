@@ -1,6 +1,6 @@
-import { execSync } from 'child_process'
+import { execFileSync, ExecFileSyncOptions } from 'child_process'
 import { createClient } from '@supabase/supabase-js'
-import { mkdtemp, rm, writeFile } from 'fs/promises'
+import { mkdtemp, rm, writeFile, readFile } from 'fs/promises'
 import { tmpdir } from 'os'
 import { join } from 'path'
 
@@ -9,13 +9,13 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 )
 
-function run(cmd: string, opts: { cwd?: string; timeout?: number } = {}): string {
-  return execSync(cmd, {
-    cwd: opts.cwd,
-    timeout: opts.timeout || 120_000,
-    encoding: 'utf-8',
+function run(cmd: string, args: string[], opts?: ExecFileSyncOptions): string {
+  return execFileSync(cmd, args, {
+    timeout: 120_000, // 2min default for git commands
     env: { ...process.env },
     stdio: ['pipe', 'pipe', 'pipe'],
+    ...opts,
+    encoding: 'utf-8', // must come last so spread can't override to Buffer
   }).trim()
 }
 
@@ -39,7 +39,7 @@ export async function processJob(job: BuildJob): Promise<Record<string, unknown>
 
     const cloneUrl = `https://x-access-token:${job.github_token}@github.com/${repo}.git`
     console.log(`[worker] Cloning ${repo}...`)
-    run(`git clone --depth 50 ${cloneUrl} ${workDir}`)
+    run('git', ['clone', '--depth', '50', cloneUrl, workDir])
 
     if (job.job_type === 'implement') {
       return await runImplement(job, workDir, repo)
@@ -52,12 +52,14 @@ export async function processJob(job: BuildJob): Promise<Record<string, unknown>
 }
 
 async function runImplement(job: BuildJob, workDir: string, repo: string): Promise<Record<string, unknown>> {
+  const cwdOpts: ExecFileSyncOptions = { cwd: workDir }
+
   // Set git identity for commits
-  run('git config user.email "bot@selfimprove.dev"', { cwd: workDir })
-  run('git config user.name "SelfImprove Bot"', { cwd: workDir })
+  run('git', ['config', 'user.email', 'bot@selfimprove.dev'], cwdOpts)
+  run('git', ['config', 'user.name', 'SelfImprove Bot'], cwdOpts)
 
   const branchName = `selfimprove/auto-${Date.now()}`
-  run(`git checkout -b ${branchName}`, { cwd: workDir })
+  run('git', ['checkout', '-b', branchName], cwdOpts)
 
   console.log(`[worker] Running Claude Code for implementation...`)
 
@@ -75,36 +77,33 @@ async function runImplement(job: BuildJob, workDir: string, repo: string): Promi
 - Make minimal, focused changes
 `)
 
+  const claudeTimeout: ExecFileSyncOptions = { cwd: workDir, timeout: 1_800_000 }
+
   let stdout = ''
   try {
-    stdout = run(
-      `claude -p "$(cat ${promptFile})" --allowedTools Edit,Write,Read,Glob,Grep --output-format text`,
-      { cwd: workDir, timeout: 900_000 },
-    )
+    // Read prompt file in Node.js instead of using $(cat ...) shell substitution
+    const promptContent = await readFile(promptFile, 'utf-8')
+    stdout = run('claude', ['-p', promptContent, '--allowedTools', 'Edit,Write,Read,Glob,Grep', '--output-format', 'text'], claudeTimeout)
   } catch (err) {
     console.log('[worker] First attempt failed, retrying with simplified prompt...')
     // Retry with a simpler, more focused prompt
-    const simplePromptFile = join(workDir, '.selfimprove-retry-prompt.txt')
-    await writeFile(simplePromptFile, `Make the following changes to the codebase. Be minimal and focused.\n\n${job.prompt.slice(0, 2000)}`)
-    stdout = run(
-      `claude -p "$(cat ${simplePromptFile})" --allowedTools Edit,Write,Read,Glob,Grep --output-format text`,
-      { cwd: workDir, timeout: 900_000 },
-    )
+    const simplePrompt = `Make the following changes to the codebase. Be minimal and focused.\n\n${job.prompt.slice(0, 2000)}`
+    stdout = run('claude', ['-p', simplePrompt, '--allowedTools', 'Edit,Write,Read,Glob,Grep', '--output-format', 'text'], claudeTimeout)
   }
 
   console.log(`[worker] Claude Code output: ${stdout.slice(0, 500)}`)
 
-  const diffStat = run('git diff --stat', { cwd: workDir })
-  const untrackedFiles = run('git ls-files --others --exclude-standard', { cwd: workDir })
+  const diffStat = run('git', ['diff', '--stat'], cwdOpts)
+  const untrackedFiles = run('git', ['ls-files', '--others', '--exclude-standard'], cwdOpts)
 
   if (!diffStat && !untrackedFiles) {
     throw new Error('Claude Code made no changes')
   }
 
-  run('git add -A', { cwd: workDir })
+  run('git', ['add', '-A'], cwdOpts)
   const commitMsg = `feat: ${job.prompt.slice(0, 50).replace(/"/g, "'").replace(/\n/g, ' ')}...\n\nImplemented by SelfImprove AI`
-  run(`git commit -m "${commitMsg}"`, { cwd: workDir })
-  run(`git push origin ${branchName}`, { cwd: workDir })
+  run('git', ['commit', '-m', commitMsg], cwdOpts)
+  run('git', ['push', 'origin', branchName], cwdOpts)
 
   const prBody = `## Auto-Implementation\n\n${job.prompt.slice(0, 500)}\n\n---\n*Auto-implemented by [SelfImprove](https://selfimprove-iota.vercel.app)*`
 
@@ -165,20 +164,17 @@ async function runScan(job: BuildJob, workDir: string): Promise<Record<string, u
 - Focus on reading and analyzing the codebase
 `)
 
+  const claudeTimeout: ExecFileSyncOptions = { cwd: workDir, timeout: 1_800_000 }
+
   let stdout = ''
   try {
-    stdout = run(
-      `claude -p "$(cat ${promptFile})" --allowedTools Read,Glob,Grep --output-format text`,
-      { cwd: workDir, timeout: 900_000 },
-    )
+    // Read prompt file in Node.js instead of using $(cat ...) shell substitution
+    const promptContent = await readFile(promptFile, 'utf-8')
+    stdout = run('claude', ['-p', promptContent, '--allowedTools', 'Read,Glob,Grep', '--output-format', 'text'], claudeTimeout)
   } catch (err) {
     console.log('[worker] First scan attempt failed, retrying with simplified prompt...')
-    const simplePromptFile = join(workDir, '.selfimprove-retry-prompt.txt')
-    await writeFile(simplePromptFile, `Analyze this codebase. Be concise.\n\n${job.prompt.slice(0, 2000)}`)
-    stdout = run(
-      `claude -p "$(cat ${simplePromptFile})" --allowedTools Read,Glob,Grep --output-format text`,
-      { cwd: workDir, timeout: 900_000 },
-    )
+    const simplePrompt = `Analyze this codebase. Be concise.\n\n${job.prompt.slice(0, 2000)}`
+    stdout = run('claude', ['-p', simplePrompt, '--allowedTools', 'Read,Glob,Grep', '--output-format', 'text'], claudeTimeout)
   }
 
   let findings: Array<Record<string, unknown>> = []

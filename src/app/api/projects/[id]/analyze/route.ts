@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { callClaude } from '@/lib/ai/call-claude'
 import { getGitHubToken } from '@/lib/github/get-token'
+import { validatePublicUrl } from '@/lib/validate-url'
 
 interface ProductContext {
   description: string
@@ -37,11 +38,22 @@ export async function POST(
 
   const admin = createAdminClient()
 
-  // Get project details
+  // Verify user belongs to an org
+  const { data: membership } = await admin
+    .from('org_members')
+    .select('org_id')
+    .eq('user_id', user.id)
+    .single()
+  if (!membership) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
+  // Get project details — scoped to user's org
   const { data: project } = await admin
     .from('projects')
     .select('*')
     .eq('id', id)
+    .eq('org_id', membership.org_id)
     .single()
 
   if (!project) {
@@ -52,7 +64,10 @@ export async function POST(
 
   // 1. Crawl the site URL if available
   if (project.site_url) {
-    try {
+    const urlCheck = await validatePublicUrl(project.site_url)
+    if (!urlCheck.valid) {
+      console.warn(`SSRF blocked: ${project.site_url} — ${urlCheck.error}`)
+    } else try {
       const response = await fetch(project.site_url, {
         headers: { 'User-Agent': 'SelfImprove-Bot/1.0' },
         signal: AbortSignal.timeout(10000),

@@ -1,15 +1,26 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { verifyGitHubSignature } from '@/lib/auth/verify-secret'
 
 export async function POST(request: Request) {
-  // Verify GitHub webhook signature (optional for now — use a secret later)
+  // Verify GitHub webhook HMAC-SHA256 signature
+  const signature = request.headers.get('x-hub-signature-256')
+  const body = await request.text()
+  const secret = process.env.GITHUB_WEBHOOK_SECRET
+  if (!secret || !signature) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+  if (!verifyGitHubSignature(body, signature, secret)) {
+    return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
+  }
+
   const event = request.headers.get('x-github-event')
 
   if (event !== 'pull_request') {
     return NextResponse.json({ ignored: true })
   }
 
-  const payload = await request.json()
+  const payload = JSON.parse(body)
   const action = payload.action // opened, closed, merged, etc.
   const pr = payload.pull_request
 

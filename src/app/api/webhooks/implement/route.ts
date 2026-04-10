@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { reviewPR, type PRDiff } from '@/lib/ai/approval-agent'
 import { notifyPRCreated } from '@/lib/notifications'
+import { verifySecret } from '@/lib/auth/verify-secret'
 import type { ProjectSettingsRow } from '@/lib/types/database'
 
 interface ImplementWebhookPayload {
@@ -22,7 +23,8 @@ interface ImplementWebhookPayload {
 export async function POST(request: Request) {
   // Verify webhook secret
   const authHeader = request.headers.get('authorization')
-  if (authHeader !== `Bearer ${process.env.IMPLEMENT_WEBHOOK_SECRET}`) {
+  const webhookSecret = process.env.IMPLEMENT_WEBHOOK_SECRET
+  if (!webhookSecret || !authHeader || !verifySecret(authHeader, `Bearer ${webhookSecret}`)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

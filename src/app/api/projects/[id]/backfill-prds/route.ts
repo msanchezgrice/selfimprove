@@ -20,6 +20,27 @@ export async function POST(
 
   const admin = createAdminClient()
 
+  // Verify user belongs to an org
+  const { data: membership } = await admin
+    .from('org_members')
+    .select('org_id')
+    .eq('user_id', user.id)
+    .single()
+  if (!membership) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
+  // Verify project belongs to user's org
+  const { data: project } = await admin
+    .from('projects')
+    .select('id')
+    .eq('id', id)
+    .eq('org_id', membership.org_id)
+    .single()
+  if (!project) {
+    return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+  }
+
   const { data: items } = await admin
     .from('roadmap_items')
     .select('id, title')

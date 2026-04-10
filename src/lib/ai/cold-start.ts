@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { SIGNAL_WEIGHTS } from '@/lib/constants/signal-weights'
+import { validatePublicUrl } from '@/lib/validate-url'
 
 interface SiteAnalysis {
   title: string
@@ -30,6 +31,13 @@ export async function analyzeSite(siteUrl: string): Promise<SiteAnalysis> {
     accessibilityHints: [],
     seoHints: [],
     agentReadiness: [],
+  }
+
+  // SSRF protection: validate URL resolves to a public IP
+  const urlCheck = await validatePublicUrl(siteUrl)
+  if (!urlCheck.valid) {
+    console.warn(`SSRF blocked in cold-start: ${siteUrl} — ${urlCheck.error}`)
+    return analysis
   }
 
   try {

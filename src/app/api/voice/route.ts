@@ -45,10 +45,10 @@ export async function POST(request: Request) {
 
   const supabase = createAdminClient()
 
-  // Verify project exists
+  // Verify project exists and get allowed domains
   const { data: project } = await supabase
     .from('projects')
-    .select('id, status')
+    .select('id, status, allowed_domains')
     .eq('id', projectId)
     .single()
 
@@ -57,6 +57,22 @@ export async function POST(request: Request) {
       { error: 'Project not found' },
       { status: 404 },
     )
+  }
+
+  // Validate origin against allowed domains
+  const origin = request.headers.get('origin')
+  const allowedDomains: string[] = project.allowed_domains || []
+  if (allowedDomains.length > 0 && origin) {
+    const originHost = new URL(origin).hostname
+    const allowed = allowedDomains.some((domain: string) => {
+      if (domain.startsWith('*.')) {
+        return originHost.endsWith(domain.slice(1)) || originHost === domain.slice(2)
+      }
+      return originHost === domain
+    })
+    if (!allowed) {
+      return NextResponse.json({ error: 'Domain not allowed' }, { status: 403 })
+    }
   }
 
   const { data: signal, error } = await supabase
@@ -83,21 +99,27 @@ export async function POST(request: Request) {
     )
   }
 
-  const origin = request.headers.get('origin') || '*'
+  const corsHeaders: Record<string, string> = {
+    'Content-Type': 'application/json',
+  }
+  if (origin) {
+    corsHeaders['Access-Control-Allow-Origin'] = origin
+  }
+
   return new NextResponse(
     JSON.stringify({ id: signal.id, transcript, received: true }),
     {
       status: 201,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': origin,
-      },
+      headers: corsHeaders,
     },
   )
 }
 
 export async function OPTIONS(request: Request) {
-  const origin = request.headers.get('origin') || '*'
+  const origin = request.headers.get('origin')
+  if (!origin) {
+    return new NextResponse(null, { status: 204 })
+  }
   return new NextResponse(null, {
     status: 204,
     headers: {

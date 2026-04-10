@@ -67,12 +67,20 @@ export async function PATCH(
     }
   }
 
-  // Update project_settings if provided
+  // Update project_settings if provided (allowlisted fields only)
   if (settings) {
-    await admin
-      .from('project_settings')
-      .update(settings)
-      .eq('project_id', id)
+    const allowedFields = [
+      'widget_position', 'widget_color', 'widget_label',
+      'allowed_domains', 'voice_enabled',
+      'automation_implement_enabled', 'automation_auto_merge',
+      'posthog_api_key', 'posthog_host',
+    ]
+    const sanitized = Object.fromEntries(
+      Object.entries(settings).filter(([key]) => allowedFields.includes(key))
+    )
+    if (Object.keys(sanitized).length > 0) {
+      await admin.from('project_settings').update(sanitized).eq('project_id', id)
+    }
   }
 
   return NextResponse.json({ id })
