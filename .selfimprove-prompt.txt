@@ -1,0 +1,21 @@
+Implement this feature: Add User-Facing Feedback & Toast Notification System
+
+Users have no visual feedback after performing actions in the dashboard. When a user clicks the "Approve" button on a PRD, nothing visibly happens — no confirmation, no error, no loading state. Similarly, state tab transitions are silent. This leaves users confused about whether their action succeeded, failed, or is still processing. The absence of a feedback layer erodes trust in the product and causes users to repeat actions or abandon workflows entirely.
+
+Solution: Install and configure a global toast notification system using `sonner` (or `react-hot-toast` as fallback) in the Next.js App Router root layout. Create a shared `ToastProvider` component and a `showToast(type, message)` utility function that all existing and future async action handlers can call. Wire the toast utility into the three highest-priority action sites: PRD approval, item save, and status/state transitions. Toasts will be non-blocking, auto-dismissing, accessible, and stylistically consistent with the existing UI.
+
+Acceptance Criteria:
+sonner is listed as a dependency in package.json and installs without peer-dependency conflicts
+ToastProvider component exists at components/providers/ToastProvider.tsx and renders sonner's <Toaster /> with position='bottom-right', duration=4000, and richColors enabled
+<ToastProvider /> is mounted in app/layout.tsx at the root level, wrapping all page content
+lib/utils/toast.ts exports a showToast(type, message, options?) function that wraps sonner's toast API with types: 'success' | 'error' | 'info' | 'warning'
+Clicking the Approve button on a PRD detail page shows a success toast ('PRD approved successfully') on success
+Clicking the Approve button on a PRD detail page shows an error toast ('Failed to approve PRD. Please try again.') if the server action returns an error
+Saving an item shows a success toast ('Changes saved') on success and an error toast on failure
+A status/state transition shows an info or success toast confirming the new state (e.g., 'Status updated to In Review')
+All toasts auto-dismiss after 4 seconds without user interaction
+All toasts display an X button that allows manual dismissal before auto-dismiss
+Toasts render inside an ARIA live region (role='status' or role='alert') so screen readers announce them — verified via DOM inspection
+No more than one toast is shown per user action (no duplicate toasts on double-click)
+showToast utility is documented with JSDoc comments in lib/utils/toast.ts describing each parameter and usage example
+Toasts do not appear for background/polling operations that the user did not explicitly trigger

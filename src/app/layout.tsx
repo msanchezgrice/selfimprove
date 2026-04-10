@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
+import { ToastProvider } from "@/components/providers/ToastProvider";
 import "./globals.css";
 
 const inter = Inter({
@@ -61,6 +62,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-[var(--bg)]">
         {children}
+        <ToastProvider />
         <script
           src="https://selfimprove-iota.vercel.app/widget.js"
           data-project="bb7ec56a-5ef9-4bc1-af84-b206af76e039"

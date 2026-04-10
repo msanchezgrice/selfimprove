@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
+import { showToast } from '@/lib/utils/toast'
 import type {
   RoadmapItemRow,
   RoadmapCategory,
@@ -171,6 +172,9 @@ export function PRDDetail({ item }: PRDDetailProps) {
         setLocalItem((prev) => ({ ...prev, prd_content: data.prd }))
         setShowRefineInput(false)
         setRefineFeedback('')
+        showToast('success', 'Changes saved', { id: 'prd-generate' })
+      } else {
+        showToast('error', 'Failed to save changes. Please try again.', { id: 'prd-generate' })
       }
     } finally {
       setLoading(false)
@@ -185,6 +189,9 @@ export function PRDDetail({ item }: PRDDetailProps) {
     })
     if (res.ok) {
       setLocalItem((prev) => ({ ...prev, status: 'approved' }))
+      showToast('success', 'PRD approved successfully', { id: 'prd-approve' })
+    } else {
+      showToast('error', 'Failed to approve PRD. Please try again.', { id: 'prd-approve' })
     }
   }
 
@@ -202,6 +209,9 @@ export function PRDDetail({ item }: PRDDetailProps) {
         dismiss_reason: dismissReason,
       }))
       setDismissing(false)
+      showToast('info', 'Status updated to Dismissed', { id: 'prd-dismiss' })
+    } else {
+      showToast('error', 'Failed to dismiss item. Please try again.', { id: 'prd-dismiss' })
     }
   }
 
