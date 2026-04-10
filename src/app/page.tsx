@@ -465,7 +465,7 @@ export default async function Home() {
             Paste this into Claude Code, Cursor, or Codex
           </h2>
           <p className="text-[15px] text-text-secondary leading-relaxed mb-6">
-            Your agent creates the account, installs the widget, and sets up your roadmap. No browser signup needed.
+            Your agent connects your repo, scans your codebase, and opens your dashboard. No browser signup needed.
           </p>
 
           <pre
@@ -481,14 +481,10 @@ export default async function Home() {
      -H "Content-Type: application/json" \\
      -d '{"repo_url": "THIS_REPO_URL", "site_url": "PRODUCTION_URL"}'
 
-3. From the JSON response:
-   - Add the "widget_snippet" to my root HTML layout
-   - Create a SELFIMPROVE.md file with the "agent_instructions"
-
-4. Commit and push the changes.`}</pre>
+3. Open the dashboard_url from the response in my browser.`}</pre>
 
           <p className="text-xs text-text-secondary mt-4">
-            Uses your GitHub token to auto-create an account. No signup needed. Your agent fills in the repo and site URLs automatically.
+            Uses your GitHub token to auto-create an account. Your agent detects the repo URL automatically. The dashboard shows your AI-generated roadmap within minutes.
           </p>
         </div>
       </section>
