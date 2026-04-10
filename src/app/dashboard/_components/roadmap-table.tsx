@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/browser'
-import type { RoadmapItemRow, RoadmapCategory, RoadmapScope } from '@/lib/types/database'
+import type { RoadmapItemRow, RoadmapCategory, RoadmapScope, RoadmapStatus } from '@/lib/types/database'
 
 type RoadmapTableProps = {
   items: RoadmapItemRow[]
@@ -24,6 +24,15 @@ const scopeConfig: Record<RoadmapScope, { bg: string; text: string; label: strin
   small: { bg: '#f0fdf4', text: '#16a34a', label: 'S' },
   medium: { bg: '#fffbeb', text: '#d97706', label: 'M' },
   large: { bg: '#fef2f2', text: '#dc2626', label: 'L' },
+}
+
+const statusConfig: Record<RoadmapStatus, { bg: string; text: string; label: string }> = {
+  proposed: { bg: '#f5f0eb', text: '#8b8680', label: 'Proposed' },
+  approved: { bg: '#eef2ff', text: '#6366f1', label: 'Approved' },
+  building: { bg: '#fffbeb', text: '#d97706', label: 'Building' },
+  shipped: { bg: '#ecfdf5', text: '#059669', label: 'Shipped' },
+  archived: { bg: '#f8fafc', text: '#475569', label: 'Archived' },
+  dismissed: { bg: '#fef2f2', text: '#dc2626', label: 'Dismissed' },
 }
 
 function roiColor(score: number): string {
@@ -114,6 +123,7 @@ function DesktopTable({ items, onReorder, sortField, sortDir, onSort, slug }: Ro
             <th className="px-3 py-3 w-8" />
             <th className={`${thClass} min-w-[180px]`} onClick={() => onSort('title')}>Item<SortIndicator field="title" sortField={sortField} sortDir={sortDir} /></th>
             <th className={thClass} onClick={() => onSort('category')}>Category<SortIndicator field="category" sortField={sortField} sortDir={sortDir} /></th>
+            <th className={thClass} onClick={() => onSort('status')}>Status<SortIndicator field="status" sortField={sortField} sortDir={sortDir} /></th>
             <th className={`hidden lg:table-cell ${thClass}`} onClick={() => onSort('origin')}>Origin<SortIndicator field="origin" sortField={sortField} sortDir={sortDir} /></th>
             <th className={thClass} onClick={() => onSort('confidence')}>Confidence<SortIndicator field="confidence" sortField={sortField} sortDir={sortDir} /></th>
             <th className={`hidden lg:table-cell ${thClass}`} onClick={() => onSort('scope')}>Scope<SortIndicator field="scope" sortField={sortField} sortDir={sortDir} /></th>
@@ -189,6 +199,9 @@ function DesktopTable({ items, onReorder, sortField, sortDir, onSort, slug }: Ro
                 </td>
                 <td className="px-3 py-3">
                   <Badge bg={cat.bg} text={cat.text} label={cat.label} />
+                </td>
+                <td className="px-3 py-3">
+                  <Badge bg={statusConfig[item.status]?.bg || '#f5f0eb'} text={statusConfig[item.status]?.text || '#8b8680'} label={statusConfig[item.status]?.label || item.status} />
                 </td>
                 <td className="hidden lg:table-cell px-3 py-3 text-xs" style={{ color: '#8b8680' }}>
                   {truncate(item.origin, 24)}

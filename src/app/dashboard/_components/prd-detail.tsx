@@ -128,6 +128,7 @@ type PRDContent = {
   rollback?: string
   success_metrics?: Array<{ metric: string; baseline: string; target: string; measurement: string }>
   analytics_events?: Array<{ event_name: string; properties: string; trigger: string }>
+  experiments?: Array<{ name: string; hypothesis: string; control: string; variant: string; metric: string; sample_size: string; duration: string; expected_lift: string }>
 }
 
 /* ---------- Main component ---------- */
@@ -452,6 +453,45 @@ export function PRDDetail({ item }: PRDDetailProps) {
                     <code className="text-sm font-medium" style={{ color: '#6366f1' }}>{e.event_name}</code>
                     <p className="text-xs mt-1" style={{ color: '#8b8680' }}>Properties: {e.properties}</p>
                     <p className="text-xs" style={{ color: '#8b8680' }}>Trigger: {e.trigger}</p>
+                  </div>
+                ))}
+              </div>
+            </SectionCard>
+          )}
+
+          {prd.experiments && prd.experiments.length > 0 && (
+            <SectionCard title="Experiment Designs">
+              <div className="space-y-4">
+                {prd.experiments.map((exp, i) => (
+                  <div key={i} className="rounded-lg border p-4" style={{ borderColor: '#e8e4de' }}>
+                    <h4 className="text-sm font-semibold mb-2" style={{ color: '#1a1a2e' }}>{exp.name}</h4>
+                    <p className="text-xs mb-3" style={{ color: '#6366f1', fontStyle: 'italic' }}>{exp.hypothesis}</p>
+                    <div className="grid grid-cols-2 gap-3 text-xs">
+                      <div>
+                        <span className="font-medium" style={{ color: '#8b8680' }}>Control:</span>
+                        <p style={{ color: '#1a1a2e' }}>{exp.control}</p>
+                      </div>
+                      <div>
+                        <span className="font-medium" style={{ color: '#8b8680' }}>Variant:</span>
+                        <p style={{ color: '#1a1a2e' }}>{exp.variant}</p>
+                      </div>
+                      <div>
+                        <span className="font-medium" style={{ color: '#8b8680' }}>Primary Metric:</span>
+                        <p style={{ color: '#1a1a2e' }}>{exp.metric}</p>
+                      </div>
+                      <div>
+                        <span className="font-medium" style={{ color: '#8b8680' }}>Expected Lift:</span>
+                        <p style={{ color: '#059669', fontWeight: 600 }}>{exp.expected_lift}</p>
+                      </div>
+                      <div>
+                        <span className="font-medium" style={{ color: '#8b8680' }}>Sample Size:</span>
+                        <p style={{ color: '#1a1a2e' }}>{exp.sample_size}</p>
+                      </div>
+                      <div>
+                        <span className="font-medium" style={{ color: '#8b8680' }}>Duration:</span>
+                        <p style={{ color: '#1a1a2e' }}>{exp.duration}</p>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>

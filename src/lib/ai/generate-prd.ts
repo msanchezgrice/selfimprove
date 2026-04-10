@@ -15,6 +15,16 @@ interface PRDContent {
   open_questions: string[]
   success_metrics: Array<{ metric: string; baseline: string; target: string; measurement: string }>
   analytics_events: Array<{ event_name: string; properties: string; trigger: string }>
+  experiments: Array<{
+    name: string
+    hypothesis: string
+    control: string
+    variant: string
+    metric: string
+    sample_size: string
+    duration: string
+    expected_lift: string
+  }>
 }
 
 const PRD_SCHEMA = {
@@ -84,6 +94,24 @@ const PRD_SCHEMA = {
         required: ['event_name', 'properties', 'trigger'],
       },
     },
+    experiments: {
+      type: 'array',
+      description: 'A/B test or experiment designs to validate the feature impact. Include hypothesis, control/variant descriptions, target metric, sample size, duration, and expected lift.',
+      items: {
+        type: 'object',
+        properties: {
+          name: { type: 'string', description: 'Experiment name, e.g. "Simplified Checkout A/B Test"' },
+          hypothesis: { type: 'string', description: 'If we [change], then [metric] will [improve] because [reason]' },
+          control: { type: 'string', description: 'Current experience (control group)' },
+          variant: { type: 'string', description: 'New experience (variant group)' },
+          metric: { type: 'string', description: 'Primary metric to track, e.g. "checkout_completion_rate"' },
+          sample_size: { type: 'string', description: 'Required sample size for statistical significance' },
+          duration: { type: 'string', description: 'How long to run the experiment, e.g. "2 weeks"' },
+          expected_lift: { type: 'string', description: 'Expected improvement, e.g. "+8% conversion"' },
+        },
+        required: ['name', 'hypothesis', 'control', 'variant', 'metric', 'sample_size', 'duration', 'expected_lift'],
+      },
+    },
   },
   required: [
     'problem',
@@ -99,6 +127,7 @@ const PRD_SCHEMA = {
     'open_questions',
     'success_metrics',
     'analytics_events',
+    'experiments',
   ],
 }
 
@@ -169,7 +198,9 @@ ${filesToModify.join('\n- ')}
 ## Known Risks
 ${risks.join('\n- ')}
 
-Generate a complete PRD with problem statement, solution approach, detailed acceptance criteria, technical implementation plan, file-by-file changes, test requirements, rollback plan, success metrics (how to measure if this worked after shipping), and analytics events the developer should add to track this feature's usage and impact.${feedback ? `\n\n## Refinement Feedback\nThe user has provided the following feedback on the previous PRD. Incorporate these changes:\n${feedback}` : ''}`
+Generate a complete PRD with problem statement, solution approach, detailed acceptance criteria, technical implementation plan, file-by-file changes, test requirements, rollback plan, success metrics (how to measure if this worked after shipping), and analytics events the developer should add to track this feature's usage and impact.
+
+Also design A/B experiments to validate each change's impact. Include a clear hypothesis, control vs variant, primary metric, sample size for statistical significance, duration, and expected lift.${feedback ? `\n\n## Refinement Feedback\nThe user has provided the following feedback on the previous PRD. Incorporate these changes:\n${feedback}` : ''}`
 
   const prd = await callClaude<PRDContent>({
     prompt,
