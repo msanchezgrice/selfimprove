@@ -2,12 +2,14 @@ import { createClient } from '@/lib/supabase/server'
 import { getActiveProject } from '@/lib/supabase/get-active-project'
 import { RoadmapTable } from '../../../_components/roadmap-table'
 import { RoadmapEmpty } from '../../../_components/roadmap-empty'
+import { GenerateButton } from '../../../_components/generate-button'
 
 export default async function RoadmapPage() {
   const project = await getActiveProject()
   const projectId = project?.id ?? null
 
   const supabase = await createClient()
+
   const { data: items } = projectId
     ? await supabase
         .from('roadmap_items')
@@ -16,6 +18,15 @@ export default async function RoadmapPage() {
         .in('status', ['proposed', 'approved'])
         .order('rank', { ascending: true })
     : { data: null }
+
+  // Count unprocessed signals
+  const { count: unprocessedCount } = projectId
+    ? await supabase
+        .from('signals')
+        .select('*', { count: 'exact', head: true })
+        .eq('project_id', projectId)
+        .eq('processed', false)
+    : { count: 0 }
 
   return (
     <div>
@@ -28,6 +39,9 @@ export default async function RoadmapPage() {
             {items?.length ?? 0} items
           </p>
         </div>
+        {projectId && (
+          <GenerateButton projectId={projectId} unprocessedCount={unprocessedCount ?? 0} />
+        )}
       </div>
 
       {!items || items.length === 0 ? (
