@@ -445,69 +445,42 @@ export default async function Home() {
               letterSpacing: "-1px",
             }}
           >
-            Give your AI PM its instructions
+            Two lines. That&apos;s all it takes.
           </h2>
           <p className="text-[17px] text-text-secondary max-w-[560px] leading-relaxed mb-10">
-            Configure how SelfImprove prioritizes, what it can auto-merge, and
-            how aggressive it should be.
+            Add the feedback widget to your site and tell your coding agent about
+            SelfImprove. Everything else is automatic.
           </p>
 
-          <div
-            className="bg-[#1a1a2e] rounded-[14px] p-8 font-mono text-sm leading-relaxed overflow-x-auto"
-            style={{ color: "#e2e0dc" }}
-          >
-            <div className="text-text-secondary mb-4">
-              <span style={{ color: "#8b8680" }}>// selfimprove.config.ts</span>
+          <div className="space-y-4">
+            <div>
+              <p className="text-xs font-semibold uppercase text-text-secondary mb-2" style={{ letterSpacing: "1px" }}>
+                1. Add the widget to your site
+              </p>
+              <div className="bg-[#1a1a2e] rounded-[14px] p-6 font-mono text-sm overflow-x-auto" style={{ color: "#e2e0dc" }}>
+                <span style={{ color: "#7dd3fc" }}>&lt;script</span>{" "}
+                <span style={{ color: "#fbbf24" }}>src</span>
+                <span style={{ color: "#94a3b8" }}>=</span>
+                <span style={{ color: "#a5f3c4" }}>&quot;selfimprove-iota.vercel.app/widget.js&quot;</span>
+                {"\n  "}
+                <span style={{ color: "#fbbf24" }}>data-project</span>
+                <span style={{ color: "#94a3b8" }}>=</span>
+                <span style={{ color: "#a5f3c4" }}>&quot;your-project-id&quot;</span>
+                <span style={{ color: "#7dd3fc" }}>&gt;&lt;/script&gt;</span>
+              </div>
             </div>
-            <pre className="whitespace-pre-wrap">
-              <span style={{ color: "#c792ea" }}>export default</span>{" "}
-              {"{\n"}
-              {"  "}
-              <span style={{ color: "#82aaff" }}>project</span>
-              {": "}
-              <span style={{ color: "#c3e88d" }}>&quot;my-saas-app&quot;</span>
-              {",\n"}
-              {"  "}
-              <span style={{ color: "#82aaff" }}>signals</span>
-              {": ["}
-              <span style={{ color: "#c3e88d" }}>&quot;widget&quot;</span>
-              {", "}
-              <span style={{ color: "#c3e88d" }}>&quot;voice&quot;</span>
-              {", "}
-              <span style={{ color: "#c3e88d" }}>&quot;posthog&quot;</span>
-              {", "}
-              <span style={{ color: "#c3e88d" }}>&quot;sentry&quot;</span>
-              {"],\n"}
-              {"  "}
-              <span style={{ color: "#82aaff" }}>autoMerge</span>
-              {": {\n"}
-              {"    "}
-              <span style={{ color: "#82aaff" }}>enabled</span>
-              {": "}
-              <span style={{ color: "#f78c6c" }}>true</span>
-              {",\n"}
-              {"    "}
-              <span style={{ color: "#82aaff" }}>riskThreshold</span>
-              {": "}
-              <span style={{ color: "#c3e88d" }}>&quot;low&quot;</span>
-              {",\n"}
-              {"    "}
-              <span style={{ color: "#82aaff" }}>dailyCap</span>
-              {": "}
-              <span style={{ color: "#f78c6c" }}>5</span>
-              {",\n"}
-              {"  },\n"}
-              {"  "}
-              <span style={{ color: "#82aaff" }}>priority</span>
-              {": "}
-              <span style={{ color: "#c3e88d" }}>&quot;roi-weighted&quot;</span>
-              {",\n"}
-              {"  "}
-              <span style={{ color: "#82aaff" }}>agent</span>
-              {": "}
-              <span style={{ color: "#c3e88d" }}>&quot;claude-code&quot;</span>
-              {",\n}"}
-            </pre>
+
+            <div>
+              <p className="text-xs font-semibold uppercase text-text-secondary mb-2" style={{ letterSpacing: "1px" }}>
+                2. Tell your coding agent
+              </p>
+              <div className="bg-[#1a1a2e] rounded-[14px] p-6 font-mono text-sm overflow-x-auto leading-relaxed" style={{ color: "#e2e0dc" }}>
+                <span style={{ color: "#a5f3c4" }}>## SelfImprove Integration</span>{"\n"}
+                <span style={{ color: "#e2e0dc" }}>This project uses SelfImprove for AI product management.</span>{"\n"}
+                <span style={{ color: "#e2e0dc" }}>Check the roadmap for user evidence and PRDs before building.</span>{"\n"}
+                <span style={{ color: "#8b8680" }}># Add to CLAUDE.md, .cursorrules, or agent config</span>
+              </div>
+            </div>
           </div>
 
           <div className="mt-10">
