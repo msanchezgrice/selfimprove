@@ -429,14 +429,14 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* ===== AGENT INSTRUCTIONS CTA ===== */}
+      {/* ===== SETUP CTA ===== */}
       <section className="py-[100px] px-6">
-        <div className="max-w-[1040px] mx-auto">
+        <div className="max-w-[1040px] mx-auto text-center">
           <p
             className="text-[13px] font-semibold uppercase text-accent mb-3"
             style={{ letterSpacing: "1.5px" }}
           >
-            Your New AI Team Member
+            Setup takes 60 seconds
           </p>
           <h2
             className="font-extrabold leading-[1.15] mb-4 text-text"
@@ -445,52 +445,21 @@ export default async function Home() {
               letterSpacing: "-1px",
             }}
           >
-            Two lines. That&apos;s all it takes.
+            Connect your repo. Get your roadmap.
           </h2>
-          <p className="text-[17px] text-text-secondary max-w-[560px] leading-relaxed mb-10">
-            Add the feedback widget to your site and tell your coding agent about
-            SelfImprove. Everything else is automatic.
+          <p className="text-[17px] text-text-secondary max-w-[520px] mx-auto leading-relaxed mb-10">
+            Sign in with GitHub, connect your repository, and SelfImprove scans your
+            codebase and site to generate your first AI-powered product roadmap.
           </p>
-
-          <div className="space-y-4">
-            <div>
-              <p className="text-xs font-semibold uppercase text-text-secondary mb-2" style={{ letterSpacing: "1px" }}>
-                1. Add the widget to your site
-              </p>
-              <div className="bg-[#1a1a2e] rounded-[14px] p-6 font-mono text-sm overflow-x-auto" style={{ color: "#e2e0dc" }}>
-                <span style={{ color: "#7dd3fc" }}>&lt;script</span>{" "}
-                <span style={{ color: "#fbbf24" }}>src</span>
-                <span style={{ color: "#94a3b8" }}>=</span>
-                <span style={{ color: "#a5f3c4" }}>&quot;selfimprove-iota.vercel.app/widget.js&quot;</span>
-                {"\n  "}
-                <span style={{ color: "#fbbf24" }}>data-project</span>
-                <span style={{ color: "#94a3b8" }}>=</span>
-                <span style={{ color: "#a5f3c4" }}>&quot;your-project-id&quot;</span>
-                <span style={{ color: "#7dd3fc" }}>&gt;&lt;/script&gt;</span>
-              </div>
-            </div>
-
-            <div>
-              <p className="text-xs font-semibold uppercase text-text-secondary mb-2" style={{ letterSpacing: "1px" }}>
-                2. Tell your coding agent
-              </p>
-              <div className="bg-[#1a1a2e] rounded-[14px] p-6 font-mono text-sm overflow-x-auto leading-relaxed" style={{ color: "#e2e0dc" }}>
-                <span style={{ color: "#a5f3c4" }}>## SelfImprove Integration</span>{"\n"}
-                <span style={{ color: "#e2e0dc" }}>This project uses SelfImprove for AI product management.</span>{"\n"}
-                <span style={{ color: "#e2e0dc" }}>Check the roadmap for user evidence and PRDs before building.</span>{"\n"}
-                <span style={{ color: "#8b8680" }}># Add to CLAUDE.md, .cursorrules, or agent config</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-10">
-            <a
-              href="/dashboard"
-              className="inline-flex items-center gap-2 px-7 py-3.5 bg-accent text-white rounded-[10px] text-base font-semibold no-underline hover:bg-accent-hover transition-all hover:-translate-y-px"
-            >
-              Start Building &rarr;
-            </a>
-          </div>
+          <a
+            href="/login"
+            className="inline-flex items-center gap-2 px-7 py-3.5 bg-accent text-white rounded-[10px] text-base font-semibold no-underline hover:bg-accent-hover transition-all hover:-translate-y-px"
+          >
+            Get Started Free &rarr;
+          </a>
+          <p className="text-[13px] text-text-secondary mt-4">
+            No credit card required. Works with any codebase.
+          </p>
         </div>
       </section>
 
