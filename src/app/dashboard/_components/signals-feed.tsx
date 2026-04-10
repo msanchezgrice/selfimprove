@@ -156,7 +156,7 @@ export function SignalsFeed({ signals }: SignalsFeedProps) {
                     overflow: 'hidden',
                   }}
                 >
-                  {signal.content}
+                  {signal.type === 'feedback' ? `\u201C${signal.content}\u201D` : signal.content}
                 </p>
 
                 {/* Metadata row (always visible) */}

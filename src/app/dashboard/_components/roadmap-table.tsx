@@ -112,18 +112,16 @@ function DesktopTable({ items, onReorder, sortField, sortDir, onSort, slug }: Ro
             style={{ backgroundColor: '#faf8f5', color: '#8b8680' }}
           >
             <th className="px-3 py-3 w-8" />
-            <th className={`${thClass} w-10`} onClick={() => onSort('rank')}>#<SortIndicator field="rank" sortField={sortField} sortDir={sortDir} /></th>
             <th className={`${thClass} min-w-[180px]`} onClick={() => onSort('title')}>Item<SortIndicator field="title" sortField={sortField} sortDir={sortDir} /></th>
             <th className={thClass} onClick={() => onSort('category')}>Category<SortIndicator field="category" sortField={sortField} sortDir={sortDir} /></th>
             <th className={`hidden lg:table-cell ${thClass}`} onClick={() => onSort('origin')}>Origin<SortIndicator field="origin" sortField={sortField} sortDir={sortDir} /></th>
             <th className={thClass} onClick={() => onSort('confidence')}>Confidence<SortIndicator field="confidence" sortField={sortField} sortDir={sortDir} /></th>
             <th className={`hidden lg:table-cell ${thClass}`} onClick={() => onSort('scope')}>Scope<SortIndicator field="scope" sortField={sortField} sortDir={sortDir} /></th>
-            <th className={`hidden lg:table-cell ${thClass}`} onClick={() => onSort('strategy')}>Strategy<SortIndicator field="strategy" sortField={sortField} sortDir={sortDir} /></th>
             <th className={`hidden lg:table-cell ${thClass} text-right`} onClick={() => onSort('impact')}>Impact<SortIndicator field="impact" sortField={sortField} sortDir={sortDir} /></th>
             <th className={`hidden lg:table-cell ${thClass}`} onClick={() => onSort('upside')}>Upside<SortIndicator field="upside" sortField={sortField} sortDir={sortDir} /></th>
             <th className={`hidden lg:table-cell ${thClass} text-right`} onClick={() => onSort('size')}>Size<SortIndicator field="size" sortField={sortField} sortDir={sortDir} /></th>
             <th className={`${thClass} text-right`} onClick={() => onSort('roi_score')}>ROI<SortIndicator field="roi_score" sortField={sortField} sortDir={sortDir} /></th>
-            <th className={`hidden lg:table-cell ${thClass}`} onClick={() => onSort('created_at')}>Created<SortIndicator field="created_at" sortField={sortField} sortDir={sortDir} /></th>
+            <th className={`hidden lg:table-cell ${thClass} whitespace-nowrap`} onClick={() => onSort('created_at')}>Created<SortIndicator field="created_at" sortField={sortField} sortDir={sortDir} /></th>
             <th className="px-3 py-3 w-10" />
           </tr>
         </thead>
@@ -148,7 +146,7 @@ function DesktopTable({ items, onReorder, sortField, sortDir, onSort, slug }: Ro
                   setDragOverIndex(null)
                 }}
                 onClick={() => router.push(`/dashboard/${slug}/roadmap/${item.id}`)}
-                className={`border-t cursor-pointer transition-all duration-150 hover:bg-[#faf8f5]/60${dragIndex === index ? ' opacity-40 scale-[0.98]' : ''}${dragOverIndex === index && dragIndex !== index ? ' border-t-2 border-t-indigo-400' : ''}`}
+                className={`border-t cursor-pointer transition-all duration-150 hover:bg-[#faf8f5]/60${dragIndex === index ? ' opacity-20 scale-[0.98]' : ''}${dragOverIndex === index && dragIndex !== index ? ' border-t-[3px] border-t-indigo-500' : ''}`}
                 style={{ borderColor: dragOverIndex === index && dragIndex !== index ? undefined : '#e8e4de' }}
               >
                 <td
@@ -181,9 +179,6 @@ function DesktopTable({ items, onReorder, sortField, sortDir, onSort, slug }: Ro
                     <circle cx="15" cy="19" r="1" fill="#8b8680" />
                   </svg>
                 </td>
-                <td className="px-3 py-3 tabular-nums" style={{ color: '#8b8680' }}>
-                  {item.rank}
-                </td>
                 <td className="px-3 py-3">
                   <div className="font-medium leading-snug" style={{ color: '#1a1a2e' }}>
                     {item.title}
@@ -203,9 +198,6 @@ function DesktopTable({ items, onReorder, sortField, sortDir, onSort, slug }: Ro
                 </td>
                 <td className="hidden lg:table-cell px-3 py-3">
                   <Badge bg={scope.bg} text={scope.text} label={scope.label} />
-                </td>
-                <td className="hidden lg:table-cell px-3 py-3 text-xs max-w-[120px]" style={{ color: '#8b8680' }}>
-                  {truncate(item.strategy, 32)}
                 </td>
                 <td className="hidden lg:table-cell px-3 py-3 text-right tabular-nums font-medium">
                   {item.impact}/10
@@ -239,7 +231,7 @@ function DesktopTable({ items, onReorder, sortField, sortDir, onSort, slug }: Ro
                     {item.roi_score.toFixed(1)}
                   </span>
                 </td>
-                <td className="hidden lg:table-cell px-3 py-3">
+                <td className="hidden lg:table-cell px-3 py-3 whitespace-nowrap">
                   {(() => {
                     const created = new Date(item.created_at)
                     const now = new Date()
@@ -247,8 +239,8 @@ function DesktopTable({ items, onReorder, sortField, sortDir, onSort, slug }: Ro
                     const isNew = diffHours < 24
                     const dateStr = created.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
                     return (
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs" style={{ color: '#8b8680' }}>{dateStr}</span>
+                      <div className="flex items-center gap-1.5 whitespace-nowrap">
+                        <span className="text-xs whitespace-nowrap" style={{ color: '#8b8680' }}>{dateStr}</span>
                         {isNew && (
                           <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: '#eef2ff', color: '#6366f1' }}>
                             NEW
@@ -262,11 +254,13 @@ function DesktopTable({ items, onReorder, sortField, sortDir, onSort, slug }: Ro
                   <Link
                     href={`/dashboard/${slug}/roadmap/${item.id}`}
                     onClick={(e) => e.stopPropagation()}
-                    className="text-xs font-medium transition-colors hover:opacity-70"
+                    className="inline-flex items-center justify-center transition-opacity hover:opacity-70"
                     style={{ color: '#6366f1' }}
                     aria-label={`View ${item.title}`}
                   >
-                    Open
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="9 18 15 12 9 6" />
+                    </svg>
                   </Link>
                 </td>
               </tr>
@@ -295,12 +289,6 @@ function MobileCards({ items, slug }: RoadmapTableProps & { slug: string }) {
           >
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-2.5 min-w-0">
-                <span
-                  className="shrink-0 flex items-center justify-center w-6 h-6 rounded-full text-xs font-semibold text-white"
-                  style={{ backgroundColor: '#6366f1' }}
-                >
-                  {item.rank}
-                </span>
                 <span className="text-sm font-medium truncate" style={{ color: '#1a1a2e' }}>
                   {item.title}
                 </span>

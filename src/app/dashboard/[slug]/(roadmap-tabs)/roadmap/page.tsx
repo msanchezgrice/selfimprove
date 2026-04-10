@@ -40,7 +40,7 @@ export default async function RoadmapPage() {
           </p>
         </div>
         {projectId && (
-          <GenerateButton projectId={projectId} unprocessedCount={unprocessedCount ?? 0} />
+          <GenerateButton projectId={projectId} unprocessedCount={unprocessedCount ?? 0} hasItems={!!items && items.length > 0} />
         )}
       </div>
 

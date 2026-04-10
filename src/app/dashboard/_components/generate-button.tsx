@@ -6,9 +6,11 @@ import { useRouter } from 'next/navigation'
 export function GenerateButton({
   projectId,
   unprocessedCount,
+  hasItems = false,
 }: {
   projectId: string
   unprocessedCount: number
+  hasItems?: boolean
 }) {
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -78,7 +80,7 @@ export function GenerateButton({
             Generating...
           </>
         ) : (
-          'Generate Roadmap'
+          hasItems ? 'Update Roadmap' : 'Generate Roadmap'
         )}
       </button>
     </div>
