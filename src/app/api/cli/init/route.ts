@@ -250,9 +250,10 @@ Signals API: https://selfimprove-iota.vercel.app/api/signals
     agent_instructions: agentInstructions,
     next_steps: [
       loginUrl
-        ? `Open this URL to sign in and view your dashboard (one-time magic link): ${loginUrl}&redirect_to=${encodeURIComponent(`/dashboard/${project.slug}/roadmap`)}`
-        : `Visit ${dashboardUrl} to see your roadmap`,
-      'First roadmap items appear within minutes from scans',
+        ? `Open this URL to sign in and view your dashboard: ${loginUrl}&redirect_to=${encodeURIComponent(`/dashboard/${project.slug}/roadmap`)}`
+        : `Open your dashboard: ${dashboardUrl}`,
+      'Your roadmap will populate within minutes as scans complete.',
+      'You can add the feedback widget and configure settings from the dashboard.',
     ],
     scans: {
       site_scan: site_url ? 'queued' : 'skipped (no site_url)',
