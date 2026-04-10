@@ -57,13 +57,23 @@ async function runImplement(job: BuildJob, workDir: string, repo: string): Promi
 
   console.log(`[worker] Running Claude Code for implementation...`)
 
-  // Write prompt to a temp file to avoid shell escaping issues
-  const promptFile = join(workDir, '.selfimprove-prompt.txt')
+  // Write prompt and constraints to temp files
   const { writeFile } = await import('fs/promises')
+  const promptFile = join(workDir, '.selfimprove-prompt.txt')
   await writeFile(promptFile, job.prompt)
 
+  // Add CLAUDE.md to prevent Claude from running npm install (OOM risk)
+  const claudeMd = join(workDir, 'CLAUDE.md')
+  await writeFile(claudeMd, `# Worker Constraints
+- Do NOT run npm install, npm ci, or any package manager install commands
+- Do NOT run the dev server or build commands
+- Focus only on editing source files to implement the requested changes
+- Dependencies are already installed
+- Make minimal, focused changes
+`)
+
   const stdout = run(
-    `claude -p "$(cat ${promptFile})" --allowedTools Edit,Write,Bash,Read,Glob,Grep --output-format text`,
+    `claude -p "$(cat ${promptFile})" --allowedTools Edit,Write,Read,Glob,Grep --output-format text`,
     { cwd: workDir, timeout: 600_000 },
   )
 
@@ -129,12 +139,20 @@ async function runImplement(job: BuildJob, workDir: string, repo: string): Promi
 async function runScan(job: BuildJob, workDir: string): Promise<Record<string, unknown>> {
   console.log(`[worker] Running Claude Code for codebase scan...`)
 
-  const promptFile = join(workDir, '.selfimprove-prompt.txt')
   const { writeFile } = await import('fs/promises')
+  const promptFile = join(workDir, '.selfimprove-prompt.txt')
   await writeFile(promptFile, job.prompt)
 
+  // Add constraints for scan (read-only, no installs)
+  const claudeMd = join(workDir, 'CLAUDE.md')
+  await writeFile(claudeMd, `# Worker Constraints
+- Do NOT run npm install or any package manager commands
+- Do NOT modify any files — this is a read-only scan
+- Focus on reading and analyzing the codebase
+`)
+
   const stdout = run(
-    `claude -p "$(cat ${promptFile})" --allowedTools Read,Glob,Grep,Bash --output-format text`,
+    `claude -p "$(cat ${promptFile})" --allowedTools Read,Glob,Grep --output-format text`,
     { cwd: workDir, timeout: 600_000 },
   )
 
