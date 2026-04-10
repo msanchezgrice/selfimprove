@@ -209,8 +209,20 @@ function DesktopTable({ items, onReorder, sortField, sortDir, onSort, slug }: Ro
                 <td className="hidden lg:table-cell px-3 py-3 text-right tabular-nums font-medium">
                   {item.impact}/10
                 </td>
-                <td className="hidden lg:table-cell px-3 py-3 text-xs max-w-[120px]" style={{ color: '#8b8680' }}>
-                  {truncate(item.upside, 32)}
+                <td className="hidden lg:table-cell px-3 py-3">
+                  {item.impact_estimates && (item.impact_estimates as unknown[]).length > 0 ? (
+                    <div className="text-xs">
+                      {(item.impact_estimates as Array<{metric: string; predicted: string}>).slice(0, 2).map((est, i) => (
+                        <div key={i} className="truncate" style={{ color: '#059669', maxWidth: '120px' }}>
+                          {est.metric.replace(/_/g, ' ')}: {est.predicted}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-xs truncate" style={{ color: '#8b8680', maxWidth: '100px', display: 'block' }}>
+                      {item.upside?.slice(0, 40) || '\u2014'}
+                    </span>
+                  )}
                 </td>
                 <td className="hidden lg:table-cell px-3 py-3 text-right tabular-nums font-medium">
                   {item.size}/10

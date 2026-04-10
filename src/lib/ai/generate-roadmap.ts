@@ -21,6 +21,13 @@ interface GeneratedRoadmapItem {
   acceptance_criteria: string[]
   files_to_modify: string[]
   risks: string[]
+  impact_estimates: Array<{
+    metric: string
+    baseline: string
+    predicted: string
+    unit: string
+    reasoning: string
+  }>
 }
 
 interface RoadmapGenerationResult {
@@ -77,6 +84,21 @@ const ROADMAP_SCHEMA = {
           acceptance_criteria: { type: 'array', items: { type: 'string' } },
           files_to_modify: { type: 'array', items: { type: 'string' } },
           risks: { type: 'array', items: { type: 'string' } },
+          impact_estimates: {
+            type: 'array',
+            description: 'Specific, measurable metric predictions. Be concrete: "+12% signup completion" not "improves UX". Include baseline (current state), predicted (after shipping), and reasoning.',
+            items: {
+              type: 'object',
+              properties: {
+                metric: { type: 'string', description: 'Metric name, e.g. signup_completion_rate, bounce_rate, page_load_time, error_rate, retention_d7' },
+                baseline: { type: 'string', description: 'Current value or best estimate, e.g. "58%", "3.2s", "12 errors/day"' },
+                predicted: { type: 'string', description: 'Predicted value after shipping, e.g. "70%", "1.8s", "2 errors/day"' },
+                unit: { type: 'string', description: 'Unit type: percentage, seconds, count, rate' },
+                reasoning: { type: 'string', description: 'Why this prediction — reference the signal evidence' },
+              },
+              required: ['metric', 'baseline', 'predicted', 'unit', 'reasoning'],
+            },
+          },
         },
         required: [
           'title',
@@ -95,6 +117,7 @@ const ROADMAP_SCHEMA = {
           'acceptance_criteria',
           'files_to_modify',
           'risks',
+          'impact_estimates',
         ],
       },
     },
@@ -195,7 +218,13 @@ ${roiFocusInstruction}
 5. Identify likely files that would need modification
 6. List risks and potential rollback strategies
 7. Include your thinking traces showing how you arrived at each item
-8. Return 3-10 items, ranked by ROI score (highest first)`
+8. For each item, provide QUANTIFIED impact estimates:
+   - Use specific metrics: signup_completion_rate, bounce_rate, page_load_time, error_rate, retention_d7, revenue_per_user, etc.
+   - Provide baseline (current/estimated) and predicted (after shipping) values
+   - Base estimates on the signal evidence — if "42% drop at step 3", predict "drop to 25%" not "improves UX"
+   - Be realistic — small changes typically yield 5-20% improvements, not 50%+
+   - Include reasoning that references the signal data
+9. Return 3-10 items, ranked by ROI score (highest first)`
 
   const result = await callClaude<{ items: GeneratedRoadmapItem[] }>({
     prompt,
@@ -233,6 +262,7 @@ ${roiFocusInstruction}
       acceptance_criteria: item.acceptance_criteria,
       files_to_modify: item.files_to_modify,
       risks: item.risks,
+      impact_estimates: item.impact_estimates,
       rank: index + 1,
       generation_id: generationId,
     }))

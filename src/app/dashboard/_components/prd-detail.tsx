@@ -397,6 +397,26 @@ export function PRDDetail({ item }: PRDDetailProps) {
             </SectionCard>
           )}
 
+          {item.impact_estimates && (item.impact_estimates as unknown[]).length > 0 && (
+            <SectionCard title="Predicted Impact">
+              <div className="space-y-3">
+                {(item.impact_estimates as Array<{metric: string; baseline: string; predicted: string; unit: string; reasoning: string}>).map((est, i) => (
+                  <div key={i} className="rounded-lg p-3" style={{ backgroundColor: '#f0fdf4' }}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-medium" style={{ color: '#1a1a2e' }}>
+                        {est.metric.replace(/_/g, ' ')}
+                      </span>
+                      <span className="text-sm font-semibold" style={{ color: '#059669' }}>
+                        {est.baseline} &rarr; {est.predicted}
+                      </span>
+                    </div>
+                    <p className="text-xs" style={{ color: '#8b8680' }}>{est.reasoning}</p>
+                  </div>
+                ))}
+              </div>
+            </SectionCard>
+          )}
+
           {prd.success_metrics && (prd.success_metrics as unknown[]).length > 0 && (
             <SectionCard title="Success Metrics">
               <div className="space-y-3">

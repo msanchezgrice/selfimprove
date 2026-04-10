@@ -141,9 +141,12 @@ export type RoadmapItemRow = BaseRow & {
   github_issue_number: number | null;
   pr_url: string | null;
   pr_number: number | null;
+  impact_estimates: Array<{ metric: string; baseline: string; predicted: string; unit: string; reasoning: string }>;
+  impact_actuals: Array<{ metric: string; actual: string; measured_at: string }>;
+  estimate_accuracy: number | null;
 };
 
-export type RoadmapItemInsert = Omit<RoadmapItemRow, 'id' | 'created_at' | 'updated_at' | 'roi_score' | 'status' | 'rank' | 'feedback_up' | 'feedback_down' | 'dismiss_reason' | 'prd_content' | 'generation_id' | 'build_status' | 'github_issue_url' | 'github_issue_number' | 'pr_url' | 'pr_number'> & {
+export type RoadmapItemInsert = Omit<RoadmapItemRow, 'id' | 'created_at' | 'updated_at' | 'roi_score' | 'status' | 'rank' | 'feedback_up' | 'feedback_down' | 'dismiss_reason' | 'prd_content' | 'generation_id' | 'build_status' | 'github_issue_url' | 'github_issue_number' | 'pr_url' | 'pr_number' | 'impact_estimates' | 'impact_actuals' | 'estimate_accuracy'> & {
   roi_score?: number;
   status?: RoadmapStatus;
   rank?: number;
@@ -157,6 +160,9 @@ export type RoadmapItemInsert = Omit<RoadmapItemRow, 'id' | 'created_at' | 'upda
   github_issue_number?: number | null;
   pr_url?: string | null;
   pr_number?: number | null;
+  impact_estimates?: Array<{ metric: string; baseline: string; predicted: string; unit: string; reasoning: string }>;
+  impact_actuals?: Array<{ metric: string; actual: string; measured_at: string }>;
+  estimate_accuracy?: number | null;
 };
 
 export type RoadmapItemUpdate = Partial<RoadmapItemInsert>;
