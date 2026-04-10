@@ -14,12 +14,25 @@ async function authenticateGitHub(token: string): Promise<{ userId: string; orgI
   if (!ghRes.ok) return null
 
   const ghUser = await ghRes.json()
-  const email = ghUser.email || `${ghUser.login}@users.noreply.github.com`
   const displayName = ghUser.name || ghUser.login
+
+  // Get the user's verified emails (handles private email settings)
+  let email = ghUser.email
+  if (!email) {
+    const emailsRes = await fetch('https://api.github.com/user/emails', {
+      headers: { Authorization: `Bearer ${token}`, 'User-Agent': 'SelfImprove-App' },
+    })
+    if (emailsRes.ok) {
+      const emails = await emailsRes.json()
+      const primary = emails.find((e: { primary: boolean; verified: boolean; email: string }) => e.primary && e.verified)
+      email = primary?.email || emails[0]?.email
+    }
+  }
+  if (!email) email = `${ghUser.login}@users.noreply.github.com`
 
   const supabase = createAdminClient()
 
-  // Check if user already exists by email
+  // Check if user already exists by email (check all known emails)
   const { data: existingUsers } = await supabase.auth.admin.listUsers()
   const existingUser = existingUsers?.users?.find(u => u.email === email)
 
