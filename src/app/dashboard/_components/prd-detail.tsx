@@ -480,6 +480,21 @@ export function PRDDetail({ item }: PRDDetailProps) {
 
       {/* Action buttons */}
       <div className="flex flex-wrap items-center gap-3">
+        {/* Shipped banner */}
+        {localItem.status === 'shipped' && (
+          <div className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium" style={{ backgroundColor: '#ecfdf5', color: '#059669' }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+            Shipped
+            {localItem.pr_url && (
+              <a href={localItem.pr_url as string} target="_blank" rel="noopener noreferrer" className="underline ml-1">
+                PR #{localItem.pr_number}
+              </a>
+            )}
+          </div>
+        )}
+
         {/* Refine PRD */}
         {prd && !showRefineInput && (
           <button
@@ -549,42 +564,44 @@ export function PRDDetail({ item }: PRDDetailProps) {
         )}
 
         {/* Dismiss */}
-        {!dismissing ? (
-          <button
-            onClick={() => setDismissing(true)}
-            className="px-4 py-2 rounded-lg text-sm font-medium border transition-opacity hover:opacity-90 cursor-pointer"
-            style={{ borderColor: '#dc2626', color: '#dc2626' }}
-          >
-            Dismiss
-          </button>
-        ) : (
-          <div className="flex items-center gap-2">
-            <input
-              type="text"
-              value={dismissReason}
-              onChange={(e) => setDismissReason(e.target.value)}
-              placeholder="Reason for dismissal..."
-              className="px-3 py-2 rounded-lg border text-sm"
-              style={{ borderColor: '#e8e4de', color: '#1a1a2e' }}
-            />
+        {localItem.status !== 'shipped' && localItem.status !== 'dismissed' && (
+          !dismissing ? (
             <button
-              onClick={handleDismiss}
-              className="px-3 py-2 rounded-lg text-sm font-medium text-white cursor-pointer"
-              style={{ backgroundColor: '#dc2626' }}
+              onClick={() => setDismissing(true)}
+              className="px-4 py-2 rounded-lg text-sm font-medium border transition-opacity hover:opacity-90 cursor-pointer"
+              style={{ borderColor: '#dc2626', color: '#dc2626' }}
             >
-              Confirm
+              Dismiss
             </button>
-            <button
-              onClick={() => {
-                setDismissing(false)
-                setDismissReason('')
-              }}
-              className="px-3 py-2 rounded-lg text-sm font-medium cursor-pointer"
-              style={{ color: '#8b8680' }}
-            >
-              Cancel
-            </button>
-          </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={dismissReason}
+                onChange={(e) => setDismissReason(e.target.value)}
+                placeholder="Reason for dismissal..."
+                className="px-3 py-2 rounded-lg border text-sm"
+                style={{ borderColor: '#e8e4de', color: '#1a1a2e' }}
+              />
+              <button
+                onClick={handleDismiss}
+                className="px-3 py-2 rounded-lg text-sm font-medium text-white cursor-pointer"
+                style={{ backgroundColor: '#dc2626' }}
+              >
+                Confirm
+              </button>
+              <button
+                onClick={() => {
+                  setDismissing(false)
+                  setDismissReason('')
+                }}
+                className="px-3 py-2 rounded-lg text-sm font-medium cursor-pointer"
+                style={{ color: '#8b8680' }}
+              >
+                Cancel
+              </button>
+            </div>
+          )
         )}
 
         {/* Feedback buttons */}

@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/roadmap",
       "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/sync-github",
+      "schedule": "*/5 * * * *"
     }
   ]
 }
