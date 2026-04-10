@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef, type KeyboardEvent, type ChangeEvent } from 'react'
+import { useState, useEffect, useCallback, useRef, type KeyboardEvent, type ChangeEvent } from 'react'
 import { createClient } from '@/lib/supabase/browser'
 import { showToast } from '@/lib/utils/toast'
 import { TIERS } from '@/lib/constants/tiers'
@@ -235,6 +235,14 @@ export function SettingsForm({ project, settings, orgTier }: SettingsFormProps) 
   const { toast, show } = useToast()
 
   const tierConfig = TIERS[orgTier]
+
+  /* ----- API Key state ----- */
+  const [apiKey, setApiKey] = useState<string | null>(null)
+  const [loadingKey, setLoadingKey] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/settings/api-key').then(r => r.json()).then(d => setApiKey(d.api_key)).catch(() => {})
+  }, [])
 
   /* ----- General state ----- */
   const [name, setName] = useState(project.name)
@@ -899,6 +907,51 @@ export function SettingsForm({ project, settings, orgTier }: SettingsFormProps) 
 
     return (
       <div className="space-y-6">
+        {/* API Key */}
+        <div className="mb-6">
+          <h3 className="text-sm font-semibold mb-2" style={{ color: C.text }}>API Key</h3>
+          <p className="text-xs mb-3" style={{ color: C.secondary }}>
+            Use this key for CLI and agent onboarding. Pass as: <code className="bg-gray-100 px-1 py-0.5 rounded text-xs">Authorization: Bearer si_...</code>
+          </p>
+          {apiKey ? (
+            <div className="flex gap-2">
+              <input
+                readOnly
+                value={apiKey}
+                className={inputClass + ' flex-1 font-mono text-xs'}
+                style={inputStyle}
+              />
+              <button
+                type="button"
+                onClick={() => navigator.clipboard.writeText(apiKey)}
+                className="shrink-0 px-4 py-2 rounded-lg text-sm font-medium text-white transition-opacity hover:opacity-90"
+                style={{ backgroundColor: C.accent }}
+              >
+                Copy
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              disabled={loadingKey}
+              onClick={async () => {
+                setLoadingKey(true)
+                try {
+                  const res = await fetch('/api/settings/api-key', { method: 'POST' })
+                  const data = await res.json()
+                  setApiKey(data.api_key)
+                } finally {
+                  setLoadingKey(false)
+                }
+              }}
+              className="px-5 py-2 rounded-lg text-sm font-medium text-white transition-opacity disabled:opacity-60"
+              style={{ backgroundColor: C.accent }}
+            >
+              {loadingKey ? 'Generating...' : 'Generate API Key'}
+            </button>
+          )}
+        </div>
+
         {/* Current plan */}
         <div
           className="rounded-xl border p-5"

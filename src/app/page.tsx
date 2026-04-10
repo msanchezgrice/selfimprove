@@ -432,33 +432,56 @@ export default async function Home() {
       {/* ===== SETUP CTA ===== */}
       <section className="py-[100px] px-6">
         <div className="max-w-[1040px] mx-auto text-center">
-          <p
-            className="text-[13px] font-semibold uppercase text-accent mb-3"
-            style={{ letterSpacing: "1.5px" }}
-          >
-            Setup takes 60 seconds
+          <p className="text-[13px] font-semibold uppercase text-accent mb-3" style={{ letterSpacing: "1.5px" }}>
+            Get started in 60 seconds
           </p>
-          <h2
-            className="font-extrabold leading-[1.15] mb-4 text-text"
-            style={{
-              fontSize: "clamp(28px, 4vw, 40px)",
-              letterSpacing: "-1px",
-            }}
-          >
-            Connect your repo. Get your roadmap.
+          <h2 className="font-extrabold leading-[1.15] mb-4 text-text" style={{ fontSize: "clamp(28px, 4vw, 40px)", letterSpacing: "-1px" }}>
+            Sign up, or let your agent do it
           </h2>
           <p className="text-[17px] text-text-secondary max-w-[520px] mx-auto leading-relaxed mb-10">
-            Sign in with GitHub, connect your repository, and SelfImprove scans your
-            codebase and site to generate your first AI-powered product roadmap.
+            Connect your repo and get an AI-powered roadmap. Set up via the web, or paste the prompt below into your coding agent.
           </p>
-          <a
-            href="/login"
-            className="inline-flex items-center gap-2 px-7 py-3.5 bg-accent text-white rounded-[10px] text-base font-semibold no-underline hover:bg-accent-hover transition-all hover:-translate-y-px"
-          >
-            Get Started Free &rarr;
-          </a>
-          <p className="text-[13px] text-text-secondary mt-4">
-            No credit card required. Works with any codebase.
+
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
+            <a href="/login" className="inline-flex items-center gap-2 px-7 py-3.5 bg-accent text-white rounded-[10px] text-base font-semibold no-underline hover:bg-accent-hover transition-all">
+              Sign Up Free &rarr;
+            </a>
+            <a href="#agent-setup" className="inline-flex items-center gap-2 px-7 py-3.5 bg-white text-text rounded-[10px] text-base font-medium no-underline border border-border hover:border-accent hover:text-accent transition-all">
+              Agent Setup &darr;
+            </a>
+          </div>
+
+          <p className="text-[13px] text-text-secondary">No credit card required. Works with any codebase.</p>
+        </div>
+      </section>
+
+      {/* ===== AGENT SETUP ===== */}
+      <section id="agent-setup" className="py-[80px] px-6 bg-surface-2 border-t border-border">
+        <div className="max-w-[640px] mx-auto">
+          <p className="text-[13px] font-semibold uppercase text-accent mb-3" style={{ letterSpacing: "1.5px" }}>
+            For AI coding agents
+          </p>
+          <h2 className="font-extrabold leading-[1.15] mb-4 text-text" style={{ fontSize: "clamp(24px, 3vw, 32px)", letterSpacing: "-0.5px" }}>
+            Paste this into Claude Code, Cursor, or Codex
+          </h2>
+          <p className="text-[15px] text-text-secondary leading-relaxed mb-6">
+            Your coding agent will call our API to create the project, install the widget, and add agent instructions to your repo. You just review and commit.
+          </p>
+
+          <div className="bg-[#1a1a2e] rounded-[14px] p-6 font-mono text-[13px] leading-relaxed overflow-x-auto text-left" style={{ color: "#e2e0dc" }}>
+            <span style={{ color: "#a5f3c4" }}>&quot;Set up SelfImprove for this project.</span>{"\n\n"}
+            <span style={{ color: "#e2e0dc" }}>1. Call POST https://selfimprove-iota.vercel.app/api/cli/init</span>{"\n"}
+            <span style={{ color: "#e2e0dc" }}>   with Authorization: Bearer MY_API_KEY</span>{"\n"}
+            <span style={{ color: "#e2e0dc" }}>   and body: {`{`}&quot;repo_url&quot;: &quot;REPO_URL&quot;, &quot;site_url&quot;: &quot;SITE_URL&quot;{`}`}</span>{"\n\n"}
+            <span style={{ color: "#e2e0dc" }}>2. Add the widget_snippet from the response to my root layout.</span>{"\n\n"}
+            <span style={{ color: "#e2e0dc" }}>3. Create SELFIMPROVE.md with the agent_instructions from the response.</span>{"\n\n"}
+            <span style={{ color: "#e2e0dc" }}>4. Commit and push.&quot;</span>
+          </div>
+
+          <p className="text-xs text-text-secondary mt-4">
+            Get your API key after signing up at{" "}
+            <a href="/login" className="text-accent underline">selfimprove-iota.vercel.app/login</a>
+            {" "}&rarr; Settings &rarr; Team &amp; Billing
           </p>
         </div>
       </section>

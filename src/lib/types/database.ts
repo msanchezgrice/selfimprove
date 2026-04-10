@@ -49,6 +49,7 @@ export type OrgMemberRow = BaseRow & {
   user_id: string;
   role: OrgMemberRole;
   github_token: string | null;
+  api_key: string | null;
 };
 
 export type OrgMemberInsert = Omit<OrgMemberRow, 'id' | 'created_at' | 'updated_at'>;

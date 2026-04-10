@@ -1,0 +1,1 @@
+ALTER TABLE org_members ADD COLUMN IF NOT EXISTS api_key text UNIQUE;
