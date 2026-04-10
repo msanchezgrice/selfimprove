@@ -1,4 +1,5 @@
 import { getUser } from '@/lib/supabase/auth-helpers'
+import { CopyPrompt } from './_components/copy-prompt'
 
 export default async function Home() {
   const user = await getUser()
@@ -468,20 +469,7 @@ export default async function Home() {
             Your agent connects your repo, scans your codebase, and opens your dashboard. No browser signup needed.
           </p>
 
-          <pre
-            className="bg-[#1a1a2e] rounded-[14px] p-6 font-mono text-[13px] leading-[1.8] overflow-x-auto text-left whitespace-pre-wrap"
-            style={{ color: "#e2e0dc", margin: 0 }}
-          >{`Set up SelfImprove for this project.
-
-1. Get my GitHub token by running: gh auth token
-
-2. Call this API to create the project:
-   curl -X POST https://selfimprove-iota.vercel.app/api/cli/init \\
-     -H "Authorization: Bearer GITHUB_TOKEN" \\
-     -H "Content-Type: application/json" \\
-     -d '{"repo_url": "THIS_REPO_URL", "site_url": "PRODUCTION_URL"}'
-
-3. Open the dashboard_url from the response in my browser.`}</pre>
+          <CopyPrompt />
 
           <p className="text-xs text-text-secondary mt-4">
             Uses your GitHub token to auto-create an account. Your agent detects the repo URL automatically. The dashboard shows your AI-generated roadmap within minutes.
