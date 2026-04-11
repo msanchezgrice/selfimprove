@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { generateRoadmap } from '@/lib/ai/generate-roadmap'
 import { generatePRD } from '@/lib/ai/generate-prd'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 export async function POST(
   _req: NextRequest,
@@ -17,6 +18,17 @@ export async function POST(
   } = await supabase.auth.getUser()
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  // Rate limit: 5 requests per hour per user
+  const { allowed, resetIn } = checkRateLimit(
+    `generate-roadmap:${user.id}`, 5, 60 * 60 * 1000
+  )
+  if (!allowed) {
+    return NextResponse.json(
+      { error: 'Rate limit exceeded', retry_after_ms: resetIn },
+      { status: 429, headers: { 'Retry-After': String(Math.ceil(resetIn / 1000)) } }
+    )
   }
 
   // Verify project exists and user has access

@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { callClaude } from '@/lib/ai/call-claude'
 import { getGitHubToken } from '@/lib/github/get-token'
 import { validatePublicUrl } from '@/lib/validate-url'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 interface ProductContext {
   description: string
@@ -34,6 +35,17 @@ export async function POST(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  // Rate limit: 3 requests per hour per user
+  const { allowed, resetIn } = checkRateLimit(
+    `analyze:${user.id}`, 3, 60 * 60 * 1000
+  )
+  if (!allowed) {
+    return NextResponse.json(
+      { error: 'Rate limit exceeded', retry_after_ms: resetIn },
+      { status: 429, headers: { 'Retry-After': String(Math.ceil(resetIn / 1000)) } }
+    )
   }
 
   const admin = createAdminClient()

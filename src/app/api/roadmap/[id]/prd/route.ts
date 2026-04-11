@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { generatePRD } from '@/lib/ai/generate-prd'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 export async function POST(
   req: NextRequest,
@@ -15,6 +16,17 @@ export async function POST(
   } = await supabase.auth.getUser()
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  // Rate limit: 10 requests per hour per user
+  const { allowed, resetIn } = checkRateLimit(
+    `prd:${user.id}`, 10, 60 * 60 * 1000
+  )
+  if (!allowed) {
+    return NextResponse.json(
+      { error: 'Rate limit exceeded', retry_after_ms: resetIn },
+      { status: 429, headers: { 'Retry-After': String(Math.ceil(resetIn / 1000)) } }
+    )
   }
 
   // Parse optional feedback from request body

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { SIGNAL_WEIGHTS } from '@/lib/constants/signal-weights'
 import { canIngestSignal } from '@/lib/stripe/tier-enforcement'
+import { checkRateLimit } from '@/lib/rate-limit'
 import type { SignalType } from '@/lib/types/database'
 import type { TierName } from '@/lib/constants/tiers'
 
@@ -31,6 +32,17 @@ export async function POST(request: Request) {
         error: `Invalid signal type. Must be one of: ${VALID_TYPES.join(', ')}`,
       },
       { status: 400 },
+    )
+  }
+
+  // Rate limit: 100 requests per hour per project (in addition to monthly tier cap)
+  const { allowed, resetIn } = checkRateLimit(
+    `signals:${project_id}`, 100, 60 * 60 * 1000
+  )
+  if (!allowed) {
+    return NextResponse.json(
+      { error: 'Rate limit exceeded', retry_after_ms: resetIn },
+      { status: 429, headers: { 'Retry-After': String(Math.ceil(resetIn / 1000)) } }
     )
   }
 

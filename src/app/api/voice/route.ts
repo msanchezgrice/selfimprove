@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { SIGNAL_WEIGHTS } from '@/lib/constants/signal-weights'
 import { transcribeAudio } from '@/lib/ai/transcribe-audio'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 export async function POST(request: Request) {
   const formData = await request.formData()
@@ -13,6 +14,17 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { error: 'Missing project_id' },
       { status: 400 },
+    )
+  }
+
+  // Rate limit: 20 requests per hour per project
+  const { allowed, resetIn } = checkRateLimit(
+    `voice:${projectId}`, 20, 60 * 60 * 1000
+  )
+  if (!allowed) {
+    return NextResponse.json(
+      { error: 'Rate limit exceeded', retry_after_ms: resetIn },
+      { status: 429, headers: { 'Retry-After': String(Math.ceil(resetIn / 1000)) } }
     )
   }
 
