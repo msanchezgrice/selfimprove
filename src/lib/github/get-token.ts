@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { decryptIfNeeded } from '@/lib/crypto'
 
 export async function getGitHubToken(): Promise<string | null> {
   const supabase = await createClient()
@@ -20,5 +21,6 @@ export async function getGitHubToken(): Promise<string | null> {
     .limit(1)
     .single()
 
-  return member?.github_token ?? null
+  if (!member?.github_token) return null
+  return decryptIfNeeded(member.github_token)
 }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendWelcomeEmail } from '@/lib/notifications'
+import { encrypt } from '@/lib/crypto'
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
@@ -41,7 +42,7 @@ export async function GET(request: Request) {
         if (providerToken) {
           await admin
             .from('org_members')
-            .update({ github_token: providerToken })
+            .update({ github_token: encrypt(providerToken) })
             .eq('user_id', user.id)
         }
 

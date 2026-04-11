@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { decryptIfNeeded } from '@/lib/crypto'
 
 export async function authenticateApiKey(request: Request): Promise<{ userId: string; orgId: string } | null> {
   const authHeader = request.headers.get('authorization')
@@ -32,5 +33,6 @@ export async function getGitHubTokenFromApiKey(request: Request): Promise<string
     .limit(1)
     .single()
 
-  return data?.github_token ?? null
+  if (!data?.github_token) return null
+  return decryptIfNeeded(data.github_token)
 }

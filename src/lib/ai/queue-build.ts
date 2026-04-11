@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { encrypt } from '@/lib/crypto'
 
 export async function queueImplementJob(
   roadmapItemId: string,
@@ -15,7 +16,7 @@ export async function queueImplementJob(
       project_id: projectId,
       job_type: 'implement',
       repo_url: repoUrl,
-      github_token: githubToken,
+      github_token: encrypt(githubToken),
       prompt,
     })
     .select('id')
@@ -52,7 +53,7 @@ Be thorough. Read the actual code, don't just guess from file names.`
       project_id: projectId,
       job_type: 'scan',
       repo_url: repoUrl,
-      github_token: githubToken,
+      github_token: encrypt(githubToken),
       prompt,
     })
     .select('id')

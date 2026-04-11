@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { mkdtemp, rm, writeFile, readFile } from 'fs/promises'
 import { tmpdir } from 'os'
 import { join } from 'path'
+import { decryptIfNeeded } from './crypto'
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -30,6 +31,8 @@ interface BuildJob {
 }
 
 export async function processJob(job: BuildJob): Promise<Record<string, unknown>> {
+  // Decrypt token at rest (handles both encrypted and legacy plaintext tokens)
+  const githubToken = decryptIfNeeded(job.github_token)
   const workDir = await mkdtemp(join(tmpdir(), 'selfimprove-'))
 
   try {
@@ -37,12 +40,12 @@ export async function processJob(job: BuildJob): Promise<Record<string, unknown>
     if (!repoMatch) throw new Error('Invalid repo URL')
     const repo = repoMatch[1].replace(/\.git$/, '')
 
-    const cloneUrl = `https://x-access-token:${job.github_token}@github.com/${repo}.git`
+    const cloneUrl = `https://x-access-token:${githubToken}@github.com/${repo}.git`
     console.log(`[worker] Cloning ${repo}...`)
     run('git', ['clone', '--depth', '50', cloneUrl, workDir])
 
     if (job.job_type === 'implement') {
-      return await runImplement(job, workDir, repo)
+      return await runImplement(job, workDir, repo, githubToken)
     } else {
       return await runScan(job, workDir)
     }
@@ -51,7 +54,7 @@ export async function processJob(job: BuildJob): Promise<Record<string, unknown>
   }
 }
 
-async function runImplement(job: BuildJob, workDir: string, repo: string): Promise<Record<string, unknown>> {
+async function runImplement(job: BuildJob, workDir: string, repo: string, githubToken: string): Promise<Record<string, unknown>> {
   const cwdOpts: ExecFileSyncOptions = { cwd: workDir }
 
   // Set git identity for commits
@@ -110,7 +113,7 @@ async function runImplement(job: BuildJob, workDir: string, repo: string): Promi
   const prRes = await fetch(`https://api.github.com/repos/${repo}/pulls`, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${job.github_token}`,
+      Authorization: `Bearer ${githubToken}`,
       Accept: 'application/vnd.github.v3+json',
       'User-Agent': 'SelfImprove-Worker',
       'Content-Type': 'application/json',

@@ -5,8 +5,9 @@ import { queueScanJob } from '@/lib/ai/queue-build'
 import { seedProjectSignals } from '@/lib/ai/cold-start'
 import { importGitHubIssues } from '@/lib/ai/import-github-issues'
 import crypto from 'crypto'
+import { encrypt } from '@/lib/crypto'
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || '${APP_URL}'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://selfimprove-iota.vercel.app'
 
 async function authenticateGitHub(token: string): Promise<{ userId: string; orgId: string; githubToken: string; loginUrl: string | null; isNewUser: boolean } | null> {
   // Verify the GitHub token by calling GitHub API
@@ -69,10 +70,10 @@ async function authenticateGitHub(token: string): Promise<{ userId: string; orgI
     if (!membership) return null
     orgId = membership.org_id
 
-    // Update GitHub token
+    // Update GitHub token (encrypted at rest)
     await supabase
       .from('org_members')
-      .update({ github_token: token })
+      .update({ github_token: encrypt(token) })
       .eq('user_id', userId)
 
     return { userId, orgId, githubToken: token, loginUrl: null, isNewUser: false }
@@ -102,7 +103,7 @@ async function authenticateGitHub(token: string): Promise<{ userId: string; orgI
 
     await supabase
       .from('org_members')
-      .insert({ org_id: orgId, user_id: userId, role: 'owner', github_token: token })
+      .insert({ org_id: orgId, user_id: userId, role: 'owner', github_token: encrypt(token) })
 
     // Generate API key for future use
     const apiKey = `si_${crypto.randomBytes(24).toString('hex')}`
