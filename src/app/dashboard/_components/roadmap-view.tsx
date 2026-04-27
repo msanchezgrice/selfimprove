@@ -80,7 +80,12 @@ type RoadmapApiResponse = {
 
 type BootstrapResponse = {
   project: { id: string; slug: string; name: string }
-  steps: Record<string, unknown>
+  steps: {
+    dedupItems?: { total?: number; exactMerged?: number; cosineMerged?: number }
+    rollup?: { anomaliesMinted?: number }
+    coldStart?: { itemsLinked?: number; clustersCreated?: number }
+    [key: string]: unknown
+  }
   finalState: {
     roadmapCount: number
     clusterCount: number
@@ -255,6 +260,18 @@ export function RoadmapView({
           <strong>{bootstrapResult.finalState.clusterCount}</strong> active clusters ·{' '}
           <strong>{bootstrapResult.finalState.openAnomalies}</strong> open anomalies · focus:{' '}
           <strong>{bootstrapResult.finalState.currentFocus ?? 'none'}</strong>
+          {(bootstrapResult.steps.dedupItems?.total ?? 0) > 0 && (
+            <>
+              {' \u00b7 '}
+              <strong>{bootstrapResult.steps.dedupItems!.total}</strong> dupes merged
+            </>
+          )}
+          {(bootstrapResult.steps.rollup?.anomaliesMinted ?? 0) > 0 && (
+            <>
+              {' \u00b7 '}
+              <strong>+{bootstrapResult.steps.rollup!.anomaliesMinted}</strong> new anomaly signals
+            </>
+          )}
         </div>
       )}
 

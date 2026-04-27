@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 import { applyColdStartCluster } from './cold-start-cluster'
+import { dedupHistoricalItems } from './dedup-items'
 import { rollupProjectFunnel } from './funnel-rollup'
 import { rerankProjectRoadmap } from './rerank'
 import { registerPostHogInsights } from './register-insights'
@@ -101,6 +102,15 @@ export async function runDailyPipeline(
   // 3. Cold-start cluster (file any unfiled items)
   result.steps.coldStart = await safeRun(() =>
     applyColdStartCluster(supabase, projectId, { dryRun }),
+  )
+
+  // 3b. Dedup historical roadmap_items.
+  // Synthesis dedup only catches NEW items; this back-fills the long
+  // backlog of pre-v1.1.5 dupes ("Fix onboarding errors" minted three
+  // times before cooldown was wired). Cheap and idempotent — once the
+  // backlog is cleaned it auto-merges only the trickle of new dupes.
+  result.steps.dedupItems = await safeRun(() =>
+    dedupHistoricalItems(supabase, projectId, { dryRun }),
   )
 
   // 4. Recycle stale (skip on dryRun)
