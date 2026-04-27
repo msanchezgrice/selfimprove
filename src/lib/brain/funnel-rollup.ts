@@ -43,6 +43,8 @@ export type RollupResult = {
   stopsCreated: number
   anomaliesMinted: number
   signalsMinted: number
+  /** Anomaly decisions that we dropped because today's signal-volume cap was hit. */
+  signalsCappedToday?: number
   clustersCreated: number
   totalEventsConsidered: number
   windowDays: number
@@ -308,7 +310,39 @@ async function mintAnomalies(args: {
   const windowEnd = now.toISOString()
   const windowStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()
 
-  for (const { stopId, update, decision } of decisions) {
+  // Volume cap: count signals already minted today and stop if we'd blow the
+  // per-project ceiling. Without this a noisy PostHog account can flood
+  // the brain with hundreds of "rate_drop" rows per rollup run, which then
+  // takes synthesis hours to triage.
+  const startOfDay = new Date(now)
+  startOfDay.setUTCHours(0, 0, 0, 0)
+  const [{ count: todaySignalCount }, { data: settings }] = await Promise.all([
+    supabase
+      .from('signals')
+      .select('*', { count: 'exact', head: true })
+      .eq('project_id', projectId)
+      .gte('created_at', startOfDay.toISOString()),
+    supabase
+      .from('project_settings')
+      .select('signal_volume_cap_per_day')
+      .eq('project_id', projectId)
+      .maybeSingle(),
+  ])
+  const volumeCap =
+    (settings as { signal_volume_cap_per_day?: number } | null)
+      ?.signal_volume_cap_per_day ?? 200
+  let remainingQuota = Math.max(0, volumeCap - (todaySignalCount ?? 0))
+
+  // Sort decisions so we mint the highest-severity ones first when the cap
+  // bites — losing a 7% trend matters less than losing a 40% drop.
+  const ordered = [...decisions].sort((a, b) => b.decision.severity - a.decision.severity)
+
+  for (const { stopId, update, decision } of ordered) {
+    if (remainingQuota <= 0) {
+      result.signalsCappedToday = (result.signalsCappedToday ?? 0) + 1
+      continue
+    }
+    remainingQuota -= 1
     // 1. Insert the signal first so the anomaly row can FK to it.
     const signalInsert: SignalInsert = {
       project_id: projectId,

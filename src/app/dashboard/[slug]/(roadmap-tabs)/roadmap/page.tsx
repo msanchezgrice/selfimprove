@@ -26,7 +26,7 @@ export default async function RoadmapPage() {
     admin
       .from('roadmap_items')
       .select(
-        'id, project_id, title, description, category, status, stage, rank, confidence, roi_score, impact, size, updated_at, created_at, opportunity_cluster_id, prd_content',
+        'id, project_id, title, description, category, status, stage, rank, confidence, roi_score, impact, size, updated_at, created_at, opportunity_cluster_id, prd_content, dismiss_reason',
       )
       .eq('project_id', projectId)
       .in('stage', ['roadmap'])
@@ -85,6 +85,7 @@ export default async function RoadmapPage() {
       confidence: entry.item.confidence,
       roi_score: entry.item.roi_score,
       has_prd: Boolean(entry.item.prd_content),
+      dismiss_reason: entry.item.dismiss_reason ?? null,
       cluster: entry.cluster
         ? {
             id: entry.cluster.id,

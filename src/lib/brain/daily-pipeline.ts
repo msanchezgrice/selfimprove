@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 
 import { applyColdStartCluster } from './cold-start-cluster'
 import { dedupHistoricalItems } from './dedup-items'
+import { expireStaleAnomalies } from './expire-anomalies'
 import { rollupProjectFunnel } from './funnel-rollup'
 import { rerankProjectRoadmap } from './rerank'
 import { registerPostHogInsights } from './register-insights'
@@ -82,6 +83,13 @@ export async function runDailyPipeline(
   } else {
     result.steps.rollup = { skipped: 'no posthog_subscriptions row' }
   }
+
+  // 1b. Auto-expire stale open anomalies. Without this, the same drop
+  // re-mints daily and the brain accumulates 1,000+ "open" rows that all
+  // claim the funnel is broken right now. Supersede + age-cap fixes it.
+  result.steps.expireAnomalies = await safeRun(() =>
+    expireStaleAnomalies(supabase, projectId, { dryRun }),
+  )
 
   // 2. Signal triage (LLM synthesis: signals → briefs)
   if (!skipSynthesis && !dryRun) {

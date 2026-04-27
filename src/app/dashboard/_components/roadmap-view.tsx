@@ -47,6 +47,7 @@ type RoadmapEntry = {
   confidence: number
   roi_score: number
   has_prd: boolean
+  dismiss_reason: string | null
   cluster: {
     id: string
     slug: string
@@ -119,6 +120,7 @@ export function RoadmapView({
   const [minConfidence, setMinConfidence] = useState<number>(0)
   const [stage, setStage] = useState<'roadmap' | 'brief' | 'both'>('roadmap')
   const [clusterSlug, setClusterSlug] = useState<string>('')
+  const [showDismissed, setShowDismissed] = useState<boolean>(false)
   const [data, setData] = useState<RoadmapApiResponse>(initialData)
   const [loading, setLoading] = useState(false)
   const [bootstrapping, setBootstrapping] = useState(false)
@@ -141,7 +143,10 @@ export function RoadmapView({
       if (minConfidence > 0) params.set('minConfidence', String(minConfidence))
       if (clusterSlug) params.set('clusterSlugs', clusterSlug)
       if (stage !== 'roadmap') params.set('stage', stage)
-      params.set('limit', '50')
+      if (showDismissed) {
+        params.set('status', 'proposed,approved,building,dismissed')
+      }
+      params.set('limit', '100')
       const res = await fetch(`/api/projects/${projectId}/roadmap?${params.toString()}`)
       if (!res.ok) {
         const j = await res.json().catch(() => null)
@@ -154,15 +159,22 @@ export function RoadmapView({
     } finally {
       setLoading(false)
     }
-  }, [projectId, focus, categories, minConfidence, clusterSlug, stage])
+  }, [projectId, focus, categories, minConfidence, clusterSlug, stage, showDismissed])
 
   useEffect(() => {
-    if (focus === '' && categories.length === 0 && minConfidence === 0 && !clusterSlug && stage === 'roadmap') {
+    if (
+      focus === '' &&
+      categories.length === 0 &&
+      minConfidence === 0 &&
+      !clusterSlug &&
+      stage === 'roadmap' &&
+      !showDismissed
+    ) {
       // Showing initial canonical view; no need to refetch.
       return
     }
     refetch()
-  }, [focus, categories, minConfidence, clusterSlug, stage, refetch])
+  }, [focus, categories, minConfidence, clusterSlug, stage, showDismissed, refetch])
 
   const handleBootstrap = useCallback(async () => {
     setBootstrapping(true)
@@ -193,7 +205,12 @@ export function RoadmapView({
   }
 
   const isFiltered =
-    focus !== '' || categories.length > 0 || minConfidence > 0 || clusterSlug !== '' || stage !== 'roadmap'
+    focus !== '' ||
+    categories.length > 0 ||
+    minConfidence > 0 ||
+    clusterSlug !== '' ||
+    stage !== 'roadmap' ||
+    showDismissed
 
   return (
     <div>
@@ -374,6 +391,20 @@ export function RoadmapView({
           </>
         )}
 
+        <label
+          className="ml-2 flex cursor-pointer items-center gap-1 text-xs"
+          style={{ color: '#8b8680' }}
+          title="Show dismissed items \u2014 useful to audit auto-merged duplicates and stale items recycled by the daily pipeline."
+        >
+          <input
+            type="checkbox"
+            checked={showDismissed}
+            onChange={(e) => setShowDismissed(e.target.checked)}
+            className="h-3 w-3"
+          />
+          Show dismissed
+        </label>
+
         {isFiltered && (
           <button
             type="button"
@@ -383,6 +414,7 @@ export function RoadmapView({
               setMinConfidence(0)
               setClusterSlug('')
               setStage('roadmap')
+              setShowDismissed(false)
             }}
             className="ml-auto rounded-md border px-2 py-1 text-xs"
             style={{ borderColor: '#e5e1d8', color: '#8b8680', backgroundColor: 'white' }}
@@ -440,11 +472,16 @@ export function RoadmapView({
             <tbody>
               {data.items.map((item, index) => {
                 const itemHref = `${pathname}/${item.id}`
+                const isDismissed = item.status === 'dismissed'
                 return (
                   <tr
                     key={item.id}
                     className="cursor-pointer border-t transition-colors hover:bg-[#fafaf7]"
-                    style={{ borderColor: '#f3efe6', color: '#1a1a2e' }}
+                    style={{
+                      borderColor: '#f3efe6',
+                      color: isDismissed ? '#8b8680' : '#1a1a2e',
+                      opacity: isDismissed ? 0.6 : 1,
+                    }}
                     onClick={(e) => {
                       // Don't navigate if user clicked a control inside the row.
                       if ((e.target as HTMLElement).closest('button, a')) return
@@ -458,28 +495,41 @@ export function RoadmapView({
                       <Link
                         href={itemHref}
                         className="hover:underline"
-                        style={{ color: '#1a1a2e' }}
+                        style={{
+                          color: isDismissed ? '#8b8680' : '#1a1a2e',
+                          textDecoration: isDismissed ? 'line-through' : 'none',
+                        }}
                       >
                         {item.title}
                       </Link>
-                      <span
-                        className="ml-2 inline-block rounded px-1.5 py-0.5 text-[10px] font-medium uppercase"
-                        style={
-                          item.has_prd
-                            ? { backgroundColor: '#ecfdf5', color: '#059669' }
-                            : { backgroundColor: '#f5f0eb', color: '#8b8680' }
-                        }
-                        title={
-                          item.has_prd
-                            ? 'PRD generated. Click the row to read the spec.'
-                            : 'Brief only \u2014 PRD will auto-generate when you open this item for the first time.'
-                        }
-                      >
-                        {item.has_prd ? 'PRD' : 'Brief'}
-                      </span>
-                      {item.reason && (
+                      {isDismissed ? (
+                        <span
+                          className="ml-2 inline-block rounded px-1.5 py-0.5 text-[10px] font-medium uppercase"
+                          style={{ backgroundColor: '#fef2f2', color: '#dc2626' }}
+                          title={item.dismiss_reason ?? 'dismissed'}
+                        >
+                          Dismissed
+                        </span>
+                      ) : (
+                        <span
+                          className="ml-2 inline-block rounded px-1.5 py-0.5 text-[10px] font-medium uppercase"
+                          style={
+                            item.has_prd
+                              ? { backgroundColor: '#ecfdf5', color: '#059669' }
+                              : { backgroundColor: '#f5f0eb', color: '#8b8680' }
+                          }
+                          title={
+                            item.has_prd
+                              ? 'PRD generated. Click the row to read the spec.'
+                              : 'Brief only \u2014 PRD will auto-generate when you open this item for the first time.'
+                          }
+                        >
+                          {item.has_prd ? 'PRD' : 'Brief'}
+                        </span>
+                      )}
+                      {(item.dismiss_reason || item.reason) && (
                         <div className="text-xs" style={{ color: '#8b8680' }}>
-                          {item.reason}
+                          {item.dismiss_reason ?? item.reason}
                         </div>
                       )}
                     </td>

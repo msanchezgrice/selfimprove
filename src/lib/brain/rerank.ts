@@ -51,6 +51,7 @@ export type RoadmapItemForRanking = Pick<
   | 'created_at'
   | 'opportunity_cluster_id'
   | 'prd_content'
+  | 'dismiss_reason'
 >
 
 export type RoadmapFilter = {

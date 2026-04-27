@@ -78,7 +78,7 @@ export async function GET(
     admin
       .from('roadmap_items')
       .select(
-        'id, project_id, title, description, category, status, stage, rank, confidence, roi_score, impact, size, updated_at, created_at, opportunity_cluster_id, prd_content',
+        'id, project_id, title, description, category, status, stage, rank, confidence, roi_score, impact, size, updated_at, created_at, opportunity_cluster_id, prd_content, dismiss_reason',
       )
       .eq('project_id', id)
       .in('stage', stagesToInclude)
@@ -124,6 +124,8 @@ export async function GET(
       confidence: entry.item.confidence,
       roi_score: entry.item.roi_score,
       has_prd: Boolean(entry.item.prd_content),
+      dismiss_reason:
+        (entry.item as { dismiss_reason?: string | null }).dismiss_reason ?? null,
       cluster: entry.cluster
         ? {
             id: entry.cluster.id,
