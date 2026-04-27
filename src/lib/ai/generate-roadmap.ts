@@ -35,7 +35,9 @@ import { applyPageUpdates, type PageUpdateInput } from '@/lib/brain/write-pages'
 import {
   resolveActions,
   type Action,
+  type ActionResolverInput,
   type ClusterSnapshot,
+  type RoadmapProjection,
 } from '@/lib/brain/action-resolver'
 import {
   dedupAgainstHistory,
@@ -882,10 +884,14 @@ async function computeNextActions(args: {
     }
   }
 
-  const inputs = fresh.map((cluster) => ({
+  const inputs: ActionResolverInput[] = fresh.map((cluster) => ({
     before: clusterBefore.get(cluster.id) ?? null,
     after: toSnapshot(cluster),
-    roadmapItem: projectionsByCluster.get(cluster.id) ?? null,
+    // The DB returns status/stage as raw strings (post-RLS); the
+    // ActionResolverInput type narrows them to the discriminated unions,
+    // so coerce. Mismatches surface in resolveActions itself.
+    roadmapItem:
+      (projectionsByCluster.get(cluster.id) as RoadmapProjection | undefined) ?? null,
     policy: (settings as ApprovalPolicyRow | null) ?? null,
     clusterRankInFocus: rankByClusterId.get(cluster.id),
   }))

@@ -31,7 +31,7 @@ describe('propagateStaleness', () => {
     const graph = {
       current_focus: ['user_pain_map'],
       user_pain_map: ['active_experiments'],
-    } satisfies Record<BrainPageKind, BrainPageKind[]> as unknown as typeof DEFAULT_PAGE_GRAPH
+    } as Partial<Record<BrainPageKind, BrainPageKind[]>> as typeof DEFAULT_PAGE_GRAPH
     const result = propagateStaleness(['current_focus'], graph)
     expect(result).toEqual(['user_pain_map'])
     expect(result).not.toContain('active_experiments')

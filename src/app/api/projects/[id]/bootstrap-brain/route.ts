@@ -136,7 +136,9 @@ export async function POST(
   const sub = subRow as PosthogSubscriptionRow | null
   const apiKey = (sub?.metadata as { api_key?: string } | null)?.api_key
 
-  let rollup: Awaited<ReturnType<typeof rollupProjectFunnel>> | { skipped: string } = {
+  type StepResult<T> = T | { error: string } | { skipped: string }
+
+  let rollup: StepResult<Awaited<ReturnType<typeof rollupProjectFunnel>>> = {
     skipped: 'no posthog_subscriptions row',
   }
   if (sub && apiKey) {
@@ -146,7 +148,7 @@ export async function POST(
   }
 
   // ---- Step 4: register PostHog Insights ----
-  let insights: Awaited<ReturnType<typeof registerPostHogInsights>> | { skipped: string } = {
+  let insights: StepResult<Awaited<ReturnType<typeof registerPostHogInsights>>> = {
     skipped: 'no posthog config',
   }
   if (sub && apiKey) {
@@ -160,7 +162,7 @@ export async function POST(
   }
 
   // ---- Step 5: ensure bottom-funnel alerts (skip on dryRun) ----
-  let alerts: Awaited<ReturnType<typeof ensureBottomFunnelAlerts>> | { skipped: string } = {
+  let alerts: StepResult<Awaited<ReturnType<typeof ensureBottomFunnelAlerts>>> = {
     skipped: 'dryRun',
   }
   if (!dryRun && sub && apiKey) {

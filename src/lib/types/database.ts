@@ -711,7 +711,17 @@ export type FunnelStopUpdate = Partial<FunnelStopInsert>;
 // funnel_anomalies (v1.1.5)
 // ---------------------------------------------------------------------------
 
-export type FunnelAnomalyKind = 'rate_drop' | 'rate_spike' | 'count_drop' | 'count_spike' | 'new_event' | 'first_seen';
+export type FunnelAnomalyKind =
+  | 'rate_drop'
+  | 'rate_spike'
+  | 'count_drop'
+  | 'count_spike'
+  | 'count_trend'
+  | 'rate_trend'
+  | 'distribution_shift'
+  | 'cohort_regression'
+  | 'new_event'
+  | 'first_seen';
 export type FunnelAnomalyStatus = 'open' | 'acknowledged' | 'resolved' | 'expired' | 'duplicate';
 export type FunnelAnomalySource = 'cron' | 'webhook' | 'backtest' | 'manual';
 

@@ -87,7 +87,7 @@ export default async function RoadmapPage() {
             persisted_focus_score: entry.cluster.focus_weighted_score,
           }
         : null,
-      cluster_focus_score: entry.clusterFocusScore,
+      cluster_focus_score: entry.clusterFocusScore ?? 0,
       combined_score: entry.combinedScore,
       reason: entry.reason,
     })),

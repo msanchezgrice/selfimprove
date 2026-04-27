@@ -22,6 +22,7 @@ const typeBadgeConfig: Record<SignalType, { bg: string; text: string; label: str
   analytics: { bg: '#ecfeff', text: '#0891b2', label: 'Analytics' },
   error: { bg: '#fef2f2', text: '#dc2626', label: 'Error' },
   builder: { bg: '#ecfdf5', text: '#059669', label: 'Builder' },
+  funnel_anomaly: { bg: '#fffbeb', text: '#d97706', label: 'Funnel' },
 }
 
 function timeAgo(date: string): string {

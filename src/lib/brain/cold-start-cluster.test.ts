@@ -5,7 +5,7 @@ import { clusterItems, type CandidateItem } from './cold-start-cluster'
 function item(
   id: string,
   title: string,
-  category = 'revenue',
+  category: CandidateItem['category'] = 'revenue',
   createdAt = '2026-04-20T10:00:00Z',
 ): CandidateItem {
   return {
