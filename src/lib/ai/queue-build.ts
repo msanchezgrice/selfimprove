@@ -1,6 +1,13 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { encrypt } from '@/lib/crypto'
 
+/**
+ * @deprecated Prefer `runImplementationBrief` from `src/lib/ai/implementation-brief.ts`.
+ *
+ * This low-level helper bypasses the implementation-brief skill's safety
+ * caps, resolver context, packet validation, and `brain_runs` audit record.
+ * It is kept for scripts and tests that need a raw build_jobs insert.
+ */
 export async function queueImplementJob(
   roadmapItemId: string,
   projectId: string,

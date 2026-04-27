@@ -2,6 +2,7 @@ import { NextResponse, after } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { generateRoadmap } from '@/lib/ai/generate-roadmap'
 import { generatePRD } from '@/lib/ai/generate-prd'
+import { rollupProjectFunnel } from '@/lib/brain/funnel-rollup'
 import { verifySecret } from '@/lib/auth/verify-secret'
 
 export async function GET(request: Request) {
@@ -14,38 +15,32 @@ export async function GET(request: Request) {
 
   const supabase = createAdminClient()
 
-  // Sync PostHog events for projects with API keys
+  // v1.1.5: ingest funnel anomalies from PostHog (HogQL aggregates), not raw
+  // events. Each rollup mints at most a handful of `funnel_anomaly` signals
+  // per project — only when a rate or count actually moved enough to matter.
+  // The legacy per-event poll (50 events/hour, no aggregation) is gone.
   const { data: posthogProjects } = await supabase
     .from('project_settings')
-    .select('project_id, posthog_api_key')
+    .select('project_id')
     .not('posthog_api_key', 'is', null)
 
-  if (posthogProjects) {
-    for (const ps of posthogProjects) {
-      try {
-        // Fetch and create signals from PostHog
-        const eventsRes = await fetch('https://app.posthog.com/api/event/?limit=50&order_by=-timestamp', {
-          headers: { Authorization: `Bearer ${ps.posthog_api_key}` },
-        })
-        if (eventsRes.ok) {
-          const data = await eventsRes.json()
-          const events = data.results?.filter((e: any) =>
-            e.event?.includes('$exception') || e.event?.includes('$rageclick') || !e.event?.startsWith('$')
-          ) || []
+  const subscriptionProjects = (
+    await supabase.from('posthog_subscriptions').select('project_id')
+  ).data ?? []
 
-          if (events.length > 0) {
-            const signals = events.slice(0, 10).map((e: any) => ({
-              project_id: ps.project_id,
-              type: e.event?.includes('$exception') ? 'error' : 'analytics' as const,
-              title: `PostHog: ${e.event}`,
-              content: e.properties?.$exception_message || `Event "${e.event}" detected`,
-              metadata: { source: 'posthog', event_name: e.event },
-              weight: e.event?.includes('$exception') ? 3 : 2,
-            }))
-            await supabase.from('signals').insert(signals)
-          }
-        }
-      } catch { /* skip on error */ }
+  const projectsWithPosthog = new Set<string>([
+    ...(posthogProjects ?? []).map((p) => p.project_id),
+    ...subscriptionProjects.map((p) => p.project_id),
+  ])
+
+  for (const projectId of projectsWithPosthog) {
+    try {
+      await rollupProjectFunnel(supabase, projectId, { source: 'cron' })
+    } catch (err) {
+      console.warn('[cron/roadmap] funnel-rollup failed', {
+        projectId,
+        error: err instanceof Error ? err.message : String(err),
+      })
     }
   }
 

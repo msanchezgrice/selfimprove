@@ -6,6 +6,8 @@ import { generateRoadmap } from '@/lib/ai/generate-roadmap'
 import { importGitHubIssues } from '@/lib/ai/import-github-issues'
 import { getGitHubToken } from '@/lib/github/get-token'
 import { queueScanJob } from '@/lib/ai/queue-build'
+import { seedProjectBrainPages } from '@/lib/brain/seed-pages'
+import type { ProjectSettingsRow } from '@/lib/types/database'
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -62,6 +64,26 @@ export async function POST(request: Request) {
       .from('project_settings')
       .update(settings)
       .eq('project_id', project.id)
+  }
+
+  // Seed baseline brain pages so the resolver has something to load on the
+  // first roadmap / PRD run. Non-fatal: enrichment will fill any gaps later.
+  if (project) {
+    const { data: settingsRow } = await admin
+      .from('project_settings')
+      .select('*')
+      .eq('project_id', project.id)
+      .single()
+
+    seedProjectBrainPages(admin, {
+      projectId: project.id,
+      name,
+      description: description ?? null,
+      framework: framework ?? null,
+      repoUrl: repo_url ?? null,
+      siteUrl: site_url ?? null,
+      settings: (settingsRow as ProjectSettingsRow) ?? null,
+    }).catch((err) => console.error('[projects.POST] seed brain pages failed:', err))
   }
 
   // Trigger cold-start analysis (non-blocking)

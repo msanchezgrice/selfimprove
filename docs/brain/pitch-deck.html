@@ -1,0 +1,1622 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Project Brain v1.1 · A SelfImprove Monograph</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT@0,9..144,300..900,0..100;1,9..144,300..900,0..100&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@300;400;500&display=swap"
+  rel="stylesheet"
+/>
+<style>
+  :root {
+    --paper: #efe7d4;
+    --paper-warm: #f4ecd9;
+    --paper-deep: #e7dec7;
+    --ink: #131009;
+    --ink-70: #3b332a;
+    --ink-50: #6b6152;
+    --ink-30: #a59c89;
+    --rust: #a6421a;
+    --rust-deep: #6b2a0e;
+    --archive: #17233f;
+    --rule: #c8bca1;
+    --rule-soft: #ddd2b8;
+    --serif: 'Fraunces', 'Times New Roman', serif;
+    --editorial: 'Instrument Serif', 'Fraunces', serif;
+    --mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html {
+    scroll-behavior: smooth;
+    background: var(--paper);
+  }
+
+  body {
+    min-height: 100vh;
+    height: 100vh;
+    overflow-y: scroll;
+    scroll-snap-type: y mandatory;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--editorial);
+    font-size: 18px;
+    line-height: 1.55;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* paper atmosphere */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    pointer-events: none;
+    z-index: 50;
+    opacity: 0.35;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.09 0 0 0 0 0.07 0 0 0 0 0.05 0 0 0 0.17 0'/></filter><rect width='220' height='220' filter='url(%23n)'/></svg>");
+  }
+  body::after {
+    content: '';
+    position: fixed; inset: 0;
+    pointer-events: none;
+    z-index: 49;
+    background:
+      radial-gradient(1200px 700px at 15% 15%, rgba(166,66,26,0.06), transparent 60%),
+      radial-gradient(1000px 800px at 85% 85%, rgba(23,35,63,0.05), transparent 60%),
+      linear-gradient(180deg, transparent 0%, rgba(107,42,14,0.03) 100%);
+  }
+
+  /* ruled margins of a bound monograph */
+  .deck {
+    position: relative;
+  }
+
+  /* chrome */
+  .progress {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: transparent;
+    z-index: 60;
+  }
+  .progress .bar {
+    display: block;
+    height: 100%;
+    width: 0%;
+    background: var(--rust);
+    transition: width 160ms linear;
+  }
+  .chrome-folio {
+    position: fixed;
+    right: 28px;
+    bottom: 22px;
+    z-index: 60;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--ink-50);
+    background: rgba(239,231,212,0.78);
+    backdrop-filter: blur(6px);
+    padding: 6px 10px;
+    border: 0.5px solid var(--rule);
+    border-radius: 999px;
+    user-select: none;
+  }
+  .chrome-nav {
+    position: fixed;
+    left: 28px;
+    bottom: 22px;
+    z-index: 60;
+    display: flex;
+    gap: 6px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.22em;
+  }
+  .chrome-nav button {
+    appearance: none;
+    background: rgba(239,231,212,0.78);
+    backdrop-filter: blur(6px);
+    border: 0.5px solid var(--rule);
+    color: var(--ink-70);
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    cursor: pointer;
+    font-family: var(--mono);
+    transition: transform 150ms ease, color 150ms ease, border-color 150ms ease;
+  }
+  .chrome-nav button:hover {
+    color: var(--rust);
+    border-color: var(--rust);
+    transform: translateY(-1px);
+  }
+
+  /* slide frame */
+  .slide {
+    min-height: 100vh;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    padding: clamp(28px, 4vw, 56px) clamp(32px, 5vw, 84px) clamp(28px, 3vw, 48px);
+    position: relative;
+    overflow: hidden;
+  }
+  .slide::before {
+    /* top rule */
+    content: '';
+    position: absolute;
+    left: clamp(32px, 5vw, 84px);
+    right: clamp(32px, 5vw, 84px);
+    top: calc(clamp(28px, 4vw, 56px) + 32px);
+    height: 0.5px;
+    background: var(--rule);
+  }
+  .slide::after {
+    /* bottom rule */
+    content: '';
+    position: absolute;
+    left: clamp(32px, 5vw, 84px);
+    right: clamp(32px, 5vw, 84px);
+    bottom: calc(clamp(28px, 3vw, 48px) + 28px);
+    height: 0.5px;
+    background: var(--rule);
+  }
+
+  .header, .footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-family: var(--mono);
+    font-weight: 400;
+    font-size: 10.5px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--ink-50);
+  }
+  .header .right, .footer .right { display: flex; gap: 28px; }
+  .header .slug, .footer .slug { color: var(--rust); }
+  .body {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: clamp(24px, 4vh, 60px) 0 clamp(20px, 3vh, 40px);
+    gap: clamp(18px, 2.4vh, 32px);
+    position: relative;
+    z-index: 2;
+  }
+
+  /* reveal on scroll-into-view */
+  .reveal > * {
+    opacity: 0;
+    transform: translateY(14px);
+    transition: opacity 700ms cubic-bezier(0.2,0.7,0.2,1), transform 700ms cubic-bezier(0.2,0.7,0.2,1);
+  }
+  .slide.in-view .reveal > * { opacity: 1; transform: none; }
+  .slide.in-view .reveal > *:nth-child(1) { transition-delay: 60ms; }
+  .slide.in-view .reveal > *:nth-child(2) { transition-delay: 140ms; }
+  .slide.in-view .reveal > *:nth-child(3) { transition-delay: 220ms; }
+  .slide.in-view .reveal > *:nth-child(4) { transition-delay: 300ms; }
+  .slide.in-view .reveal > *:nth-child(5) { transition-delay: 380ms; }
+  .slide.in-view .reveal > *:nth-child(6) { transition-delay: 460ms; }
+  .slide.in-view .reveal > *:nth-child(7) { transition-delay: 540ms; }
+
+  /* typographic primitives */
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--rust);
+  }
+  .kicker {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--ink-50);
+  }
+  .roman {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: 14px;
+    letter-spacing: 0.08em;
+    color: var(--rust);
+    font-variant-numeric: oldstyle-nums;
+  }
+  h1.display {
+    font-family: var(--serif);
+    font-variation-settings: 'opsz' 144, 'SOFT' 30, 'wght' 380;
+    font-weight: 380;
+    font-size: clamp(64px, 11vw, 168px);
+    line-height: 0.92;
+    letter-spacing: -0.035em;
+    color: var(--ink);
+  }
+  h2.title {
+    font-family: var(--serif);
+    font-variation-settings: 'opsz' 96, 'SOFT' 50, 'wght' 400;
+    font-weight: 400;
+    font-size: clamp(36px, 4.6vw, 64px);
+    line-height: 1.02;
+    letter-spacing: -0.025em;
+    color: var(--ink);
+    max-width: 24ch;
+  }
+  h3.sub {
+    font-family: var(--serif);
+    font-weight: 500;
+    font-size: clamp(20px, 1.5vw, 24px);
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+  }
+  p.lead {
+    font-family: var(--editorial);
+    font-size: clamp(20px, 1.6vw, 26px);
+    line-height: 1.45;
+    max-width: 46ch;
+    color: var(--ink-70);
+  }
+  p.lead em { color: var(--rust-deep); }
+  p.caption {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-50);
+  }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--rust);
+    border: 0.5px solid var(--rust);
+    padding: 6px 12px;
+    border-radius: 999px;
+  }
+  .pill::before {
+    content: '';
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--rust);
+  }
+
+  code, pre, .mono { font-family: var(--mono); }
+
+  /* COVER — slide 01 */
+  .cover .body {
+    display: grid;
+    grid-template-columns: 1fr;
+    justify-items: start;
+    gap: 44px;
+  }
+  .cover .stamps {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    color: var(--ink-50);
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+  }
+  .cover .stamps .ornament {
+    display: inline-block;
+    width: 40px; height: 1px;
+    background: var(--ink-30);
+  }
+  .cover .title-stack h1 {
+    font-family: var(--serif);
+    font-variation-settings: 'opsz' 144, 'SOFT' 40, 'wght' 380;
+    font-weight: 380;
+    font-size: clamp(78px, 13.5vw, 220px);
+    line-height: 0.86;
+    letter-spacing: -0.04em;
+  }
+  .cover .title-stack h1 .slash {
+    color: var(--rust);
+    font-style: italic;
+    font-weight: 300;
+    padding: 0 0.06em;
+  }
+  .cover .title-stack h1 .brain {
+    font-family: var(--editorial);
+    font-style: italic;
+    font-weight: 400;
+  }
+  .cover .title-stack h1 em {
+    font-family: var(--editorial);
+    font-style: italic;
+    font-weight: 400;
+    color: var(--rust-deep);
+  }
+  .cover .subtitle {
+    display: grid;
+    grid-template-columns: minmax(280px, 48ch) auto;
+    gap: 64px;
+    align-items: end;
+    width: 100%;
+  }
+  .cover .subtitle p {
+    font-family: var(--editorial);
+    font-style: italic;
+    font-size: clamp(22px, 2vw, 32px);
+    line-height: 1.35;
+    color: var(--ink-70);
+  }
+  .cover .subtitle p span { color: var(--rust); font-style: normal; }
+  .cover .meta {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.26em;
+    text-transform: uppercase;
+    color: var(--ink-50);
+    text-align: right;
+    line-height: 2;
+  }
+  .cover .meta strong { color: var(--ink); font-weight: 500; }
+
+  .cover .ornament-line {
+    display: flex; align-items: center; gap: 14px;
+    font-family: var(--mono);
+    font-size: 11px; letter-spacing: 0.3em; text-transform: uppercase;
+    color: var(--ink-50);
+  }
+  .cover .ornament-line::before, .cover .ornament-line::after {
+    content: ''; flex: 1; height: 0.5px; background: var(--rule);
+  }
+
+  /* SLIDE 02 — PREMISE */
+  .premise .body { gap: 48px; }
+  .pipeline {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr) ;
+    gap: 22px;
+    align-items: stretch;
+    margin-top: 12px;
+  }
+  .pipeline .node {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 20px 18px 22px;
+    border-top: 1.5px solid var(--ink);
+    position: relative;
+  }
+  .pipeline .node .idx {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.3em;
+    color: var(--ink-50);
+  }
+  .pipeline .node .word {
+    font-family: var(--serif);
+    font-variation-settings: 'opsz' 72, 'SOFT' 50;
+    font-weight: 430;
+    font-size: clamp(26px, 2.6vw, 38px);
+    line-height: 1;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+  }
+  .pipeline .node .word em {
+    font-family: var(--editorial);
+    font-style: italic;
+    font-weight: 400;
+    color: var(--rust);
+  }
+  .pipeline .node .caption {
+    margin-top: auto;
+    color: var(--ink-50);
+  }
+  .pipeline .node:nth-child(odd)::after {
+    /* decorative tick */
+    content: '';
+    position: absolute;
+    top: -1.5px; left: 0;
+    width: 42px; height: 4px;
+    background: var(--rust);
+  }
+  .pipeline .arrow {
+    display: none;
+  }
+  .pipeline-caption {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 12px;
+    gap: 32px;
+    color: var(--ink-50);
+  }
+  .pipeline-caption em { color: var(--rust); font-style: normal; letter-spacing: 0.2em; }
+  .leadout {
+    font-family: var(--editorial);
+    font-style: italic;
+    font-size: clamp(20px, 1.6vw, 28px);
+    color: var(--ink-70);
+    max-width: 80ch;
+    border-left: 2px solid var(--rust);
+    padding-left: 18px;
+  }
+
+  /* SLIDE 03 — V1 FAILURES */
+  .postmortem .body { gap: 32px; }
+  .critiques {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0;
+    border-top: 0.5px solid var(--rule);
+    margin-top: 6px;
+  }
+  .critique {
+    padding: 28px 28px 28px 0;
+    border-right: 0.5px solid var(--rule);
+    position: relative;
+  }
+  .critique:last-child { border-right: 0; padding-right: 0; }
+  .critique:not(:first-child) { padding-left: 28px; }
+  .critique .num {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.3em;
+    color: var(--rust);
+    margin-bottom: 14px;
+  }
+  .critique .quote {
+    font-family: var(--editorial);
+    font-style: italic;
+    font-size: clamp(22px, 1.8vw, 28px);
+    line-height: 1.25;
+    color: var(--ink);
+    margin-bottom: 18px;
+  }
+  .critique .quote::before { content: '“'; color: var(--rust); }
+  .critique .quote::after { content: '”'; color: var(--rust); }
+  .critique p {
+    font-size: 16px;
+    line-height: 1.55;
+    color: var(--ink-70);
+  }
+
+  /* SLIDE 04 — FOUR SHIFTS */
+  .shifts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    border: 0.5px solid var(--rule);
+    background: rgba(255,252,243,0.35);
+  }
+  .shift {
+    padding: 32px 34px 36px;
+    border-right: 0.5px solid var(--rule);
+    border-bottom: 0.5px solid var(--rule);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    min-height: 240px;
+  }
+  .shift:nth-child(2), .shift:nth-child(4) { border-right: 0; }
+  .shift:nth-child(3), .shift:nth-child(4) { border-bottom: 0; }
+  .shift .num {
+    font-family: var(--serif);
+    font-variation-settings: 'opsz' 144, 'wght' 300;
+    font-weight: 300;
+    font-size: clamp(52px, 5vw, 80px);
+    line-height: 0.9;
+    color: var(--rust);
+    letter-spacing: -0.04em;
+  }
+  .shift h3 {
+    font-family: var(--serif);
+    font-weight: 500;
+    font-size: clamp(22px, 1.9vw, 30px);
+    line-height: 1.1;
+    color: var(--ink);
+    letter-spacing: -0.015em;
+  }
+  .shift p {
+    font-family: var(--editorial);
+    font-size: 17px;
+    line-height: 1.5;
+    color: var(--ink-70);
+    max-width: 42ch;
+  }
+  .shift .tag {
+    margin-top: auto;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--ink-50);
+  }
+
+  /* SLIDE 05 — PRINCIPLES */
+  .principles {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0;
+    align-items: stretch;
+  }
+  .principle {
+    padding: 6px 18px 0 0;
+    border-top: 2px solid var(--ink);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .principle:not(:last-child) { border-right: 0.5px solid var(--rule); padding-right: 18px; margin-right: 18px; }
+  .principle .sec {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.3em;
+    color: var(--rust);
+  }
+  .principle .title {
+    font-family: var(--serif);
+    font-variation-settings: 'opsz' 72, 'wght' 430;
+    font-weight: 430;
+    font-size: clamp(24px, 2.2vw, 34px);
+    line-height: 1.02;
+    color: var(--ink);
+    letter-spacing: -0.02em;
+    margin-top: 2px;
+  }
+  .principle .title em {
+    font-family: var(--editorial);
+    font-style: italic;
+    color: var(--rust);
+    font-weight: 400;
+  }
+  .principle p {
+    font-size: 15.5px;
+    line-height: 1.5;
+    color: var(--ink-70);
+    max-width: 28ch;
+  }
+
+  /* SLIDE 06 — RESOLVER LAYERS */
+  .resolvers {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0;
+    border: 0.5px solid var(--rule);
+    background: rgba(255,252,243,0.4);
+  }
+  .resolver {
+    padding: 30px 34px 34px;
+    border-right: 0.5px solid var(--rule);
+    border-bottom: 0.5px solid var(--rule);
+    display: grid;
+    grid-template-columns: 56px 1fr;
+    gap: 24px;
+    min-height: 220px;
+  }
+  .resolver:nth-child(2n) { border-right: 0; }
+  .resolver:nth-last-child(-n+2) { border-bottom: 0; }
+  .resolver .glyph {
+    font-family: var(--serif);
+    font-variation-settings: 'opsz' 144, 'wght' 300;
+    font-weight: 300;
+    font-size: 64px;
+    line-height: 1;
+    color: var(--rust);
+    letter-spacing: -0.04em;
+  }
+  .resolver h3 {
+    font-family: var(--serif);
+    font-weight: 500;
+    font-size: 24px;
+    letter-spacing: -0.015em;
+    color: var(--ink);
+    margin-bottom: 6px;
+  }
+  .resolver .where {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--ink-50);
+    margin-bottom: 14px;
+  }
+  .resolver .purpose {
+    font-family: var(--editorial);
+    font-size: 16.5px;
+    line-height: 1.5;
+    color: var(--ink-70);
+    max-width: 52ch;
+  }
+  .resolver .fail {
+    margin-top: 14px;
+    font-family: var(--editorial);
+    font-style: italic;
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--rust-deep);
+    border-top: 0.5px dashed var(--rule);
+    padding-top: 12px;
+  }
+  .resolver .fail::before {
+    content: 'FAILS AS ';
+    font-family: var(--mono);
+    font-style: normal;
+    font-size: 10px;
+    letter-spacing: 0.28em;
+    color: var(--rust);
+    margin-right: 8px;
+  }
+
+  /* SLIDE 07 — BACKLOG FUNNEL */
+  .funnel {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+  .tier {
+    display: grid;
+    grid-template-columns: 52px 1fr auto auto;
+    gap: 28px;
+    align-items: baseline;
+    padding: 18px 0;
+    border-bottom: 0.5px solid var(--rule);
+  }
+  .tier:last-child { border-bottom: 2px solid var(--ink); }
+  .tier .idx {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.3em;
+    color: var(--rust);
+  }
+  .tier .name {
+    font-family: var(--serif);
+    font-variation-settings: 'opsz' 96, 'wght' 420;
+    font-weight: 420;
+    font-size: clamp(30px, 3vw, 44px);
+    letter-spacing: -0.025em;
+    color: var(--ink);
+  }
+  .tier .name em {
+    font-family: var(--editorial);
+    font-style: italic;
+    color: var(--rust);
+    font-weight: 400;
+  }
+  .tier .role {
+    font-family: var(--editorial);
+    font-style: italic;
+    font-size: 16px;
+    color: var(--ink-70);
+    max-width: 44ch;
+  }
+  .tier .count {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink);
+    text-align: right;
+  }
+  .tier .count .big {
+    display: block;
+    font-family: var(--serif);
+    font-size: clamp(22px, 2vw, 32px);
+    font-weight: 400;
+    letter-spacing: 0;
+    color: var(--rust-deep);
+  }
+  .tier .policy {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-50);
+    text-align: right;
+    max-width: 22ch;
+  }
+
+  /* SLIDE 08, 09 — REFACTOR BEFORE/AFTER */
+  .diff {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    border: 0.5px solid var(--rule);
+    background: rgba(255,252,243,0.4);
+  }
+  .diff > .col {
+    padding: 28px 30px 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-height: 300px;
+  }
+  .diff > .col.today { border-right: 0.5px solid var(--rule); background: rgba(231,222,199,0.35); }
+  .diff > .col h4 {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--ink-50);
+  }
+  .diff > .col.after h4 { color: var(--rust); }
+  .diff > .col .label {
+    font-family: var(--serif);
+    font-size: clamp(26px, 2.2vw, 34px);
+    font-weight: 420;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+  }
+  .diff ol {
+    list-style: none;
+    counter-reset: step;
+    display: grid;
+    gap: 10px;
+    margin-top: 4px;
+  }
+  .diff ol li {
+    counter-increment: step;
+    display: grid;
+    grid-template-columns: 28px 1fr;
+    gap: 12px;
+    font-size: 15.5px;
+    line-height: 1.45;
+    color: var(--ink-70);
+    padding: 6px 0;
+    border-bottom: 0.5px dashed var(--rule-soft);
+  }
+  .diff ol li::before {
+    content: counter(step, decimal-leading-zero);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    color: var(--rust);
+    padding-top: 4px;
+  }
+  .diff ol li:last-child { border-bottom: 0; }
+  .diff ol li strong { color: var(--ink); font-weight: 500; font-family: var(--serif); }
+  .diff ol li code { font-size: 13px; color: var(--rust-deep); background: rgba(166,66,26,0.08); padding: 1px 6px; border-radius: 3px; }
+  .policy-callout {
+    margin-top: 20px;
+    border: 0.5px solid var(--rust);
+    padding: 18px 24px;
+    background: rgba(166,66,26,0.06);
+    display: flex;
+    align-items: center;
+    gap: 22px;
+  }
+  .policy-callout .tag {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--rust);
+    white-space: nowrap;
+    border-right: 0.5px solid var(--rust);
+    padding-right: 22px;
+  }
+  .policy-callout p {
+    font-family: var(--editorial);
+    font-style: italic;
+    font-size: 19px;
+    color: var(--ink);
+    line-height: 1.4;
+  }
+
+  /* SLIDE 10 — LEARNING LOOP */
+  .loop {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 0;
+    align-items: stretch;
+  }
+  .loop-step {
+    padding: 20px 16px 22px;
+    border-top: 2px solid var(--ink);
+    position: relative;
+  }
+  .loop-step:not(:last-child) { border-right: 0.5px solid var(--rule); }
+  .loop-step:nth-child(even) { border-top-color: var(--rust); }
+  .loop-step .idx {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.3em;
+    color: var(--rust);
+  }
+  .loop-step h3 {
+    font-family: var(--serif);
+    font-weight: 430;
+    font-size: clamp(18px, 1.5vw, 22px);
+    letter-spacing: -0.01em;
+    color: var(--ink);
+    margin-top: 10px;
+    line-height: 1.1;
+  }
+  .loop-step p {
+    margin-top: 8px;
+    font-size: 14px;
+    line-height: 1.45;
+    color: var(--ink-70);
+  }
+  .loop-return {
+    margin-top: 28px;
+    border-top: 0.5px solid var(--rule);
+    padding-top: 22px;
+    font-family: var(--editorial);
+    font-style: italic;
+    font-size: clamp(22px, 2.2vw, 32px);
+    line-height: 1.25;
+    color: var(--ink);
+    max-width: 64ch;
+  }
+  .loop-return em { color: var(--rust); }
+
+  /* SLIDE 11 — FOCUS MODES */
+  .modes {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0;
+    border-top: 2px solid var(--ink);
+  }
+  .mode {
+    padding: 18px 16px 22px;
+    border-right: 0.5px solid var(--rule);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .mode:last-child { border-right: 0; }
+  .mode .tag {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.22em;
+    color: var(--rust);
+    text-transform: uppercase;
+  }
+  .mode .name {
+    font-family: var(--editorial);
+    font-style: italic;
+    font-weight: 400;
+    font-size: clamp(26px, 2.4vw, 36px);
+    line-height: 1;
+    color: var(--ink);
+    letter-spacing: -0.01em;
+  }
+  .mode .desc {
+    font-size: 14.5px;
+    line-height: 1.45;
+    color: var(--ink-70);
+  }
+  .mode .list {
+    margin-top: auto;
+  }
+  .mode .list-head {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.24em;
+    color: var(--ink-50);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .mode ul {
+    list-style: none;
+    font-family: var(--editorial);
+    font-size: 14.5px;
+    color: var(--ink);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    line-height: 1.4;
+  }
+  .mode ul.raises li::before {
+    content: '↑  ';
+    color: var(--rust);
+    font-family: var(--mono);
+  }
+  .mode ul.lowers li { color: var(--ink-50); }
+  .mode ul.lowers li::before {
+    content: '↓  ';
+    color: var(--ink-30);
+    font-family: var(--mono);
+  }
+
+  /* SLIDE 12 — CLOSING */
+  .closing .body {
+    justify-content: space-between;
+  }
+  .closing h1 {
+    font-family: var(--serif);
+    font-variation-settings: 'opsz' 144, 'wght' 380;
+    font-weight: 380;
+    font-size: clamp(58px, 7vw, 108px);
+    line-height: 0.95;
+    letter-spacing: -0.035em;
+    max-width: 22ch;
+  }
+  .closing h1 em {
+    font-family: var(--editorial);
+    font-style: italic;
+    color: var(--rust);
+    font-weight: 400;
+  }
+  .closing .sig {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 40px;
+  }
+  .closing .sig .block {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--ink-50);
+    line-height: 1.9;
+  }
+  .closing .sig .block strong { color: var(--ink); font-weight: 500; }
+  .closing .sig .block .row { display: flex; gap: 12px; }
+  .closing .mark {
+    font-family: var(--serif);
+    font-variation-settings: 'opsz' 144, 'wght' 250;
+    font-size: 84px;
+    color: var(--rust);
+    line-height: 1;
+  }
+
+  /* column arrangement on narrower viewports */
+  @media (max-width: 1180px) {
+    .pipeline { grid-template-columns: repeat(5, 1fr); gap: 14px; }
+    .pipeline .node .word { font-size: 22px; }
+    .principles, .modes { grid-template-columns: repeat(3, 1fr); }
+    .principle:nth-child(n+4) { margin-top: 18px; }
+    .loop { grid-template-columns: repeat(3, 1fr); }
+    .loop-step:nth-child(-n+3) { border-bottom: 0.5px solid var(--rule); }
+  }
+  @media (max-width: 820px) {
+    .slide { padding: 24px 22px; }
+    h1.display { font-size: 72px; }
+    h2.title { font-size: 30px; }
+    .critiques { grid-template-columns: 1fr; }
+    .critique { border-right: 0; border-bottom: 0.5px solid var(--rule); padding: 18px 0; }
+    .shifts-grid { grid-template-columns: 1fr; }
+    .shift { border-right: 0; }
+    .resolvers { grid-template-columns: 1fr; }
+    .resolver { border-right: 0; grid-template-columns: 40px 1fr; }
+    .principles { grid-template-columns: 1fr 1fr; }
+    .diff { grid-template-columns: 1fr; }
+    .diff > .col.today { border-right: 0; border-bottom: 0.5px solid var(--rule); }
+    .modes { grid-template-columns: 1fr 1fr; }
+    .tier { grid-template-columns: 36px 1fr; }
+    .tier .count, .tier .policy { grid-column: 2; text-align: left; margin-top: 8px; }
+    .loop { grid-template-columns: 1fr 1fr; }
+    .cover .subtitle { grid-template-columns: 1fr; gap: 20px; }
+    .cover .meta { text-align: left; }
+  }
+</style>
+</head>
+<body>
+
+<div class="progress" aria-hidden="true"><span class="bar" id="pb"></span></div>
+<div class="chrome-folio" id="folio">01 / 12</div>
+<div class="chrome-nav" aria-label="Deck navigation">
+  <button id="prev" aria-label="Previous slide">←</button>
+  <button id="next" aria-label="Next slide">→</button>
+</div>
+
+<main class="deck">
+
+  <!-- ————————————————— 01 · COVER ————————————————— -->
+  <section class="slide cover" data-slide="1" aria-label="Cover">
+    <div class="header">
+      <span>SelfImprove · Architecture Monograph</span>
+      <div class="right">
+        <span class="slug">№ 001</span>
+        <span>MMXXVI</span>
+      </div>
+    </div>
+    <div class="body reveal">
+      <div class="stamps">
+        <span>The Memory Layer</span>
+        <span class="ornament"></span>
+        <span>Internal Review Copy</span>
+      </div>
+      <div class="title-stack">
+        <h1>Project<span class="slash">/</span><span class="brain">Brain</span></h1>
+      </div>
+      <div class="subtitle">
+        <p>A durable <span>knowledge layer</span> — and a governance layer — between raw signals and the roadmap the team actually ships.</p>
+        <div class="meta">
+          VOLUME <strong>I.I</strong><br/>
+          EDITION · APRIL 2026<br/>
+          AUTHOR · <strong>SELFIMPROVE ENG</strong><br/>
+          SCOPE · ONE PRODUCT, ONE REPO
+        </div>
+      </div>
+      <div class="ornament-line"><span>COVER</span></div>
+    </div>
+    <div class="footer">
+      <span>Project Brain · v1.1</span>
+      <div class="right">
+        <span>docs/brain/project-brain-v1.md</span>
+        <span class="slug">I</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ————————————————— 02 · PREMISE ————————————————— -->
+  <section class="slide premise" data-slide="2" aria-label="The Premise">
+    <div class="header">
+      <span class="slug">I · The Premise</span>
+      <div class="right">
+        <span>Signals → Ships</span>
+      </div>
+    </div>
+    <div class="body reveal">
+      <span class="eyebrow">The pipeline, declared.</span>
+      <h2 class="title">Everything we build is a projection of what we've heard.</h2>
+      <div class="pipeline">
+        <div class="node">
+          <span class="idx">01</span>
+          <span class="word">signals</span>
+          <span class="caption">raw evidence · unbounded append-only</span>
+        </div>
+        <div class="node">
+          <span class="idx">02</span>
+          <span class="word">project <em>memory</em></span>
+          <span class="caption">inspectable canonical truth · compiled pages + sources</span>
+        </div>
+        <div class="node">
+          <span class="idx">03</span>
+          <span class="word">opportunity <em>clusters</em></span>
+          <span class="caption">the long backlog · 50–200 themed bets</span>
+        </div>
+        <div class="node">
+          <span class="idx">04</span>
+          <span class="word">ranked roadmap</span>
+          <span class="caption">focus-weighted slice · 10–25 reviewable</span>
+        </div>
+        <div class="node">
+          <span class="idx">05</span>
+          <span class="word">PRDs / build jobs</span>
+          <span class="caption">execution shortlist · 1–5 active</span>
+        </div>
+      </div>
+      <p class="leadout">
+        Two new layers do the work that <em>roadmap_items</em> and <em>prd_content</em> were quietly overloaded with:
+        memory that lives <em>between</em> signals and artifacts, and a resolver that decides where anything goes next.
+      </p>
+    </div>
+    <div class="footer">
+      <span>signals → project memory → opportunity clusters → ranked roadmap → PRDs / build jobs</span>
+      <div class="right"><span class="slug">II</span></div>
+    </div>
+  </section>
+
+  <!-- ————————————————— 03 · V1 FAILURES ————————————————— -->
+  <section class="slide postmortem" data-slide="3" aria-label="What V1 Got Wrong">
+    <div class="header">
+      <span class="slug">II · Post-Mortem</span>
+      <div class="right"><span>Three failures we're retiring</span></div>
+    </div>
+    <div class="body reveal">
+      <span class="eyebrow">What V1 got wrong.</span>
+      <h2 class="title">The backlog became unusable because three roles collapsed into one row.</h2>
+      <div class="critiques">
+        <div class="critique">
+          <div class="num">Failure 01</div>
+          <p class="quote">Roadmap rows were doing memory, output, and queue.</p>
+          <p><code>roadmap_items</code> and <code>prd_content</code> were simultaneously the durable record of what we believe, the generated artifact, and the action queue. No layer could be fixed without touching the others.</p>
+        </div>
+        <div class="critique">
+          <div class="num">Failure 02</div>
+          <p class="quote">Every signal batch minted a new brief.</p>
+          <p>A capped ranked roadmap coexisted with an ever-growing briefs layer. Repeated evidence created duplicate opportunities instead of strengthening existing ones. The backlog degraded into a junk drawer.</p>
+        </div>
+        <div class="critique">
+          <div class="num">Failure 03</div>
+          <p class="quote">Skills invented their own filing logic.</p>
+          <p>No one knew where evidence was supposed to land. Capabilities went dark — the skill existed, but nothing could reach it. Routing drifted silently.</p>
+        </div>
+      </div>
+    </div>
+    <div class="footer">
+      <span>v1.1 separates memory, backlog, and execution — with governance between them</span>
+      <div class="right"><span class="slug">III</span></div>
+    </div>
+  </section>
+
+  <!-- ————————————————— 04 · FOUR SHIFTS ————————————————— -->
+  <section class="slide" data-slide="4" aria-label="What Changed">
+    <div class="header">
+      <span class="slug">III · V1.1</span>
+      <div class="right"><span>Four shifts. Each earns its table.</span></div>
+    </div>
+    <div class="body reveal">
+      <span class="eyebrow">What changed since V1.</span>
+      <h2 class="title">Governance, focus, structure, and a routing table you can audit.</h2>
+      <div class="shifts-grid">
+        <div class="shift">
+          <div class="num">01</div>
+          <h3>Resolver as governance.</h3>
+          <p>Not just a context-loader. Resolvers now route skills, filing, context, <em>and</em> next actions. Routing becomes a first-class system concern.</p>
+          <span class="tag">Skill · Filing · Context · Action</span>
+        </div>
+        <div class="shift">
+          <div class="num">02</div>
+          <h3>Dominant need is first-class.</h3>
+          <p><code>current_focus</code> tells the system whether the product is optimizing for UX quality, conversion, virality, performance, or retention — and ranking follows.</p>
+          <span class="tag">current_focus · focus-weighted ranking</span>
+        </div>
+        <div class="shift">
+          <div class="num">03</div>
+          <h3>Long backlog, structured.</h3>
+          <p>The main backlog unit becomes an <em>opportunity_cluster</em>, not a one-off brief. The default action on a new signal is <em>attach</em>, not <em>mint</em>.</p>
+          <span class="tag">opportunity_clusters · theme + primary_need</span>
+        </div>
+        <div class="shift">
+          <div class="num">04</div>
+          <h3>Routing must be tested.</h3>
+          <p>Trigger evals, a weekly <code>check-resolvable</code> audit, and logged unmatched prompts catch dark capabilities and resolver drift before users do.</p>
+          <span class="tag">resolver_triggers · resolver_audits</span>
+        </div>
+      </div>
+    </div>
+    <div class="footer">
+      <span>brain_pages · brain_runs · opportunity_clusters · resolver_triggers · resolver_audits</span>
+      <div class="right"><span class="slug">IV</span></div>
+    </div>
+  </section>
+
+  <!-- ————————————————— 05 · PRINCIPLES ————————————————— -->
+  <section class="slide" data-slide="5" aria-label="Principles">
+    <div class="header">
+      <span class="slug">IV · Principles</span>
+      <div class="right"><span>Five clauses · the constitution</span></div>
+    </div>
+    <div class="body reveal">
+      <span class="eyebrow">Principles.</span>
+      <h2 class="title">The constitution each skill is expected to obey.</h2>
+      <div class="principles">
+        <div class="principle">
+          <span class="sec">§ 01</span>
+          <span class="title">Thin harness. <em>Fat skills.</em></span>
+          <p>The app resolves context, applies guardrails, records runs, and writes structured outputs. Judgment lives in reusable markdown procedures.</p>
+        </div>
+        <div class="principle">
+          <span class="sec">§ 02</span>
+          <span class="title"><em>Deterministic</em> stays deterministic.</span>
+          <p>Ranking math, focus weighting, dedup, resolver selection, and run logging run in code and SQL. The model never does arithmetic.</p>
+        </div>
+        <div class="principle">
+          <span class="sec">§ 03</span>
+          <span class="title">Memory is <em>inspectable.</em></span>
+          <p>Canonical truths live in pages and page versions with citations back to the source evidence. History is append-only.</p>
+        </div>
+        <div class="principle">
+          <span class="sec">§ 04</span>
+          <span class="title">Routing is <em>explicit.</em></span>
+          <p>No skill invents its own invocation path. Triggers, priorities, and fallbacks live in tables the audit can read.</p>
+        </div>
+        <div class="principle">
+          <span class="sec">§ 05</span>
+          <span class="title">No hidden <em>filing.</em></span>
+          <p>Before creating a new page or cluster, every memory-writing skill reads <code>RESOLVER.md</code> and the filing rules.</p>
+        </div>
+      </div>
+    </div>
+    <div class="footer">
+      <span>If the same judgment is needed twice, it becomes a rule.</span>
+      <div class="right"><span class="slug">V</span></div>
+    </div>
+  </section>
+
+  <!-- ————————————————— 06 · RESOLVER LAYERS ————————————————— -->
+  <section class="slide" data-slide="6" aria-label="Resolver Layers">
+    <div class="header">
+      <span class="slug">V · Resolvers compose</span>
+      <div class="right"><span>Four layers, one discipline</span></div>
+    </div>
+    <div class="body reveal">
+      <span class="eyebrow">The resolver is not one thing.</span>
+      <h2 class="title">Routing is a system — four composable layers, each with its own failure mode.</h2>
+      <div class="resolvers">
+        <div class="resolver">
+          <div class="glyph">I</div>
+          <div>
+            <h3>Skill Resolver</h3>
+            <div class="where">agent config + <code>resolver_triggers</code></div>
+            <p class="purpose">Routes user requests, cron events, and webhooks to the right skill. Keeps capabilities reachable and prevents overlap between similar skills.</p>
+            <p class="fail">the skill exists, but nobody can invoke it.</p>
+          </div>
+        </div>
+        <div class="resolver">
+          <div class="glyph">II</div>
+          <div>
+            <h3>Filing Resolver</h3>
+            <div class="where"><code>docs/brain/RESOLVER.md</code> + <code>_filing-rules.md</code></div>
+            <p class="purpose">Decides whether new evidence updates a page, strengthens a cluster, creates a new cluster, or queues a review. Keeps memory MECE enough to stay usable.</p>
+            <p class="fail">every skill invents its own filing logic. memory becomes a junk drawer.</p>
+          </div>
+        </div>
+        <div class="resolver">
+          <div class="glyph">III</div>
+          <div>
+            <h3>Context Resolver</h3>
+            <div class="where"><code>brain_resolver_rules</code></div>
+            <p class="purpose">Loads the smallest correct context set for a task. Puts <code>current_focus</code> first for roadmap work. Enforces required vs. optional pages by priority.</p>
+            <p class="fail">giant prompts, stale assumptions, noisy context.</p>
+          </div>
+        </div>
+        <div class="resolver">
+          <div class="glyph">IV</div>
+          <div>
+            <h3>Action Resolver</h3>
+            <div class="where">runtime policy + approval rules</div>
+            <p class="purpose">Turns a cluster change into the right next action: rerank, refresh a brief, draft a PRD, queue implementation, or ask for approval.</p>
+            <p class="fail">evidence leaks straight to execution with no gate.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="footer">
+      <span>Every new skill must declare its triggers. Every memory-writing skill must read the resolver first.</span>
+      <div class="right"><span class="slug">VI</span></div>
+    </div>
+  </section>
+
+  <!-- ————————————————— 07 · BACKLOG MODEL ————————————————— -->
+  <section class="slide" data-slide="7" aria-label="Backlog Model">
+    <div class="header">
+      <span class="slug">VI · The Backlog</span>
+      <div class="right"><span>A four-tier funnel with clear update policy</span></div>
+    </div>
+    <div class="body reveal">
+      <span class="eyebrow">The backlog model.</span>
+      <h2 class="title">A long backlog is fine — if each tier has a job.</h2>
+      <div class="funnel">
+        <div class="tier">
+          <span class="idx">01</span>
+          <span class="name">Signals</span>
+          <span class="role">Raw evidence from feedback, analytics, support, scans, and shipped outcomes.</span>
+          <span class="count"><span class="big">∞</span>unbounded</span>
+          <span class="policy">never rank directly · route through filing</span>
+        </div>
+        <div class="tier">
+          <span class="idx">02</span>
+          <span class="name">Opportunity <em>clusters</em></span>
+          <span class="role">The canonical long backlog. Grouped by theme and dominant need.</span>
+          <span class="count"><span class="big">50 — 200</span>active</span>
+          <span class="policy">default action is attach · minting is rare</span>
+        </div>
+        <div class="tier">
+          <span class="idx">03</span>
+          <span class="name">Ranked roadmap</span>
+          <span class="role">A focus-weighted slice of the long backlog that a team can actually review.</span>
+          <span class="count"><span class="big">10 — 25</span>live</span>
+          <span class="policy">recomputed on focus change · on cluster move</span>
+        </div>
+        <div class="tier">
+          <span class="idx">04</span>
+          <span class="name">Now / Next</span>
+          <span class="role">Execution shortlist with PRDs, approvals, and implementation packets.</span>
+          <span class="count"><span class="big">1 — 5</span>bets</span>
+          <span class="policy">human or policy-gated promotion only</span>
+        </div>
+      </div>
+    </div>
+    <div class="footer">
+      <span>Signals stay raw · clusters stay canonical · the roadmap is a projection, not the storage layer</span>
+      <div class="right"><span class="slug">VII</span></div>
+    </div>
+  </section>
+
+  <!-- ————————————————— 08 · REFACTOR: generateRoadmap ————————————————— -->
+  <section class="slide" data-slide="8" aria-label="Refactor generateRoadmap">
+    <div class="header">
+      <span class="slug">VII · Refactor</span>
+      <div class="right"><span><code>generateRoadmap()</code></span></div>
+    </div>
+    <div class="body reveal">
+      <span class="eyebrow">Refactor · roadmap synthesis</span>
+      <h2 class="title">The default action becomes <em>attach</em>, not <em>mint</em>.</h2>
+      <div class="diff">
+        <div class="col today">
+          <h4>Today · V1</h4>
+          <div class="label">Signals straight to briefs.</div>
+          <ol>
+            <li>Fetch unprocessed signals.</li>
+            <li>Deduplicate.</li>
+            <li>Summarize.</li>
+            <li>Ask Claude to create ranked items.</li>
+            <li>Mark signals processed.</li>
+          </ol>
+        </div>
+        <div class="col after">
+          <h4>V1.1 · After</h4>
+          <div class="label">Resolve · file · compute · refresh.</div>
+          <ol>
+            <li>Resolve <code>current_focus</code> + required pages.</li>
+            <li>Run the filing resolver on fresh signals — <strong>attach</strong>, mint, or mark page stale.</li>
+            <li>Compute evidence strength, freshness, confidence, effort, focus weighting — <strong>in code</strong>.</li>
+            <li>Invoke <code>roadmap-synthesis</code> only on changed or high-uncertainty clusters.</li>
+            <li>Refresh cluster briefs.</li>
+            <li>Refresh the ranked roadmap slice.</li>
+            <li>Write <code>brain_runs</code>.</li>
+            <li>Update changed pages and citations.</li>
+          </ol>
+        </div>
+      </div>
+      <div class="policy-callout">
+        <span class="tag">Key policy</span>
+        <p>The default action for a new signal is to <em>update an existing cluster</em>, not to create a new brief.</p>
+      </div>
+    </div>
+    <div class="footer">
+      <span>Latent judgment stays latent. Arithmetic stays deterministic.</span>
+      <div class="right"><span class="slug">VIII</span></div>
+    </div>
+  </section>
+
+  <!-- ————————————————— 09 · REFACTOR: generatePRD ————————————————— -->
+  <section class="slide" data-slide="9" aria-label="Refactor generatePRD">
+    <div class="header">
+      <span class="slug">VIII · Refactor</span>
+      <div class="right"><span><code>generatePRD()</code></span></div>
+    </div>
+    <div class="body reveal">
+      <span class="eyebrow">Refactor · PRD author</span>
+      <h2 class="title">The PRD becomes a <em>projection</em> of memory, not a vacuum.</h2>
+      <div class="diff">
+        <div class="col today">
+          <h4>Today · V1</h4>
+          <div class="label">Evidence from the row itself.</div>
+          <ol>
+            <li>Load a roadmap row.</li>
+            <li>Feed its evidence and traces back to Claude.</li>
+            <li>Save <code>prd_content</code> on the roadmap row.</li>
+          </ol>
+        </div>
+        <div class="col after">
+          <h4>V1.1 · After</h4>
+          <div class="label">Repo-aware. Page-backed. Logged.</div>
+          <ol>
+            <li>Resolve overview · focus · repo_map · patterns · safety · metrics.</li>
+            <li>Load the selected <strong>opportunity cluster</strong> + roadmap row.</li>
+            <li>Load recent shipped changes that touch the same area.</li>
+            <li>Invoke <code>prd-author</code>.</li>
+            <li>Write <code>brain_runs</code>.</li>
+            <li>Save <code>prd_content</code>.</li>
+            <li>Update affected memory pages with new constraints, questions, and implementation notes.</li>
+          </ol>
+        </div>
+      </div>
+      <div class="policy-callout">
+        <span class="tag">Key policy</span>
+        <p>Guardrails belong in <em>deterministic context</em> — not improvised inside the prompt body.</p>
+      </div>
+    </div>
+    <div class="footer">
+      <span>Page-backed semantics · explicit citations · inspectable run log</span>
+      <div class="right"><span class="slug">IX</span></div>
+    </div>
+  </section>
+
+  <!-- ————————————————— 10 · LEARNING LOOP ————————————————— -->
+  <section class="slide" data-slide="10" aria-label="Learning Loop">
+    <div class="header">
+      <span class="slug">IX · The Learning Loop</span>
+      <div class="right"><span>Ship → measure → update → propose</span></div>
+    </div>
+    <div class="body reveal">
+      <span class="eyebrow">The learning loop.</span>
+      <h2 class="title">Shipped work should feed back — into memory, <em>and</em> into the routing table.</h2>
+      <div class="loop">
+        <div class="loop-step">
+          <div class="idx">STEP 01</div>
+          <h3>Collect actual metrics.</h3>
+          <p>After ship, pull the outcomes attached to the roadmap item and its experiment.</p>
+        </div>
+        <div class="loop-step">
+          <div class="idx">STEP 02</div>
+          <h3>Compare to forecast.</h3>
+          <p>Deterministic diff against the PRD's predicted deltas and success criteria.</p>
+        </div>
+        <div class="loop-step">
+          <div class="idx">STEP 03</div>
+          <h3>Update cluster strength.</h3>
+          <p>Adjust evidence strength, freshness, and dominant-need weighting based on the result.</p>
+        </div>
+        <div class="loop-step">
+          <div class="idx">STEP 04</div>
+          <h3>Run <code>impact-review</code>.</h3>
+          <p>Classify as confirmed, underperformed, or inconclusive. Explain the most likely reason.</p>
+        </div>
+        <div class="loop-step">
+          <div class="idx">STEP 05</div>
+          <h3>Update pages.</h3>
+          <p>Write the lesson back to the relevant project page with a citation to the ship.</p>
+        </div>
+        <div class="loop-step">
+          <div class="idx">STEP 06</div>
+          <h3>Propose rule change.</h3>
+          <p>If the same mistake is likely to recur, propose a skill, trigger, or resolver edit.</p>
+        </div>
+      </div>
+      <p class="loop-return">If the same judgment is needed twice, it should become a <em>skill update, a filing rule, or a resolver rule</em> — not a note someone remembers.</p>
+    </div>
+    <div class="footer">
+      <span>The roadmap system doesn't just learn what to build. It learns whether its own routing table is still accurate.</span>
+      <div class="right"><span class="slug">X</span></div>
+    </div>
+  </section>
+
+  <!-- ————————————————— 11 · FOCUS MODES ————————————————— -->
+  <section class="slide" data-slide="11" aria-label="Focus Modes">
+    <div class="header">
+      <span class="slug">X · Dominant Need</span>
+      <div class="right"><span><code>current_focus</code> as routing input</span></div>
+    </div>
+    <div class="body reveal">
+      <span class="eyebrow">Focus modes.</span>
+      <h2 class="title">A product only has one direction at a time. The backlog should know which.</h2>
+      <div class="modes">
+        <div class="mode">
+          <span class="tag">Mode · 01</span>
+          <span class="name">ux_quality</span>
+          <span class="desc">Reduce friction, clarify flows, improve the felt quality of the product.</span>
+          <div class="list">
+            <div class="list-head">Raises</div>
+            <ul class="raises"><li>navigation clarity</li><li>error recovery</li><li>onboarding</li><li>dead-ends</li></ul>
+            <div class="list-head" style="margin-top:10px">Lowers</div>
+            <ul class="lowers"><li>speculative bets</li><li>non-blocking infra</li></ul>
+          </div>
+        </div>
+        <div class="mode">
+          <span class="tag">Mode · 02</span>
+          <span class="name">conversion</span>
+          <span class="desc">Improve visitor-to-signup or signup-to-paid in the current funnel.</span>
+          <div class="list">
+            <div class="list-head">Raises</div>
+            <ul class="raises"><li>landing clarity</li><li>pricing friction</li><li>CTA visibility</li><li>signup drop-off</li></ul>
+            <div class="list-head" style="margin-top:10px">Lowers</div>
+            <ul class="lowers"><li>engagement loops w/o funnel tie</li><li>cosmetic polish</li></ul>
+          </div>
+        </div>
+        <div class="mode">
+          <span class="tag">Mode · 03</span>
+          <span class="name">virality</span>
+          <span class="desc">Increase referral loops, sharing, and user-generated acquisition.</span>
+          <div class="list">
+            <div class="list-head">Raises</div>
+            <ul class="raises"><li>sharing surfaces</li><li>invite loops</li><li>social proof</li><li>network effects</li></ul>
+            <div class="list-head" style="margin-top:10px">Lowers</div>
+            <ul class="lowers"><li>internal tooling</li><li>isolated retention fixes</li></ul>
+          </div>
+        </div>
+        <div class="mode">
+          <span class="tag">Mode · 04</span>
+          <span class="name">performance</span>
+          <span class="desc">Reduce latency, errors, and operational drag that blocks quality or conversion.</span>
+          <div class="list">
+            <div class="list-head">Raises</div>
+            <ul class="raises"><li>load time</li><li>crash rate</li><li>render blocking</li><li>backend reliability</li></ul>
+            <div class="list-head" style="margin-top:10px">Lowers</div>
+            <ul class="lowers"><li>nice-to-have feature work</li><li>long-tail content</li></ul>
+          </div>
+        </div>
+        <div class="mode">
+          <span class="tag">Mode · 05</span>
+          <span class="name">retention</span>
+          <span class="desc">Increase repeat usage, habit formation, and long-term value after activation.</span>
+          <div class="list">
+            <div class="list-head">Raises</div>
+            <ul class="raises"><li>re-engagement hooks</li><li>time-to-value</li><li>churn reasons</li><li>unfinished loops</li></ul>
+            <div class="list-head" style="margin-top:10px">Lowers</div>
+            <ul class="lowers"><li>top-of-funnel experiments</li><li>one-time launch mechanics</li></ul>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="footer">
+      <span>Ranking changes with focus mode · strategy isn't regenerated from scratch every run</span>
+      <div class="right"><span class="slug">XI</span></div>
+    </div>
+  </section>
+
+  <!-- ————————————————— 12 · CLOSING ————————————————— -->
+  <section class="slide closing" data-slide="12" aria-label="Closing">
+    <div class="header">
+      <span class="slug">XI · Manifesto</span>
+      <div class="right"><span>— FIN —</span></div>
+    </div>
+    <div class="body reveal">
+      <span class="eyebrow">In one sentence.</span>
+      <h1>
+        Memory you can <em>inspect</em>.<br/>
+        Routing you can <em>test</em>.<br/>
+        A backlog that stays small where it matters — <em>and long where it should</em>.
+      </h1>
+      <div class="mark">※</div>
+      <div class="sig">
+        <div class="block">
+          <strong>Project Brain · v1.1</strong><br/>
+          Source of truth · <span style="color:var(--rust)">docs/brain/project-brain-v1.md</span><br/>
+          Review surface · <span style="color:var(--rust)">/brain-v1</span><br/>
+          Migration · <span style="color:var(--rust)">00009_add_project_brain.sql</span>
+        </div>
+        <div class="block" style="text-align:right">
+          Skills · <strong>project-enrichment</strong><br/>
+          · <strong>roadmap-synthesis</strong> · <strong>prd-author</strong><br/>
+          · <strong>implementation-brief</strong> · <strong>impact-review</strong><br/>
+          · <strong>check-resolvable</strong>
+        </div>
+      </div>
+    </div>
+    <div class="footer">
+      <span>Issued for internal review · SelfImprove Architecture Monograph № 001</span>
+      <div class="right"><span class="slug">XII / XII</span></div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  (function () {
+    const slides = Array.from(document.querySelectorAll('.slide'));
+    const pb = document.getElementById('pb');
+    const folio = document.getElementById('folio');
+    const total = slides.length;
+
+    // IntersectionObserver for reveal + current slide tracking
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (e.isIntersecting && e.intersectionRatio > 0.55) {
+          e.target.classList.add('in-view');
+          const n = parseInt(e.target.dataset.slide, 10) || 1;
+          const pct = ((n - 1) / (total - 1)) * 100;
+          pb.style.width = pct + '%';
+          folio.textContent = String(n).padStart(2, '0') + ' / ' + String(total).padStart(2, '0');
+        }
+      });
+    }, { threshold: [0.3, 0.55, 0.75] });
+    slides.forEach((s) => io.observe(s));
+
+    // Keyboard navigation
+    function currentIndex() {
+      const mid = window.innerHeight / 2;
+      let best = 0, bestDist = Infinity;
+      slides.forEach((s, i) => {
+        const r = s.getBoundingClientRect();
+        const center = r.top + r.height / 2;
+        const d = Math.abs(center - mid);
+        if (d < bestDist) { bestDist = d; best = i; }
+      });
+      return best;
+    }
+    function goTo(i) {
+      const idx = Math.max(0, Math.min(slides.length - 1, i));
+      slides[idx].scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    document.addEventListener('keydown', (e) => {
+      const advance = ['ArrowRight','ArrowDown','PageDown',' ','Enter'].includes(e.key);
+      const retreat = ['ArrowLeft','ArrowUp','PageUp','Backspace'].includes(e.key);
+      if (advance) { e.preventDefault(); goTo(currentIndex() + 1); }
+      else if (retreat) { e.preventDefault(); goTo(currentIndex() - 1); }
+      else if (e.key === 'Home') { goTo(0); }
+      else if (e.key === 'End') { goTo(slides.length - 1); }
+    });
+    document.getElementById('prev').addEventListener('click', () => goTo(currentIndex() - 1));
+    document.getElementById('next').addEventListener('click', () => goTo(currentIndex() + 1));
+
+    // Initial in-view for the first slide (in case observer is slow on load)
+    requestAnimationFrame(() => slides[0].classList.add('in-view'));
+  })();
+</script>
+</body>
+</html>

@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createGitHubIssue } from '@/lib/ai/github-issue'
 import { getGitHubToken } from '@/lib/github/get-token'
-import { queueImplementJob } from '@/lib/ai/queue-build'
+import { runImplementationBrief } from '@/lib/ai/implementation-brief'
 
 export async function PATCH(
   req: Request,
@@ -91,45 +91,31 @@ export async function PATCH(
         .single()
 
       if (settings?.automation_implement_enabled) {
-        const { data: fullItem } = await admin
-          .from('roadmap_items')
-          .select('prd_content, title')
-          .eq('id', id)
-          .single()
-
-        if (fullItem?.prd_content) {
-          const { data: project } = await admin
-            .from('projects')
-            .select('repo_url')
-            .eq('id', item.project_id)
-            .single()
-
-          if (project?.repo_url && providerToken) {
-            const prd = fullItem.prd_content as Record<string, unknown>
-            const prompt = `Implement this feature based on the PRD below. Create a new branch, make the changes, and ensure tests pass.
-
-## ${fullItem.title}
-
-### Problem
-${prd.problem || ''}
-
-### Solution
-${prd.solution || ''}
-
-### Acceptance Criteria
-${((prd.acceptance_criteria as string[]) || []).map((c: string) => `- ${c}`).join('\n')}
-
-### Files to Modify
-${((prd.files_to_modify as Array<{ path: string; changes: string }>) || []).map((f: { path: string; changes: string }) => `- ${f.path}: ${f.changes}`).join('\n')}
-
-### Test Requirements
-${((prd.test_requirements as string[]) || []).map((t: string) => `- ${t}`).join('\n')}`
-
-            queueImplementJob(id, item.project_id, project.repo_url, providerToken, prompt)
-              .then(() => admin.from('roadmap_items').update({ build_status: 'queued' }).eq('id', id))
-              .catch((err: unknown) => console.error('[approve] Queue build failed:', err))
-          }
-        }
+        // v1.1: implementation-brief skill owns the PRD -> build_jobs
+        // transition. It resolves repo_map + safety_rules, generates a
+        // structured execution packet, clamps it to the project's safety
+        // caps, and emits the build_jobs row with the encrypted token.
+        runImplementationBrief({
+          roadmapItemId: id,
+          approvalMode: 'auto_approved',
+          githubToken: providerToken,
+        })
+          .then(async (result) => {
+            if (result.buildJobId) {
+              await admin
+                .from('roadmap_items')
+                .update({ build_status: 'queued' })
+                .eq('id', id)
+            } else {
+              console.warn(
+                '[approve] implementation-brief produced packet but no build_job was enqueued',
+                { itemId: id, runId: result.runId },
+              )
+            }
+          })
+          .catch((err: unknown) =>
+            console.error('[approve] implementation-brief failed:', err),
+          )
       }
     }
   }

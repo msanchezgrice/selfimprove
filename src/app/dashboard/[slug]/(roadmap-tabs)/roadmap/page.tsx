@@ -1,55 +1,108 @@
+import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
+import { rankRoadmapItems, type RoadmapItemForRanking } from '@/lib/brain/rerank'
 import { getActiveProject } from '@/lib/supabase/get-active-project'
-import { RoadmapTable } from '../../../_components/roadmap-table'
-import { RoadmapEmpty } from '../../../_components/roadmap-empty'
 import { GenerateButton } from '../../../_components/generate-button'
+import { RoadmapEmpty } from '../../../_components/roadmap-empty'
+import { RoadmapView } from '../../../_components/roadmap-view'
+import type { OpportunityClusterRow } from '@/lib/types/database'
 
 export default async function RoadmapPage() {
   const project = await getActiveProject()
   const projectId = project?.id ?? null
+  const projectSlug = project?.slug ?? ''
 
-  const supabase = await createClient()
+  if (!projectId) {
+    return <RoadmapEmpty projectId={null} />
+  }
 
-  const { data: items } = projectId
-    ? await supabase
-        .from('roadmap_items')
-        .select('*')
-        .eq('project_id', projectId)
-        .eq('stage', 'roadmap')
-        .in('status', ['proposed', 'approved'])
-        .order('rank', { ascending: true })
-    : { data: null }
+  // Auth-gate via session (same as the API route).
+  await createClient()
 
-  // Count unprocessed signals
-  const { count: unprocessedCount } = projectId
-    ? await supabase
-        .from('signals')
-        .select('*', { count: 'exact', head: true })
-        .eq('project_id', projectId)
-        .eq('processed', false)
-    : { count: 0 }
+  // Fetch the canonical (no filter) ranked list using the same engine as the API
+  // route, so the initial render matches what the user gets after the first
+  // client-side refetch.
+  const admin = createAdminClient()
+  const [itemsRes, clustersRes, focusPageRes, unprocessedRes] = await Promise.all([
+    admin
+      .from('roadmap_items')
+      .select(
+        'id, project_id, title, description, category, status, stage, rank, confidence, roi_score, impact, size, updated_at, created_at, opportunity_cluster_id, prd_content',
+      )
+      .eq('project_id', projectId)
+      .in('stage', ['roadmap'])
+      .order('updated_at', { ascending: false })
+      .limit(800),
+    admin
+      .from('opportunity_clusters')
+      .select('*')
+      .eq('project_id', projectId)
+      .eq('status', 'active'),
+    admin
+      .from('brain_pages')
+      .select('slug, updated_at')
+      .eq('project_id', projectId)
+      .eq('kind', 'current_focus')
+      .eq('status', 'active')
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    admin
+      .from('signals')
+      .select('*', { count: 'exact', head: true })
+      .eq('project_id', projectId)
+      .eq('processed', false),
+  ])
+
+  const ranked = rankRoadmapItems(
+    (itemsRes.data ?? []) as RoadmapItemForRanking[],
+    (clustersRes.data ?? []) as OpportunityClusterRow[],
+    { limit: 50 },
+  )
+
+  const persistedFocus = (focusPageRes.data as { slug: string } | null)?.slug ?? null
+
+  const initialData = {
+    project_id: projectId,
+    persisted_focus: persistedFocus,
+    applied_focus: persistedFocus,
+    filter: { limit: 50 },
+    total: ranked.length,
+    items: ranked.map((entry) => ({
+      id: entry.item.id,
+      title: entry.item.title,
+      category: entry.item.category,
+      status: entry.item.status,
+      stage: entry.item.stage,
+      confidence: entry.item.confidence,
+      roi_score: entry.item.roi_score,
+      cluster: entry.cluster
+        ? {
+            id: entry.cluster.id,
+            slug: entry.cluster.slug,
+            primary_need: entry.cluster.primary_need,
+            theme: entry.cluster.theme,
+            evidence_strength: entry.cluster.evidence_strength,
+            confidence_score: entry.cluster.confidence_score,
+            persisted_focus_score: entry.cluster.focus_weighted_score,
+          }
+        : null,
+      cluster_focus_score: entry.clusterFocusScore,
+      combined_score: entry.combinedScore,
+      reason: entry.reason,
+    })),
+  }
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-xl font-semibold" style={{ color: '#1a1a2e' }}>
-            Roadmap
-          </h1>
-          <p className="text-sm" style={{ color: '#8b8680' }}>
-            {items?.length ?? 0} items
-          </p>
-        </div>
-        {projectId && (
-          <GenerateButton projectId={projectId} unprocessedCount={unprocessedCount ?? 0} hasItems={!!items && items.length > 0} />
-        )}
+      <div className="mb-2 flex justify-end">
+        <GenerateButton
+          projectId={projectId}
+          unprocessedCount={unprocessedRes.count ?? 0}
+          hasItems={ranked.length > 0}
+        />
       </div>
-
-      {!items || items.length === 0 ? (
-        <RoadmapEmpty projectId={projectId} />
-      ) : (
-        <RoadmapTable items={items} />
-      )}
+      <RoadmapView projectId={projectId} projectSlug={projectSlug} initialData={initialData} />
     </div>
   )
 }

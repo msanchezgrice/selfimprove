@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getGitHubToken } from '@/lib/github/get-token'
-import { queueImplementJob } from '@/lib/ai/queue-build'
+import { runImplementationBrief } from '@/lib/ai/implementation-brief'
 
 export async function POST(
   _req: Request,
@@ -41,31 +41,40 @@ export async function POST(
     return NextResponse.json({ error: 'No GitHub token' }, { status: 400 })
   }
 
-  const admin = createAdminClient()
-  const { data: fullItem } = await admin
-    .from('roadmap_items')
-    .select('project_id, title, prd_content, projects(repo_url)')
-    .eq('id', id)
-    .single()
+  // v1.1: the implementation-brief skill owns the PRD -> build_jobs transition.
+  // It resolves repo_map + safety_rules, generates a structured execution
+  // packet, clamps it against project safety caps, and emits the build_jobs row.
+  try {
+    const result = await runImplementationBrief({
+      roadmapItemId: id,
+      approvalMode: 'manual',
+      githubToken: token,
+    })
 
-  if (!fullItem?.prd_content) {
-    return NextResponse.json({ error: 'No PRD' }, { status: 400 })
+    if (!result.buildJobId) {
+      return NextResponse.json(
+        {
+          error:
+            'Implementation packet was generated but the build job could not be enqueued (check repo_url and GitHub token).',
+          packet: result.packet,
+          runId: result.runId,
+        },
+        { status: 500 },
+      )
+    }
+
+    const admin = createAdminClient()
+    await admin.from('roadmap_items').update({ build_status: 'queued' }).eq('id', id)
+
+    return NextResponse.json({
+      status: 'queued',
+      message: 'Build job queued',
+      buildJobId: result.buildJobId,
+      runId: result.runId,
+      packet: result.packet,
+    })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    return NextResponse.json({ error: message }, { status: 500 })
   }
-
-  const project = fullItem.projects as unknown as { repo_url: string | null }
-  if (!project?.repo_url) {
-    return NextResponse.json({ error: 'No repo' }, { status: 400 })
-  }
-
-  // Build the prompt from PRD
-  const prd = fullItem.prd_content as Record<string, unknown>
-  const prompt = `Implement this feature: ${fullItem.title}\n\n${prd.problem || ''}\n\nSolution: ${prd.solution || ''}\n\nAcceptance Criteria:\n${((prd.acceptance_criteria as string[]) || []).join('\n')}`
-
-  await queueImplementJob(id, fullItem.project_id, project.repo_url, token, prompt)
-  await admin.from('roadmap_items').update({ build_status: 'queued' }).eq('id', id)
-
-  return NextResponse.json({
-    status: 'queued',
-    message: 'Build job queued',
-  })
 }

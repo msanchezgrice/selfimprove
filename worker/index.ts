@@ -8,6 +8,36 @@ const supabase = createClient(
 
 const POLL_INTERVAL = 30_000 // 30 seconds
 
+const APP_BASE_URL = process.env.APP_BASE_URL ?? process.env.NEXT_PUBLIC_APP_URL
+const CRON_SECRET = process.env.CRON_SECRET
+
+/**
+ * Fire the Next.js job-complete webhook so the application side can run
+ * eager post-processing (e.g. `project-enrichment` on a finished scan)
+ * without waiting for a nightly sweep. Non-fatal: if the webhook call fails
+ * or env is missing, the nightly crons still pick the state up.
+ */
+async function notifyJobComplete(jobId: string) {
+  if (!APP_BASE_URL || !CRON_SECRET) {
+    return
+  }
+  try {
+    const res = await fetch(`${APP_BASE_URL.replace(/\/$/, '')}/api/webhooks/job-complete`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${CRON_SECRET}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ jobId }),
+    })
+    if (!res.ok) {
+      console.warn(`[worker] job-complete webhook responded ${res.status} for job ${jobId}`)
+    }
+  } catch (err) {
+    console.warn(`[worker] job-complete webhook failed for job ${jobId}:`, err)
+  }
+}
+
 async function pollForJobs() {
   // Reset stale running jobs (worker crashed before updating status)
   // Must exceed the 30min Claude Code timeout to avoid resetting active jobs
@@ -50,6 +80,10 @@ async function pollForJobs() {
       .eq('id', job.id)
 
     console.log(`[worker] Job ${job.id} completed`)
+
+    // Notify the Next.js app so it can run eager post-processing
+    // (project-enrichment, etc.). Non-fatal.
+    await notifyJobComplete(job.id)
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : 'Unknown error'
     console.error(`[worker] Job ${job.id} failed:`, errorMsg)

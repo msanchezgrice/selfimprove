@@ -23,6 +23,38 @@
     {
       "path": "/api/cron/codebase-scan",
       "schedule": "0 4 * * 0"
+    },
+    {
+      "path": "/api/cron/project-enrichment",
+      "schedule": "30 2 * * *"
+    },
+    {
+      "path": "/api/cron/impact-review",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/resolver-audit",
+      "schedule": "0 5 * * 1"
+    },
+    {
+      "path": "/api/cron/skill-sync",
+      "schedule": "0 6 * * 1"
+    },
+    {
+      "path": "/api/cron/brain-compaction",
+      "schedule": "0 4 1 * *"
+    },
+    {
+      "path": "/api/cron/funnel-rollup",
+      "schedule": "0 1 * * *"
+    },
+    {
+      "path": "/api/cron/roadmap-recycle",
+      "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/roadmap-rerank",
+      "schedule": "30 7 * * *"
     }
   ]
 }
