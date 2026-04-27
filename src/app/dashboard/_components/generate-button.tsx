@@ -53,6 +53,7 @@ export function GenerateButton({
       <button
         onClick={handleGenerate}
         disabled={generating}
+        title="Run the AI synthesis pipeline: turn unprocessed signals into NEW briefs and add them to the roadmap. Use when you have new signals to triage. (For deterministic re-ranking without LLM calls, use Rebuild brain.)"
         className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
         style={{ backgroundColor: '#6366f1' }}
       >

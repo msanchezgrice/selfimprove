@@ -4,15 +4,15 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
-const FOCUS_OPTIONS: Array<{ value: string; label: string }> = [
-  { value: '', label: 'Persisted focus' },
-  { value: 'conversion', label: 'Conversion' },
-  { value: 'reach', label: 'Reach' },
-  { value: 'retention', label: 'Retention' },
-  { value: 'monetization', label: 'Monetization' },
-  { value: 'reliability', label: 'Reliability' },
-  { value: 'ux_quality', label: 'UX quality' },
-  { value: 'discovery', label: 'Discovery' },
+// Mirrors FOCUS_MODES in src/lib/brain/design.ts. Keep synced if that
+// list ever changes — the API rejects any other value.
+const FOCUS_OPTIONS: Array<{ value: string; label: string; description: string }> = [
+  { value: '', label: 'Use current focus', description: 'Whatever current_focus is set to in the brain (auto-derived from anomalies).' },
+  { value: 'conversion', label: 'Conversion', description: 'Improve visitor → signup → paid in the funnel.' },
+  { value: 'retention', label: 'Retention', description: 'Increase repeat usage and habit formation after activation.' },
+  { value: 'virality', label: 'Virality', description: 'Increase referral loops, sharing, and user-generated acquisition.' },
+  { value: 'ux_quality', label: 'UX quality', description: 'Reduce friction, clarify flows, improve felt quality.' },
+  { value: 'performance', label: 'Performance', description: 'Reduce latency, errors, and operational drag.' },
 ]
 
 const CATEGORY_OPTIONS = ['bug', 'feature', 'improvement', 'infrastructure', 'retention', 'revenue', 'reach']
@@ -24,6 +24,23 @@ const CONFIDENCE_OPTIONS: Array<{ value: number; label: string }> = [
   { value: 85, label: '85+' },
 ]
 
+const COLUMN_HELP: Record<string, string> = {
+  cluster: 'Opportunity cluster this brief belongs to. Click to filter the table to that cluster.',
+  cluster_focus:
+    'Cluster\u2019s focus-weighted score (0-100). How relevant the cluster is given the active focus mode.',
+  conf: 'Model confidence (0-100) that the linked PRD will move the metric.',
+  roi: 'Item ROI = impact / size. Higher = better leverage.',
+  combined:
+    'Final ranking score = 60% cluster focus + 40% item ROI. This is how the table is sorted.',
+}
+
+const BUTTON_HELP = {
+  update_roadmap:
+    'Run the AI synthesis pipeline: turn unprocessed signals into NEW briefs and add them to the roadmap. Use when you have new signals to triage.',
+  rebuild_brain:
+    'Run the deterministic v1.1.5 pipeline: pull PostHog rollups, recluster, recycle stale items, refresh focus scores, rerank. Doesn\u2019t call the LLM. Use to refresh ranking when you haven\u2019t collected new signals.',
+} as const
+
 type RoadmapEntry = {
   id: string
   title: string
@@ -32,6 +49,7 @@ type RoadmapEntry = {
   stage: string
   confidence: number
   roi_score: number
+  has_prd: boolean
   cluster: {
     id: string
     slug: string
@@ -174,12 +192,16 @@ export function RoadmapView({ projectId, projectSlug, initialData }: Props) {
             Roadmap
           </h1>
           <p className="text-sm" style={{ color: '#8b8680' }}>
-            {data.total} item{data.total === 1 ? '' : 's'} · applied focus:{' '}
-            <span className="font-medium" style={{ color: '#1a1a2e' }}>
+            {data.total} item{data.total === 1 ? '' : 's'} · current focus:{' '}
+            <span
+              className="font-medium"
+              style={{ color: '#1a1a2e' }}
+              title="The brain&rsquo;s current focus mode (current_focus brain page). Auto-derived from open funnel anomalies. Drives cluster scoring."
+            >
               {data.applied_focus ?? 'none'}
             </span>
             {data.applied_focus && data.persisted_focus && data.applied_focus !== data.persisted_focus && (
-              <span style={{ color: '#d97706' }}> (override · persisted: {data.persisted_focus})</span>
+              <span style={{ color: '#d97706' }}> (filter override · saved: {data.persisted_focus})</span>
             )}
           </p>
         </div>
@@ -193,6 +215,7 @@ export function RoadmapView({ projectId, projectSlug, initialData }: Props) {
             type="button"
             onClick={handleBootstrap}
             disabled={bootstrapping}
+            title={BUTTON_HELP.rebuild_brain}
             className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-opacity hover:opacity-90 disabled:opacity-50"
             style={{ borderColor: '#e5e1d8', color: '#1a1a2e', backgroundColor: 'white' }}
           >
@@ -218,21 +241,31 @@ export function RoadmapView({ projectId, projectSlug, initialData }: Props) {
         className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border p-3"
         style={{ borderColor: '#e5e1d8', backgroundColor: '#fafaf7' }}
       >
-        <FilterLabel>Focus</FilterLabel>
+        <FilterLabel
+          help="Strategic lens that REWEIGHTS scores (e.g. retention boosts retention-themed clusters). Different from category, which only filters which items appear."
+        >
+          Focus
+        </FilterLabel>
         <select
           value={focus}
           onChange={(e) => setFocus(e.target.value)}
           className="rounded-md border bg-white px-2 py-1 text-xs"
           style={{ borderColor: '#e5e1d8', color: '#1a1a2e' }}
+          title={
+            FOCUS_OPTIONS.find((o) => o.value === focus)?.description ??
+            'Pick a focus to override the brain&rsquo;s current_focus.'
+          }
         >
           {FOCUS_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
+            <option key={opt.value} value={opt.value} title={opt.description}>
               {opt.label}
             </option>
           ))}
         </select>
 
-        <FilterLabel>Categories</FilterLabel>
+        <FilterLabel help="Type of work. Filters which items show but does NOT change scores. Multi-select.">
+          Categories
+        </FilterLabel>
         <div className="flex flex-wrap gap-1">
           {CATEGORY_OPTIONS.map((cat) => {
             const active = categories.includes(cat)
@@ -254,7 +287,7 @@ export function RoadmapView({ projectId, projectSlug, initialData }: Props) {
           })}
         </div>
 
-        <FilterLabel>Confidence</FilterLabel>
+        <FilterLabel help="Minimum model confidence (0-100) for items to appear.">Confidence</FilterLabel>
         <select
           value={minConfidence}
           onChange={(e) => setMinConfidence(Number.parseInt(e.target.value, 10))}
@@ -268,7 +301,9 @@ export function RoadmapView({ projectId, projectSlug, initialData }: Props) {
           ))}
         </select>
 
-        <FilterLabel>Stage</FilterLabel>
+        <FilterLabel help="Roadmap = promoted items the team is reviewing. Briefs = the long backlog. Both = combined.">
+          Stage
+        </FilterLabel>
         <select
           value={stage}
           onChange={(e) => setStage(e.target.value as 'roadmap' | 'brief' | 'both')}
@@ -282,7 +317,9 @@ export function RoadmapView({ projectId, projectSlug, initialData }: Props) {
 
         {clusterSlugs.length > 0 && (
           <>
-            <FilterLabel>Cluster</FilterLabel>
+            <FilterLabel help="Show only items in one opportunity cluster. Set automatically when you click a cluster cell.">
+              Cluster
+            </FilterLabel>
             <select
               value={clusterSlug}
               onChange={(e) => setClusterSlug(e.target.value)}
@@ -339,70 +376,125 @@ export function RoadmapView({ projectId, projectSlug, initialData }: Props) {
                 <th className="w-12 px-3 py-2">#</th>
                 <th className="px-3 py-2">Title</th>
                 <th className="px-3 py-2">Category</th>
-                <th className="px-3 py-2">Cluster</th>
-                <th className="px-3 py-2 text-right">Cluster focus</th>
-                <th className="px-3 py-2 text-right">Conf</th>
-                <th className="px-3 py-2 text-right">ROI</th>
-                <th className="px-3 py-2 text-right">Combined</th>
+                <th className="px-3 py-2" title={COLUMN_HELP.cluster}>
+                  Cluster
+                </th>
+                <th
+                  className="px-3 py-2 text-right"
+                  title={COLUMN_HELP.cluster_focus}
+                >
+                  Cluster focus
+                </th>
+                <th className="px-3 py-2 text-right" title={COLUMN_HELP.conf}>
+                  Conf
+                </th>
+                <th className="px-3 py-2 text-right" title={COLUMN_HELP.roi}>
+                  ROI
+                </th>
+                <th
+                  className="px-3 py-2 text-right"
+                  title={COLUMN_HELP.combined}
+                >
+                  Combined
+                </th>
               </tr>
             </thead>
             <tbody>
-              {data.items.map((item, index) => (
-                <tr
-                  key={item.id}
-                  className="border-t"
-                  style={{ borderColor: '#f3efe6', color: '#1a1a2e' }}
-                >
-                  <td className="px-3 py-2 font-mono text-xs" style={{ color: '#8b8680' }}>
-                    {index + 1}
-                  </td>
-                  <td className="px-3 py-2">
-                    <Link
-                      href={`${pathname}/${item.id}`}
-                      className="hover:underline"
-                      style={{ color: '#1a1a2e' }}
-                    >
-                      {item.title}
-                    </Link>
-                    {item.reason && (
-                      <div className="text-xs" style={{ color: '#8b8680' }}>
-                        {item.reason}
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-3 py-2">
-                    <span
-                      className="rounded-full px-2 py-0.5 text-xs"
-                      style={{ backgroundColor: '#f5f0eb', color: '#8b8680' }}
-                    >
-                      {item.category}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2">
-                    {item.cluster ? (
+              {data.items.map((item, index) => {
+                const itemHref = `${pathname}/${item.id}`
+                return (
+                  <tr
+                    key={item.id}
+                    className="cursor-pointer border-t transition-colors hover:bg-[#fafaf7]"
+                    style={{ borderColor: '#f3efe6', color: '#1a1a2e' }}
+                    onClick={(e) => {
+                      // Don't navigate if user clicked a control inside the row.
+                      if ((e.target as HTMLElement).closest('button, a')) return
+                      router.push(itemHref)
+                    }}
+                  >
+                    <td className="px-3 py-2 font-mono text-xs" style={{ color: '#8b8680' }}>
+                      {index + 1}
+                    </td>
+                    <td className="px-3 py-2">
                       <Link
-                        href={`/dashboard/${projectSlug}/clusters/${item.cluster.slug}`}
+                        href={itemHref}
                         className="hover:underline"
-                        style={{ color: '#6366f1' }}
+                        style={{ color: '#1a1a2e' }}
                       >
-                        {item.cluster.slug}
+                        {item.title}
                       </Link>
-                    ) : (
-                      <span className="text-xs" style={{ color: '#8b8680' }}>
-                        unfiled
+                      <span
+                        className="ml-2 inline-block rounded px-1.5 py-0.5 text-[10px] font-medium uppercase"
+                        style={
+                          item.has_prd
+                            ? { backgroundColor: '#ecfdf5', color: '#059669' }
+                            : { backgroundColor: '#f5f0eb', color: '#8b8680' }
+                        }
+                        title={
+                          item.has_prd
+                            ? 'PRD generated. Click the row to read the spec.'
+                            : 'Brief only \u2014 PRD will auto-generate when you open this item for the first time.'
+                        }
+                      >
+                        {item.has_prd ? 'PRD' : 'Brief'}
                       </span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2 text-right font-mono text-xs">
-                    {Math.round(item.cluster_focus_score)}
-                  </td>
-                  <td className="px-3 py-2 text-right font-mono text-xs">{item.confidence}</td>
-                  <td className="px-3 py-2 text-right font-mono text-xs">{item.roi_score}</td>
-                  <td className="px-3 py-2 text-right font-mono text-xs font-semibold">
-                    {item.combined_score.toFixed(1)}
-                  </td>
-                </tr>
-              ))}
+                      {item.reason && (
+                        <div className="text-xs" style={{ color: '#8b8680' }}>
+                          {item.reason}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-3 py-2">
+                      <span
+                        className="rounded-full px-2 py-0.5 text-xs"
+                        style={{ backgroundColor: '#f5f0eb', color: '#8b8680' }}
+                      >
+                        {item.category}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2">
+                      {item.cluster ? (
+                        <span className="inline-flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => setClusterSlug(item.cluster!.slug)}
+                            className="text-left hover:underline"
+                            style={{ color: '#6366f1' }}
+                            title={`Filter table to cluster: ${item.cluster.primary_need}/${item.cluster.theme ?? 'general'}`}
+                          >
+                            {item.cluster.slug}
+                          </button>
+                          <Link
+                            href={`/dashboard/${projectSlug}/clusters/${item.cluster.slug}`}
+                            className="text-[10px] hover:underline"
+                            style={{ color: '#8b8680' }}
+                            title="Open cluster detail page (brief, evidence, all linked items)"
+                          >
+                            ↗
+                          </Link>
+                        </span>
+                      ) : (
+                        <span
+                          className="text-xs"
+                          style={{ color: '#8b8680' }}
+                          title="No cluster assigned. Will be filed when the next bootstrap or rollup runs."
+                        >
+                          unfiled
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-right font-mono text-xs">
+                      {Math.round(item.cluster_focus_score)}
+                    </td>
+                    <td className="px-3 py-2 text-right font-mono text-xs">{item.confidence}</td>
+                    <td className="px-3 py-2 text-right font-mono text-xs">{item.roi_score}</td>
+                    <td className="px-3 py-2 text-right font-mono text-xs font-semibold">
+                      {item.combined_score.toFixed(1)}
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>
@@ -411,10 +503,19 @@ export function RoadmapView({ projectId, projectSlug, initialData }: Props) {
   )
 }
 
-function FilterLabel({ children }: { children: React.ReactNode }) {
+function FilterLabel({ children, help }: { children: React.ReactNode; help?: string }) {
   return (
-    <span className="text-xs uppercase tracking-wide" style={{ color: '#8b8680' }}>
+    <span
+      className="text-xs uppercase tracking-wide"
+      style={{ color: '#8b8680' }}
+      title={help}
+    >
       {children}
+      {help && (
+        <span aria-hidden className="ml-1 text-[10px]" style={{ color: '#bdb9b1' }}>
+          ?
+        </span>
+      )}
     </span>
   )
 }

@@ -76,6 +76,7 @@ export default async function RoadmapPage() {
       stage: entry.item.stage,
       confidence: entry.item.confidence,
       roi_score: entry.item.roi_score,
+      has_prd: Boolean(entry.item.prd_content),
       cluster: entry.cluster
         ? {
             id: entry.cluster.id,
