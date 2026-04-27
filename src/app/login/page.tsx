@@ -1,4 +1,13 @@
+import type { Metadata } from 'next'
 import { OAuthButtons } from './_components/oauth-buttons'
+
+export const metadata: Metadata = {
+  title: 'Sign In',
+  description:
+    'Sign in to SelfImprove to access your AI-powered product management dashboard. Watch your users, build your roadmap, and ship the right fixes.',
+  alternates: { canonical: '/login' },
+  robots: 'noindex, follow',
+}
 
 export default async function LoginPage({
   searchParams,

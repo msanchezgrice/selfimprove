@@ -1,5 +1,19 @@
+import type { Metadata } from 'next'
 import { getUser } from '@/lib/supabase/auth-helpers'
 import { CopyPrompt, AgentOneLiner } from './_components/copy-prompt'
+
+export const metadata: Metadata = {
+  title: 'SelfImprove — AI Product Manager for Developers',
+  description:
+    'SelfImprove watches your users, builds your roadmap, and ships the fixes. AI-powered product management for indie devs and solo SaaS founders.',
+  alternates: { canonical: '/' },
+  openGraph: {
+    title: 'SelfImprove — AI Product Manager for Developers',
+    description:
+      'You built your v1. Now make it actually work. Watch your users, build your roadmap, ship the fixes — all with AI.',
+    url: '/',
+  },
+}
 
 export default async function Home() {
   const user = await getUser()
