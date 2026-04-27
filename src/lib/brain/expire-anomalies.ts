@@ -101,36 +101,45 @@ export async function expireStaleAnomalies(
   const allToExpire = [...supersededIds, ...ageCappedIds]
   if (allToExpire.length === 0) return result
 
-  const { error: updErr } = await supabase
-    .from('funnel_anomalies')
-    .update({
-      status: 'expired',
-      metadata: {
-        auto_expired_at: new Date().toISOString(),
-        reason: 'auto-expired by daily pipeline',
-      },
-    })
-    .in('id', allToExpire)
-  if (updErr) {
-    result.errors.push(`update anomalies: ${updErr.message}`)
+  // Chunk to keep each PATCH request bodies sane. 100 IDs per chunk is well
+  // under PostgREST's defaults; 944 in one shot returns Bad Request.
+  const CHUNK_SIZE = 100
+  const expiredAtIso = new Date().toISOString()
+  for (let i = 0; i < allToExpire.length; i += CHUNK_SIZE) {
+    const chunk = allToExpire.slice(i, i + CHUNK_SIZE)
+    const { error: updErr } = await supabase
+      .from('funnel_anomalies')
+      .update({
+        status: 'expired',
+        metadata: {
+          auto_expired_at: expiredAtIso,
+          reason: 'auto-expired by daily pipeline',
+        },
+      })
+      .in('id', chunk)
+    if (updErr) {
+      result.errors.push(`update anomalies (chunk ${i / CHUNK_SIZE}): ${updErr.message}`)
+    }
   }
 
   // Flip the linked signals to processed=true so synthesis stops re-triaging.
+  const expiredSet = new Set(allToExpire)
   const expiredSignalIds = open
-    .filter((row) => allToExpire.includes(row.id))
+    .filter((row) => expiredSet.has(row.id))
     .map((row) => row.signal_id)
     .filter((id): id is string => typeof id === 'string')
 
-  if (expiredSignalIds.length > 0) {
+  for (let i = 0; i < expiredSignalIds.length; i += CHUNK_SIZE) {
+    const chunk = expiredSignalIds.slice(i, i + CHUNK_SIZE)
     const { error: sigErr } = await supabase
       .from('signals')
       .update({ processed: true })
-      .in('id', expiredSignalIds)
+      .in('id', chunk)
       .eq('processed', false)
     if (sigErr) {
-      result.errors.push(`process signals: ${sigErr.message}`)
+      result.errors.push(`process signals (chunk ${i / CHUNK_SIZE}): ${sigErr.message}`)
     } else {
-      result.signalsProcessed = expiredSignalIds.length
+      result.signalsProcessed += chunk.length
     }
   }
 

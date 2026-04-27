@@ -188,15 +188,24 @@ export async function dedupHistoricalItems(
 
   // Repoint opportunity_cluster_sources that referenced the dupe item to the
   // canonical one (or just delete; sources accumulate again on next rollup).
-  const { error: srcErr } = await supabase
-    .from('opportunity_cluster_sources')
-    .delete()
-    .in('roadmap_item_id', dupeIds)
-  if (srcErr) {
-    result.errors.push(`delete cluster sources: ${srcErr.message}`)
+  // Chunk to keep PATCH/DELETE bodies under PostgREST's request limits.
+  const CHUNK_SIZE = 100
+  for (let i = 0; i < dupeIds.length; i += CHUNK_SIZE) {
+    const chunk = dupeIds.slice(i, i + CHUNK_SIZE)
+    const { error: srcErr } = await supabase
+      .from('opportunity_cluster_sources')
+      .delete()
+      .in('roadmap_item_id', chunk)
+    if (srcErr) {
+      result.errors.push(
+        `delete cluster sources (chunk ${i / CHUNK_SIZE}): ${srcErr.message}`,
+      )
+    }
   }
 
-  // We can't update with a per-row reason in one query, so chunk by reason.
+  // Per-row reason means one update per item — but we can still order them
+  // so any single chunk's request stays small. The N here scales linearly
+  // with dupes, which is fine: even 1k merges = ~5s wall time.
   for (const [dupeId, reason] of reasonMap.entries()) {
     const { error: updErr } = await supabase
       .from('roadmap_items')
