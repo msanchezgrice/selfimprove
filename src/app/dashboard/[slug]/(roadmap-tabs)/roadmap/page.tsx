@@ -2,7 +2,6 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { rankRoadmapItems, type RoadmapItemForRanking } from '@/lib/brain/rerank'
 import { getActiveProject } from '@/lib/supabase/get-active-project'
-import { GenerateButton } from '../../../_components/generate-button'
 import { RoadmapEmpty } from '../../../_components/roadmap-empty'
 import { RoadmapView } from '../../../_components/roadmap-view'
 import type { OpportunityClusterRow } from '@/lib/types/database'
@@ -23,7 +22,7 @@ export default async function RoadmapPage() {
   // route, so the initial render matches what the user gets after the first
   // client-side refetch.
   const admin = createAdminClient()
-  const [itemsRes, clustersRes, focusPageRes, unprocessedRes] = await Promise.all([
+  const [itemsRes, clustersRes, focusPageRes, unprocessedRes, lastSignalRes] = await Promise.all([
     admin
       .from('roadmap_items')
       .select(
@@ -52,6 +51,15 @@ export default async function RoadmapPage() {
       .select('*', { count: 'exact', head: true })
       .eq('project_id', projectId)
       .eq('processed', false),
+    // Latest funnel anomaly = best proxy for "when did the brain last touch
+    // this project". The pipeline mints anomalies on every rollup.
+    admin
+      .from('funnel_anomalies')
+      .select('created_at')
+      .eq('project_id', projectId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ])
 
   const ranked = rankRoadmapItems(
@@ -94,16 +102,20 @@ export default async function RoadmapPage() {
     })),
   }
 
+  const lastRefreshedAt =
+    (lastSignalRes.data as { created_at: string } | null)?.created_at ??
+    (focusPageRes.data as { updated_at?: string } | null)?.updated_at ??
+    null
+
   return (
     <div>
-      <div className="mb-2 flex justify-end">
-        <GenerateButton
-          projectId={projectId}
-          unprocessedCount={unprocessedRes.count ?? 0}
-          hasItems={ranked.length > 0}
-        />
-      </div>
-      <RoadmapView projectId={projectId} projectSlug={projectSlug} initialData={initialData} />
+      <RoadmapView
+        projectId={projectId}
+        projectSlug={projectSlug}
+        initialData={initialData}
+        unprocessedSignals={unprocessedRes.count ?? 0}
+        lastRefreshedAt={lastRefreshedAt}
+      />
     </div>
   )
 }

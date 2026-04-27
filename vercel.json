@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/cron/roadmap",
-      "schedule": "0 * * * *"
+      "schedule": "0 7 * * *"
     },
     {
       "path": "/api/cron/sync-github",
@@ -43,18 +43,6 @@
     {
       "path": "/api/cron/brain-compaction",
       "schedule": "0 4 1 * *"
-    },
-    {
-      "path": "/api/cron/funnel-rollup",
-      "schedule": "0 1 * * *"
-    },
-    {
-      "path": "/api/cron/roadmap-recycle",
-      "schedule": "0 7 * * *"
-    },
-    {
-      "path": "/api/cron/roadmap-rerank",
-      "schedule": "30 7 * * *"
     }
   ]
 }

@@ -34,12 +34,9 @@ const COLUMN_HELP: Record<string, string> = {
     'Final ranking score = 60% cluster focus + 40% item ROI. This is how the table is sorted.',
 }
 
-const BUTTON_HELP = {
-  update_roadmap:
-    'Run the AI synthesis pipeline: turn unprocessed signals into NEW briefs and add them to the roadmap. Use when you have new signals to triage.',
-  rebuild_brain:
-    'Run the deterministic v1.1.5 pipeline: pull PostHog rollups, recluster, recycle stale items, refresh focus scores, rerank. Doesn\u2019t call the LLM. Use to refresh ranking when you haven\u2019t collected new signals.',
-} as const
+const REFRESH_HELP =
+  'Run the full daily brain pipeline now: pull PostHog rollups → mint anomaly signals → synthesize new briefs (LLM) → cluster → recycle stale → rerank → backfill PRDs. ' +
+  'This is the same pipeline that runs automatically every day at 7am UTC. Idempotent — safe to click any time.'
 
 type RoadmapEntry = {
   id: string
@@ -89,7 +86,8 @@ type BootstrapResponse = {
     clusterCount: number
     openAnomalies: number
     currentFocus: string | null
-  }
+    lastSignalAt: string | null
+  } | null
   durationMs: number
 }
 
@@ -97,9 +95,17 @@ type Props = {
   projectId: string
   projectSlug: string
   initialData: RoadmapApiResponse
+  unprocessedSignals: number
+  lastRefreshedAt: string | null
 }
 
-export function RoadmapView({ projectId, projectSlug, initialData }: Props) {
+export function RoadmapView({
+  projectId,
+  projectSlug,
+  initialData,
+  unprocessedSignals,
+  lastRefreshedAt,
+}: Props) {
   const router = useRouter()
   const pathname = usePathname()
 
@@ -192,16 +198,31 @@ export function RoadmapView({ projectId, projectSlug, initialData }: Props) {
             Roadmap
           </h1>
           <p className="text-sm" style={{ color: '#8b8680' }}>
-            {data.total} item{data.total === 1 ? '' : 's'} · current focus:{' '}
+            {data.total} item{data.total === 1 ? '' : 's'} · focus:{' '}
             <span
               className="font-medium"
               style={{ color: '#1a1a2e' }}
-              title="The brain&rsquo;s current focus mode (current_focus brain page). Auto-derived from open funnel anomalies. Drives cluster scoring."
+              title="The brain&rsquo;s current focus mode. Auto-derived from open funnel anomalies. Drives cluster scoring."
             >
               {data.applied_focus ?? 'none'}
             </span>
             {data.applied_focus && data.persisted_focus && data.applied_focus !== data.persisted_focus && (
               <span style={{ color: '#d97706' }}> (filter override · saved: {data.persisted_focus})</span>
+            )}
+            {' · '}
+            <span title="When the brain last ingested data for this project. The pipeline runs automatically every day at 7am UTC.">
+              refreshed {formatRelativeTime(lastRefreshedAt)}
+            </span>
+            {unprocessedSignals > 0 && (
+              <>
+                {' · '}
+                <span
+                  style={{ color: '#059669' }}
+                  title="Signals captured since the last refresh. They\u2019ll be processed on the next run."
+                >
+                  {unprocessedSignals} new signal{unprocessedSignals === 1 ? '' : 's'} pending
+                </span>
+              </>
             )}
           </p>
         </div>
@@ -215,24 +236,24 @@ export function RoadmapView({ projectId, projectSlug, initialData }: Props) {
             type="button"
             onClick={handleBootstrap}
             disabled={bootstrapping}
-            title={BUTTON_HELP.rebuild_brain}
-            className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-opacity hover:opacity-90 disabled:opacity-50"
-            style={{ borderColor: '#e5e1d8', color: '#1a1a2e', backgroundColor: 'white' }}
+            title={REFRESH_HELP}
+            className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+            style={{ backgroundColor: '#6366f1' }}
           >
-            {bootstrapping ? 'Rebuilding…' : 'Rebuild brain'}
+            {bootstrapping ? 'Refreshing…' : 'Refresh now'}
           </button>
         </div>
       </div>
 
-      {bootstrapResult && (
+      {bootstrapResult && bootstrapResult.finalState && (
         <div
           className="mb-4 rounded-lg border p-3 text-xs"
           style={{ borderColor: '#bbf7d0', backgroundColor: '#f0fdf4', color: '#166534' }}
         >
-          Bootstrap finished in {bootstrapResult.durationMs}ms ·{' '}
+          Refreshed in {(bootstrapResult.durationMs / 1000).toFixed(1)}s ·{' '}
           <strong>{bootstrapResult.finalState.roadmapCount}</strong> roadmap items ·{' '}
           <strong>{bootstrapResult.finalState.clusterCount}</strong> active clusters ·{' '}
-          <strong>{bootstrapResult.finalState.openAnomalies}</strong> open anomalies · current focus:{' '}
+          <strong>{bootstrapResult.finalState.openAnomalies}</strong> open anomalies · focus:{' '}
           <strong>{bootstrapResult.finalState.currentFocus ?? 'none'}</strong>
         </div>
       )}
@@ -501,6 +522,21 @@ export function RoadmapView({ projectId, projectSlug, initialData }: Props) {
       )}
     </div>
   )
+}
+
+function formatRelativeTime(iso: string | null): string {
+  if (!iso) return 'never'
+  const ms = Date.now() - new Date(iso).getTime()
+  if (Number.isNaN(ms)) return 'never'
+  if (ms < 60_000) return 'just now'
+  const minutes = Math.floor(ms / 60_000)
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  if (days < 7) return `${days}d ago`
+  const weeks = Math.floor(days / 7)
+  return `${weeks}w ago`
 }
 
 function FilterLabel({ children, help }: { children: React.ReactNode; help?: string }) {

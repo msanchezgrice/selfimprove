@@ -406,12 +406,35 @@ async function rollupInsights(args: {
 
   const now = new Date().toISOString()
 
+  // Insight snapshots are the slowest part of the rollup (~1-20s per call).
+  // We only re-pull insights whose last snapshot is older than this many ms.
+  // Daily-granularity is fine since PostHog itself re-computes saved
+  // insights on its own cadence.
+  const INSIGHT_FRESHNESS_MS = 12 * 60 * 60 * 1000
+
   for (const def of definitions as Array<{
     slug: string
     posthog_insight_short_id: string | null
     display_name: string
   }>) {
     if (!def.posthog_insight_short_id) continue
+
+    const eventName = `insight:${def.slug}`
+    const { data: existing } = await supabase
+      .from('funnel_stops')
+      .select('count_7d, count_28d, last_observed')
+      .eq('project_id', projectId)
+      .eq('event_name', eventName)
+      .maybeSingle()
+
+    const previous = (existing as { count_7d: number; count_28d: number; last_observed: string | null } | null)
+    const lastObservedMs = previous?.last_observed
+      ? Date.parse(previous.last_observed)
+      : null
+    const isFresh =
+      lastObservedMs !== null && Date.now() - lastObservedMs < INSIGHT_FRESHNESS_MS
+    if (isFresh) continue // already snapshotted today; skip the slow call
+
     let snapshot: Awaited<ReturnType<typeof getInsightSnapshot>> = null
     try {
       snapshot = await getInsightSnapshot(config, def.posthog_insight_short_id)
@@ -423,15 +446,6 @@ async function rollupInsights(args: {
     }
     if (!snapshot || snapshot.headlineValue == null) continue
 
-    const eventName = `insight:${def.slug}`
-    const { data: existing } = await supabase
-      .from('funnel_stops')
-      .select('count_7d, count_28d, last_observed')
-      .eq('project_id', projectId)
-      .eq('event_name', eventName)
-      .maybeSingle()
-
-    const previous = (existing as { count_7d: number; count_28d: number; last_observed: string | null } | null)
     const current = Math.round(snapshot.headlineValue)
     const previous7d = previous?.count_7d ?? 0
     const trend = previous7d > 0 ? (current - previous7d) / previous7d : current > 0 ? 1 : 0

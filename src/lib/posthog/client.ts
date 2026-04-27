@@ -447,8 +447,14 @@ export type InsightSnapshot = {
 export async function getInsightSnapshot(
   config: PostHogConfig,
   shortId: string,
+  options: { forceRefresh?: boolean } = {},
 ): Promise<InsightSnapshot | null> {
-  const url = `${config.host.replace(/\/$/, '')}/api/projects/${config.projectId}/insights/${shortId}/?refresh=force_blocking`
+  // Default to cached values (~1s) instead of force-blocking refresh (~20s).
+  // The daily pipeline only needs day-granularity freshness; PostHog already
+  // re-computes saved insights on its own cadence. Pass forceRefresh:true
+  // when the caller really needs an up-to-the-second value.
+  const refresh = options.forceRefresh ? '?refresh=force_blocking' : ''
+  const url = `${config.host.replace(/\/$/, '')}/api/projects/${config.projectId}/insights/${shortId}/${refresh}`
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${config.apiKey}` },
   })
