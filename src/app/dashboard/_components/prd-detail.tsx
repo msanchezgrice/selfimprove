@@ -5,15 +5,25 @@ import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
 import { showToast } from '@/lib/utils/toast'
 import type {
+  OpportunityClusterRow,
   RoadmapItemRow,
   RoadmapCategory,
   RoadmapScope,
   RoadmapStatus,
+  SignalRow,
   SignalType,
 } from '@/lib/types/database'
 
+type OriginatingSignal =
+  | (Pick<SignalRow, 'id' | 'type' | 'title' | 'content' | 'created_at'> & {
+      metadata?: Record<string, unknown> | null
+    })
+  | null
+
 type PRDDetailProps = {
   item: RoadmapItemRow
+  cluster?: OpportunityClusterRow | null
+  originatingSignal?: OriginatingSignal
 }
 
 /* ---------- Config ---------- */
@@ -131,9 +141,126 @@ type PRDContent = {
   experiments?: Array<{ name: string; hypothesis: string; control: string; variant: string; metric: string; sample_size: string; duration: string; expected_lift: string }>
 }
 
+/* ---------- Why This Matters ----------
+ *
+ * Synthesizes a human paragraph for items that may not have a PRD yet.
+ * Pulls from the cluster's primary need, the originating signal's title,
+ * the item's confidence/impact/ROI, and the predicted impact estimates
+ * if present. Always renders something useful even when half the inputs
+ * are missing.
+ */
+
+const FOCUS_NEED_COPY: Record<string, string> = {
+  conversion: 'Improving the visitor → signup → paid funnel.',
+  retention: 'Increasing repeat usage and habit formation after activation.',
+  virality: 'Increasing referral loops and user-generated acquisition.',
+  ux_quality: 'Reducing friction and clarifying flows.',
+  performance: 'Reducing latency, errors, and operational drag.',
+  reliability: 'Reducing crashes and bringing the system back to health.',
+  monetization: 'Improving revenue per user.',
+  reach: 'Improving top-of-funnel discovery and acquisition.',
+  unknown: 'Improving the product.',
+}
+
+function WhyThisMatters({
+  item,
+  cluster,
+  originatingSignal,
+}: {
+  item: RoadmapItemRow
+  cluster: OpportunityClusterRow | null
+  originatingSignal: OriginatingSignal
+}) {
+  const lines: Array<{ label: string; value: React.ReactNode }> = []
+
+  if (cluster) {
+    lines.push({
+      label: 'Why we care',
+      value: (
+        <span style={{ color: '#1a1a2e' }}>
+          {FOCUS_NEED_COPY[cluster.primary_need] ?? FOCUS_NEED_COPY.unknown}{' '}
+          This brief lives in the{' '}
+          <strong>
+            {cluster.primary_need} / {cluster.theme ?? 'general'}
+          </strong>{' '}
+          cluster (focus score {Math.round(cluster.focus_weighted_score)}).
+        </span>
+      ),
+    })
+  }
+
+  if (originatingSignal) {
+    const sig = originatingSignal
+    const evt =
+      (sig.metadata && typeof sig.metadata === 'object' && 'event_name' in sig.metadata
+        ? String((sig.metadata as { event_name?: string }).event_name ?? '')
+        : '') || null
+    lines.push({
+      label: 'Trigger signal',
+      value: (
+        <span style={{ color: '#1a1a2e' }}>
+          {sig.title}
+          {evt ? (
+            <>
+              {' \u00b7 '}
+              <code style={{ fontSize: '12px' }}>{evt}</code>
+            </>
+          ) : null}
+          <span style={{ color: '#8b8680' }}>
+            {' '}({sig.type}, {new Date(sig.created_at).toLocaleDateString()})
+          </span>
+        </span>
+      ),
+    })
+  }
+
+  // Item self-described leverage. Always renderable.
+  lines.push({
+    label: 'Bet shape',
+    value: (
+      <span style={{ color: '#1a1a2e' }}>
+        Impact <strong>{item.impact}/10</strong>, Size{' '}
+        <strong>{item.size}/10</strong>, ROI{' '}
+        <strong>{item.roi_score.toFixed(1)}</strong>, Confidence{' '}
+        <strong>{item.confidence}%</strong>.
+        {item.confidence >= 80
+          ? ' We\u2019re fairly sure this works.'
+          : item.confidence >= 60
+            ? ' Reasonable bet, validate before scaling.'
+            : ' Speculative \u2014 wants more evidence before shipping.'}
+      </span>
+    ),
+  })
+
+  if (lines.length === 0) {
+    return (
+      <p className="text-sm" style={{ color: '#8b8680' }}>
+        Not enough context to synthesize a rationale yet. Generate a PRD or
+        run the daily pipeline to attach evidence.
+      </p>
+    )
+  }
+
+  return (
+    <ul className="space-y-2 text-sm">
+      {lines.map((line, i) => (
+        <li key={i}>
+          <span
+            className="mr-2 inline-block rounded px-1.5 py-0.5 text-[10px] font-medium uppercase"
+            style={{ backgroundColor: '#f5f0eb', color: '#8b8680' }}
+          >
+            {line.label}
+          </span>
+          {line.value}
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 /* ---------- Main component ---------- */
 
-export function PRDDetail({ item }: PRDDetailProps) {
+export function PRDDetail({ item, cluster = null, originatingSignal = null }: PRDDetailProps) {
   const router = useRouter()
   const pathname = usePathname()
   const slugMatch = pathname.match(/^\/dashboard\/([^/]+)/)
@@ -269,15 +396,59 @@ export function PRDDetail({ item }: PRDDetailProps) {
         <MetricCard label="Confidence" value={`${localItem.confidence}%`} />
       </div>
 
-      {/* Description */}
-      <div
-        className="rounded-xl border bg-white p-5 mb-4"
-        style={{ borderColor: '#e8e4de' }}
-      >
+      {/* Brief — always present, this is the synthesized one-paragraph
+          description. The PRD below expands on it with structure. */}
+      <SectionCard title="Brief">
         <p className="text-sm leading-relaxed" style={{ color: '#1a1a2e' }}>
           {localItem.description}
         </p>
+      </SectionCard>
+
+      {/* Why this matters — synthesized from cluster + originating signal
+          even when there's no PRD yet, so the page is never empty. */}
+      <div className="mt-4">
+        <SectionCard title="Why this matters">
+          <WhyThisMatters
+            item={localItem}
+            cluster={cluster}
+            originatingSignal={originatingSignal}
+          />
+        </SectionCard>
       </div>
+
+      {/* Predicted Impact — hoisted out of the PRD-only block so it
+          renders on briefs too, when impact_estimates were synthesized. */}
+      {item.impact_estimates && (item.impact_estimates as unknown[]).length > 0 && (
+        <div className="mt-4">
+          <SectionCard title="Predicted Impact">
+            <div className="space-y-3">
+              {(item.impact_estimates as Array<{
+                metric: string
+                baseline: string
+                predicted: string
+                unit: string
+                reasoning: string
+              }>).map((est, i) => (
+                <div key={i} className="rounded-lg p-3" style={{ backgroundColor: '#f0fdf4' }}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-medium" style={{ color: '#1a1a2e' }}>
+                      {est.metric.replace(/_/g, ' ')}
+                    </span>
+                    <span className="text-sm font-semibold" style={{ color: '#059669' }}>
+                      {est.baseline} &rarr; {est.predicted}
+                    </span>
+                  </div>
+                  <p className="text-xs" style={{ color: '#8b8680' }}>
+                    {est.reasoning}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </SectionCard>
+        </div>
+      )}
+
+      <div className="mb-4" />
 
       {/* PRD sections */}
       {prd ? (
@@ -408,26 +579,6 @@ export function PRDDetail({ item }: PRDDetailProps) {
             </SectionCard>
           )}
 
-          {item.impact_estimates && (item.impact_estimates as unknown[]).length > 0 && (
-            <SectionCard title="Predicted Impact">
-              <div className="space-y-3">
-                {(item.impact_estimates as Array<{metric: string; baseline: string; predicted: string; unit: string; reasoning: string}>).map((est, i) => (
-                  <div key={i} className="rounded-lg p-3" style={{ backgroundColor: '#f0fdf4' }}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium" style={{ color: '#1a1a2e' }}>
-                        {est.metric.replace(/_/g, ' ')}
-                      </span>
-                      <span className="text-sm font-semibold" style={{ color: '#059669' }}>
-                        {est.baseline} &rarr; {est.predicted}
-                      </span>
-                    </div>
-                    <p className="text-xs" style={{ color: '#8b8680' }}>{est.reasoning}</p>
-                  </div>
-                ))}
-              </div>
-            </SectionCard>
-          )}
-
           {prd.success_metrics && (prd.success_metrics as unknown[]).length > 0 && (
             <SectionCard title="Success Metrics">
               <div className="space-y-3">
@@ -504,8 +655,13 @@ export function PRDDetail({ item }: PRDDetailProps) {
           className="rounded-xl border bg-white px-6 py-12 text-center mb-6"
           style={{ borderColor: '#e8e4de' }}
         >
-          <p className="text-sm mb-4" style={{ color: '#8b8680' }}>
-            No PRD has been generated for this item yet.
+          <p className="text-sm mb-1" style={{ color: '#1a1a2e' }}>
+            Detailed PRD not generated yet.
+          </p>
+          <p className="text-xs mb-4" style={{ color: '#8b8680' }}>
+            Above is the brief synthesized from the cluster + originating signal.
+            Click below to generate the full spec (problem, solution, files,
+            risks, success metrics).
           </p>
           <button
             onClick={() => handleGeneratePRD()}
@@ -513,7 +669,7 @@ export function PRDDetail({ item }: PRDDetailProps) {
             className="px-4 py-2 rounded-lg text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50 cursor-pointer"
             style={{ backgroundColor: '#6366f1' }}
           >
-            {loading ? 'Generating...' : 'Generate PRD'}
+            {loading ? 'Generating PRD\u2026' : 'Generate PRD'}
           </button>
         </div>
       )}

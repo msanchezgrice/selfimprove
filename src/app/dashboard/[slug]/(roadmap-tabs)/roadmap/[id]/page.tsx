@@ -107,7 +107,7 @@ export default async function PRDPage({
         originatingSignal={originatingSignal}
         mergedFrom={mergedFrom}
       />
-      <PRDDetail item={item} />
+      <PRDDetail item={item} cluster={cluster} originatingSignal={originatingSignal} />
     </div>
   )
 }
