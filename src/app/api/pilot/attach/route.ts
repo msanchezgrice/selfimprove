@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getState, saveState } from '@/lib/pilot/store'
+import { updateState } from '@/lib/pilot/store'
 
 export const dynamic = 'force-dynamic'
 
 /**
  * Attach a rendered video to an episode (or mark its render failed).
  * Used by the nightly render session, which generates video through the
- * Higgsfield MCP and reports back here. Keyed GET so it works from
- * environments that can only make simple GET requests.
+ * Higgsfield *consumer* app (CLI / MCP — funded account) and reports back
+ * here. Keyed GET so it works from environments that can only make simple
+ * GET requests.
  *
  *   GET /api/pilot/attach?key=CRON_SECRET&episodeId=ep-2&url=<encoded mp4 url>
  *   GET /api/pilot/attach?key=CRON_SECRET&episodeId=ep-2&failed=1
@@ -26,30 +27,40 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'episodeId and url (or failed=1) required' }, { status: 400 })
   }
 
-  const state = await getState()
-  const episode = state.episodes.find((e) => e.id === episodeId)
-  if (!episode) {
-    return NextResponse.json({ error: 'unknown episode' }, { status: 404 })
-  }
+  try {
+    const state = await updateState((draft) => {
+      const episode = draft.episodes.find((e) => e.id === episodeId)
+      if (!episode) throw Object.assign(new Error('unknown episode'), { status: 404 })
 
-  if (url) {
-    let videoUrl: string
-    try {
-      videoUrl = new URL(url).toString()
-    } catch {
-      return NextResponse.json({ error: 'url must be a valid absolute URL' }, { status: 400 })
-    }
-    episode.videoUrl = videoUrl
-    episode.renderStatus = 'done'
-  } else {
-    episode.renderStatus = 'failed'
-  }
-  await saveState(state)
+      if (url) {
+        let videoUrl: string
+        try {
+          videoUrl = new URL(url).toString()
+        } catch {
+          throw Object.assign(new Error('url must be a valid absolute URL'), { status: 400 })
+        }
+        episode.videoUrl = videoUrl
+        episode.renderStatus = 'done'
+      } else {
+        episode.renderStatus = 'failed'
+      }
+    })
 
-  return NextResponse.json({
-    ok: true,
-    episodeId,
-    renderStatus: episode.renderStatus,
-    videoUrl: episode.videoUrl,
-  })
+    const episode = state.episodes.find((e) => e.id === episodeId)!
+    return NextResponse.json({
+      ok: true,
+      episodeId,
+      renderStatus: episode.renderStatus,
+      videoUrl: episode.videoUrl,
+    })
+  } catch (err) {
+    const status =
+      err && typeof err === 'object' && 'status' in err
+        ? Number((err as { status: number }).status)
+        : 500
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : 'attach failed' },
+      { status: status >= 400 && status < 600 ? status : 500 }
+    )
+  }
 }

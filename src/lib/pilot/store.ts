@@ -4,30 +4,139 @@ import type { PilotState, PublicState } from './types'
 
 const BUCKET = 'pilot'
 const KEY = 'state.json'
+const ROW_ID = 'main'
+const MAX_SAVE_RETRIES = 8
+
+type Versioned = { state: PilotState; version: number | null }
 
 /**
- * Prototype persistence: a single JSON blob in Supabase Storage.
- * Zero-migration by design — graduates to real tables (pilot_episodes,
- * pilot_votes) once the loop is validated. Low-volume writes only.
+ * Durable persistence: Postgres `pilot_state` (jsonb + version) with a
+ * Storage blob fallback for environments that haven't run the migration yet.
  */
 export async function getState(): Promise<PilotState> {
-  const sb = createAdminClient()
-  const { data, error } = await sb.storage.from(BUCKET).download(KEY)
-  if (error || !data) {
-    const seeded = seedState()
-    await saveState(seeded)
-    return seeded
+  const versioned = await loadVersioned()
+  return versioned.state
+}
+
+/**
+ * Read → mutate → write with optimistic concurrency. Retries on version
+ * conflict so concurrent votes don't clobber each other.
+ */
+export async function updateState(
+  mutator: (state: PilotState) => void | Promise<void>
+): Promise<PilotState> {
+  let lastError: Error | null = null
+
+  for (let attempt = 0; attempt < MAX_SAVE_RETRIES; attempt++) {
+    const { state, version } = await loadVersioned()
+    const next = structuredClone(state) as PilotState
+    await mutator(next)
+    try {
+      await persist(next, version)
+      return next
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err))
+      if (/version conflict/.test(lastError.message)) continue
+      throw lastError
+    }
   }
+
+  throw lastError ?? new Error('pilot: failed to save state after retries')
+}
+
+/** @deprecated Prefer updateState for mutations. Kept for attach/seed paths. */
+export async function saveState(state: PilotState): Promise<void> {
+  const existing = await readFromDb()
+  await persist(state, existing?.version ?? null)
+}
+
+async function loadVersioned(): Promise<Versioned> {
+  const fromDb = await readFromDb()
+  if (fromDb) return fromDb
+
+  const fromStorage = await readFromStorage()
+  if (fromStorage) {
+    await writeToDb(fromStorage, null).catch(() => undefined)
+    return { state: fromStorage, version: null }
+  }
+
+  const seeded = seedState()
+  await persist(seeded, null)
+  return { state: seeded, version: null }
+}
+
+async function persist(state: PilotState, expectedVersion: number | null): Promise<void> {
   try {
-    return JSON.parse(await data.text()) as PilotState
-  } catch {
-    const seeded = seedState()
-    await saveState(seeded)
-    return seeded
+    await writeToDb(state, expectedVersion)
+    await writeToStorage(state).catch(() => undefined)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    if (/does not exist|42P01|PGRST/.test(message)) {
+      await writeToStorage(state)
+      return
+    }
+    throw err instanceof Error ? err : new Error(message)
   }
 }
 
-export async function saveState(state: PilotState): Promise<void> {
+async function readFromDb(): Promise<Versioned | null> {
+  try {
+    const sb = createAdminClient()
+    const { data, error } = await sb
+      .from('pilot_state')
+      .select('state, version')
+      .eq('id', ROW_ID)
+      .maybeSingle()
+    if (error) {
+      if (/does not exist|42P01|PGRST|Could not find the table/.test(error.message)) {
+        return null
+      }
+      console.error('pilot: db read failed', error.message)
+      return null
+    }
+    if (!data?.state) return null
+    return { state: data.state as PilotState, version: data.version as number }
+  } catch {
+    return null
+  }
+}
+
+async function writeToDb(state: PilotState, expectedVersion: number | null): Promise<void> {
+  const sb = createAdminClient()
+  const now = new Date().toISOString()
+
+  if (expectedVersion === null) {
+    const { error } = await sb.from('pilot_state').upsert(
+      { id: ROW_ID, state, version: 1, updated_at: now },
+      { onConflict: 'id' }
+    )
+    if (error) throw new Error(error.message)
+    return
+  }
+
+  const { data, error } = await sb
+    .from('pilot_state')
+    .update({ state, version: expectedVersion + 1, updated_at: now })
+    .eq('id', ROW_ID)
+    .eq('version', expectedVersion)
+    .select('id')
+
+  if (error) throw new Error(error.message)
+  if (!data?.length) throw new Error('version conflict')
+}
+
+async function readFromStorage(): Promise<PilotState | null> {
+  try {
+    const sb = createAdminClient()
+    const { data, error } = await sb.storage.from(BUCKET).download(KEY)
+    if (error || !data) return null
+    return JSON.parse(await data.text()) as PilotState
+  } catch {
+    return null
+  }
+}
+
+async function writeToStorage(state: PilotState): Promise<void> {
   const sb = createAdminClient()
   const body = JSON.stringify(state)
   const upload = () =>
@@ -38,13 +147,45 @@ export async function saveState(state: PilotState): Promise<void> {
 
   let { error } = await upload()
   if (error) {
-    // Bucket may not exist yet — create it and retry once.
     await sb.storage.createBucket(BUCKET, { public: false })
     ;({ error } = await upload())
   }
   if (error) {
     throw new Error(`pilot: failed to save state: ${error.message}`)
   }
+}
+
+/**
+ * Render backend for /pilot.
+ *
+ * Default `session` = consumer app (Higgsfield CLI / MCP on the funded
+ * account). Cycle leaves the episode as `rendering` and returns videoPrompt;
+ * the render session posts the mp4 to `/api/pilot/attach`.
+ *
+ * Opt-in `api` = platform.higgsfield.ai with HF_API_KEY (separate product —
+ * usually 0 credits; do not use unless you mean to).
+ */
+export type PilotRenderMode = 'session' | 'api' | 'off'
+
+export function getRenderMode(): PilotRenderMode {
+  const mode = (process.env.PILOT_RENDER_MODE || 'session').toLowerCase()
+  if (mode === 'api' || mode === 'off' || mode === 'session') return mode
+  return 'session'
+}
+
+export function hasCloudApiCreds(): boolean {
+  return Boolean(
+    process.env.HF_CREDENTIALS ||
+      (process.env.HF_API_KEY && process.env.HF_API_SECRET)
+  )
+}
+
+/** @deprecated Use getRenderMode() — cloud API keys ≠ consumer credits. */
+export function hasRenderCreds(): boolean {
+  const mode = getRenderMode()
+  if (mode === 'off') return false
+  if (mode === 'api') return hasCloudApiCreds()
+  return true // session mode — consumer app / attach path
 }
 
 export function toPublicState(state: PilotState): PublicState {
@@ -61,12 +202,15 @@ export function toPublicState(state: PilotState): PublicState {
       ? state.episodes[state.episodes.length - 1].id
       : null,
     renderingEnabled: hasRenderCreds(),
+    renderMode: getRenderMode(),
   }
 }
 
-export function hasRenderCreds(): boolean {
-  return Boolean(
-    process.env.HF_CREDENTIALS ||
-      (process.env.HF_API_KEY && process.env.HF_API_SECRET)
-  )
+export function yourVoteFor(
+  state: PilotState,
+  episodeId: string | null | undefined,
+  voterId: string | null | undefined
+): string | null {
+  if (!episodeId || !voterId) return null
+  return state.voters[episodeId]?.[voterId] ?? null
 }

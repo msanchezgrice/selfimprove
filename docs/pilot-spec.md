@@ -12,29 +12,35 @@ AI writes the beat, renders the video, and opens the next poll — autonomously.
    savings, energy, social, mood) + episode history + the winning choice.
    Structured output via `callClaude` (same wrapper as roadmap/PRD gen).
 3. State deltas are applied — consequences compound, nothing resets.
-4. Higgsfield renders a 10s vertical clip from Devon's canonical seed image
-   (`/v1/image2video` on platform.higgsfield.ai). The client polls
-   `POST /api/pilot/render` until the video lands.
+4. Video render (default = **consumer app**, not platform API keys):
+   - Cycle leaves the episode as `rendering` and returns `videoPrompt` +
+     `seedImageUrl`.
+   - The Higgsfield consumer render session (CLI / MCP on the funded account)
+     generates the clip and attaches it:
+     `GET /api/pilot/attach?key=CRON_SECRET&episodeId=…&url=…`
+   - Client polls `/api/pilot/state` until `videoUrl` lands.
+   - Opt-in cloud API: set `PILOT_RENDER_MODE=api` + `HF_API_KEY` /
+     `HF_API_SECRET` (platform.higgsfield.ai is a **separate** product and
+     often has 0 credits — do not confuse with consumer account balance).
 5. The next poll opens.
 
 ## Storage
 
-Prototype persistence is a single JSON blob in Supabase Storage
-(bucket `pilot`, `state.json`) — zero migrations. Graduate to real tables
-(`pilot_episodes`, `pilot_votes` with RLS) once the loop is validated.
-Votes are deduped per browser via a `pilot_voter` cookie.
+`pilot_state` Postgres row (jsonb + optimistic `version`) with a Supabase
+Storage blob fallback (`pilot/state.json`). Votes are deduped per browser via
+a `pilot_voter` cookie.
 
 ## Env vars (Vercel)
 
 | Var | Purpose |
 |---|---|
-| `HF_API_KEY` / `HF_API_SECRET` | Higgsfield platform API (video renders). Create at platform.higgsfield.ai. Alternatively `HF_CREDENTIALS="key:secret"`. |
-| `HIGGSFIELD_VIDEO_PATH` | Optional; defaults to `/v1/image2video/dop` |
-| `HIGGSFIELD_VIDEO_MODEL` | Optional; defaults to `dop-turbo` |
-| `ANTHROPIC_API_KEY` | Already set — beat writing |
+| `PILOT_RENDER_MODE` | `session` (default, consumer→attach), `api` (platform keys), or `off` (script-only) |
+| `CRON_SECRET` | Auth for keyed cycle / attach / pending-render endpoints |
+| `HF_API_KEY` / `HF_API_SECRET` | Only if `PILOT_RENDER_MODE=api`. Not the consumer account. |
+| `ANTHROPIC_API_KEY` | Beat writing |
 
-Without HF creds, cycles still run and produce script-only episodes (poster +
-script shown in the player), so the vote loop is testable end to end.
+Helper for a local consumer render pass:
+`CRON_SECRET=… APP_BASE_URL=https://… ./scripts/pilot-render-once.sh`
 
 ## Distribution: X/Twitter (to implement)
 

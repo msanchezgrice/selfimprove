@@ -33,7 +33,8 @@ type PublicState = {
   episodes: Episode[];
   currentEpisodeId: string | null;
   renderingEnabled: boolean;
-  yourVote?: string;
+  renderMode?: "session" | "api" | "off";
+  yourVote?: string | null;
   alreadyVoted?: boolean;
 };
 
@@ -72,54 +73,78 @@ export default function PilotClient() {
   const [voting, setVoting] = useState(false);
   const [cyclePhase, setCyclePhase] = useState<string | null>(null);
   const [viewingId, setViewingId] = useState<string | null>(null);
+  const [customLabel, setCustomLabel] = useState("");
+  const [customDetail, setCustomDetail] = useState("");
+  const playerRef = useRef<HTMLDivElement | null>(null);
   const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const applyState = useCallback((data: PublicState) => {
+    setState(data);
+    if (data.yourVote) setYourVote(data.yourVote);
+    else if (data.alreadyVoted === false) setYourVote(null);
+    setError(null);
+  }, []);
 
   const refresh = useCallback(async () => {
     try {
       const res = await fetch("/api/pilot/state", { cache: "no-store" });
       if (!res.ok) throw new Error(`state ${res.status}`);
       const data = (await res.json()) as PublicState;
-      setState(data);
-      setError(null);
+      applyState(data);
       return data;
     } catch (e) {
       setError(e instanceof Error ? e.message : "failed to load");
       return null;
     }
-  }, []);
+  }, [applyState]);
 
   useEffect(() => {
     refresh();
   }, [refresh]);
 
-  // If the latest episode is rendering (e.g. page load mid-render), poll it.
+  // Poll while the latest episode is awaiting video (session attach or API job).
   useEffect(() => {
     const current = state?.episodes[state.episodes.length - 1];
-    if (!current || current.renderStatus !== "rendering") return;
+    if (!current || current.renderStatus !== "rendering") {
+      if (pollTimer.current) {
+        clearInterval(pollTimer.current);
+        pollTimer.current = null;
+      }
+      return;
+    }
     if (pollTimer.current) return;
+
+    const mode = state?.renderMode ?? "session";
     pollTimer.current = setInterval(async () => {
-      const res = await fetch("/api/pilot/render", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ episodeId: current.id }),
-      });
-      if (res.ok) {
-        const data = (await res.json()) as PublicState & { renderStatus: string };
-        setState(data);
-        if (data.renderStatus !== "rendering" && pollTimer.current) {
-          clearInterval(pollTimer.current);
-          pollTimer.current = null;
+      if (mode === "api") {
+        const res = await fetch("/api/pilot/render", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ episodeId: current.id }),
+        });
+        if (res.ok) {
+          const data = (await res.json()) as PublicState & { renderStatus: string };
+          applyState(data);
+          if (data.renderStatus !== "rendering") {
+            setCyclePhase(null);
+          }
+        }
+      } else {
+        const data = await refresh();
+        const ep = data?.episodes.find((e) => e.id === current.id);
+        if (ep && ep.renderStatus !== "rendering") {
           setCyclePhase(null);
         }
       }
-    }, 6000);
+    }, 5000);
+
     return () => {
       if (pollTimer.current) {
         clearInterval(pollTimer.current);
         pollTimer.current = null;
       }
     };
-  }, [state]);
+  }, [state, applyState, refresh]);
 
   const pollClose = useMemo(() => {
     const d = new Date();
@@ -135,21 +160,67 @@ export default function PilotClient() {
   const totalVotes = current
     ? current.options.reduce((s, o) => s + o.votes, 0)
     : 0;
+  const pollClosed = Boolean(current?.winnerOptionId);
+
+  function selectEpisode(id: string) {
+    setViewingId(id);
+    // Scroll the player into view so chapter clicks feel like something happened
+    // (failed episodes share the same poster — title/script change is easy to miss).
+    requestAnimationFrame(() => {
+      playerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
 
   async function vote(optionId: string) {
-    if (!current || yourVote || voting) return;
+    if (!current || yourVote || voting || pollClosed) return;
     setVoting(true);
+    setError(null);
     try {
       const res = await fetch("/api/pilot/vote", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ episodeId: current.id, optionId }),
       });
-      if (res.ok) {
-        const data = (await res.json()) as PublicState;
-        setState(data);
-        setYourVote(data.yourVote ?? optionId);
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || `vote failed (${res.status})`);
+        return;
       }
+      applyState(data as PublicState);
+      setYourVote(data.yourVote ?? optionId);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "vote failed");
+    } finally {
+      setVoting(false);
+    }
+  }
+
+  async function submitCustomOption() {
+    const label = customLabel.trim();
+    if (!current || !label || yourVote || voting || pollClosed) return;
+    setVoting(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/pilot/vote", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          episodeId: current.id,
+          customLabel: label,
+          customDetail: customDetail.trim() || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || `vote failed (${res.status})`);
+        return;
+      }
+      applyState(data as PublicState);
+      setYourVote(data.yourVote ?? null);
+      setCustomLabel("");
+      setCustomDetail("");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "vote failed");
     } finally {
       setVoting(false);
     }
@@ -158,6 +229,7 @@ export default function PilotClient() {
   async function runCycle() {
     if (cyclePhase) return;
     setCyclePhase("Closing poll & tallying votes…");
+    setError(null);
     try {
       const res = await fetch("/api/pilot/cycle", { method: "POST" });
       const data = await res.json();
@@ -166,16 +238,21 @@ export default function PilotClient() {
         setError(data.error || "cycle failed");
         return;
       }
-      setState(data as PublicState);
+      applyState(data as PublicState);
       setYourVote(null);
       setViewingId(null);
+      const mode = data.cycle?.renderMode ?? data.renderMode ?? "session";
       if (data.cycle?.rendering) {
-        setCyclePhase("Episode written — rendering video (2-5 min)…");
+        setCyclePhase(
+          mode === "session"
+            ? "Episode written — waiting for consumer render session to attach video…"
+            : "Episode written — rendering video (2-5 min)…"
+        );
+      } else if (data.cycle?.renderError) {
+        setCyclePhase(null);
+        setError(data.cycle.renderError);
       } else if (!data.cycle?.renderingEnabled) {
         setCyclePhase(null);
-        setError(
-          "Episode written, but video rendering is off — add HF_API_KEY / HF_API_SECRET to enable Higgsfield renders."
-        );
       } else {
         setCyclePhase(null);
       }
@@ -202,6 +279,7 @@ export default function PilotClient() {
             {CATEGORIES.map((c) => (
               <button
                 key={c.id}
+                type="button"
                 onClick={() => setCategory(c.id)}
                 className={`rounded-lg px-3 py-1.5 text-sm transition ${
                   category === c.id
@@ -240,25 +318,35 @@ export default function PilotClient() {
         <main className="mx-auto max-w-6xl px-5 py-8 grid gap-8 lg:grid-cols-[minmax(0,420px)_1fr]">
           {/* Left: episode player */}
           <section>
-            <div className="rounded-2xl overflow-hidden border border-[#1e2430] bg-black relative">
+            <div
+              ref={playerRef}
+              className="rounded-2xl overflow-hidden border border-[#1e2430] bg-black relative scroll-mt-4"
+            >
+              <div className="absolute top-3 left-3 z-10 rounded-md bg-black/70 px-2 py-1 text-[11px] font-mono text-[#ffb347]">
+                EP {viewing?.number}
+              </div>
               {viewing?.videoUrl ? (
                 <video
                   key={viewing.videoUrl}
                   controls
                   playsInline
+                  autoPlay
                   poster={viewing.posterUrl}
                   src={viewing.videoUrl}
                   className="w-full aspect-[9/16] object-cover"
                 />
               ) : (
                 <div
+                  key={viewing?.id}
                   className="w-full aspect-[9/16] bg-cover bg-center flex items-end"
                   style={{ backgroundImage: `url(${viewing?.posterUrl})` }}
                 >
                   <div className="w-full bg-gradient-to-t from-black/90 to-transparent p-4 pt-16">
                     <div className="text-xs font-mono text-[#ffb347] mb-2">
                       {viewing?.renderStatus === "rendering"
-                        ? "◉ RENDERING — the video is being generated"
+                        ? state.renderMode === "session"
+                          ? "◉ AWAITING CONSUMER RENDER — session will attach the video"
+                          : "◉ RENDERING — the video is being generated"
                         : viewing?.renderStatus === "failed"
                         ? "✕ RENDER FAILED — script-only episode"
                         : "SCRIPT-ONLY EPISODE"}
@@ -270,11 +358,35 @@ export default function PilotClient() {
                 </div>
               )}
             </div>
+
+            {/* Chapter scrubber — click any episode to load it in the player */}
+            {state.episodes.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {state.episodes.map((e) => (
+                  <button
+                    key={e.id}
+                    type="button"
+                    onClick={() => selectEpisode(e.id)}
+                    className={`rounded-lg px-2.5 py-1.5 text-xs font-mono transition ${
+                      viewing?.id === e.id
+                        ? "bg-[#0d9488] text-white"
+                        : "bg-[#171b26] text-[#8b93a5] hover:text-white hover:bg-[#1b2233]"
+                    }`}
+                    title={e.title}
+                  >
+                    Ep {e.number}
+                    {e.videoUrl ? "" : e.renderStatus === "rendering" ? " ◉" : ""}
+                  </button>
+                ))}
+              </div>
+            )}
+
             <div className="mt-3 px-1">
               <div className="text-xs font-mono text-[#5a6376]">
                 EPISODE {viewing?.number} · SEASON 1
                 {viewing && current && viewing.id !== current.id && (
                   <button
+                    type="button"
                     onClick={() => setViewingId(null)}
                     className="ml-2 text-[#8fb6ff]"
                   >
@@ -284,6 +396,11 @@ export default function PilotClient() {
               </div>
               <h2 className="text-xl font-bold mt-1">{viewing?.title}</h2>
               <p className="text-sm text-[#8b93a5] mt-1">{viewing?.logline}</p>
+              {viewing?.videoUrl && (
+                <p className="mt-3 text-sm leading-relaxed text-[#9aa3b5]">
+                  {viewing.script}
+                </p>
+              )}
             </div>
 
             {/* Character state */}
@@ -333,10 +450,11 @@ export default function PilotClient() {
                     return (
                       <button
                         key={e.id}
-                        onClick={() => setViewingId(e.id)}
+                        type="button"
+                        onClick={() => selectEpisode(e.id)}
                         className={`w-full text-left text-xs rounded-lg px-2.5 py-2 transition ${
                           viewing?.id === e.id
-                            ? "bg-[#1b2233]"
+                            ? "bg-[#1b2233] ring-1 ring-[#0d9488]/40"
                             : "hover:bg-[#161b26]"
                         }`}
                       >
@@ -357,17 +475,16 @@ export default function PilotClient() {
 
           {/* Right: vote + system */}
           <section className="space-y-6">
-            {/* Vote card */}
             <div className="rounded-2xl border border-[#1e2430] bg-[#11141c] p-5">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <h3 className="font-bold">Tonight&apos;s decision</h3>
                 <span className="text-xs font-mono text-[#ffb347]">
-                  poll closes in {countdown}
+                  {pollClosed ? "poll closed" : `poll closes in ${countdown}`}
                 </span>
               </div>
               <p className="text-sm text-[#8b93a5] mt-1 mb-4">
                 The winner becomes the next episode — written, rendered, and
-                published autonomously.
+                published autonomously. Or write in your own option below.
               </p>
               <div className="space-y-2">
                 {current?.options.map((o) => {
@@ -375,17 +492,20 @@ export default function PilotClient() {
                     ? Math.round((o.votes / totalVotes) * 100)
                     : 0;
                   const isPicked = yourVote === o.id;
-                  const revealed = Boolean(yourVote);
+                  const revealed = Boolean(yourVote) || pollClosed;
                   return (
                     <button
                       key={o.id}
+                      type="button"
                       onClick={() => vote(o.id)}
-                      disabled={revealed || voting}
+                      disabled={revealed || voting || pollClosed}
                       className={`relative w-full overflow-hidden rounded-xl border p-3 text-left transition ${
                         isPicked
                           ? "border-[#0d9488] bg-[#0d948814]"
                           : "border-[#232b3b] hover:border-[#3a4356]"
-                      } ${revealed && !isPicked ? "opacity-60" : ""}`}
+                      } ${revealed && !isPicked ? "opacity-60" : ""} ${
+                        voting ? "opacity-70" : ""
+                      }`}
                     >
                       <div
                         className="absolute inset-y-0 left-0 bg-[#1b2233]"
@@ -409,6 +529,40 @@ export default function PilotClient() {
                   );
                 })}
               </div>
+
+              {/* Custom write-in */}
+              {!yourVote && !pollClosed && (
+                <div className="mt-4 rounded-xl border border-dashed border-[#3a4356] p-3">
+                  <div className="text-xs font-semibold text-[#8b93a5] mb-2">
+                    Write your own option
+                  </div>
+                  <input
+                    type="text"
+                    value={customLabel}
+                    onChange={(e) => setCustomLabel(e.target.value.slice(0, 48))}
+                    placeholder="What should Devon do?"
+                    maxLength={48}
+                    className="w-full rounded-lg border border-[#232b3b] bg-[#0b0d12] px-3 py-2 text-sm outline-none focus:border-[#0d9488]"
+                  />
+                  <input
+                    type="text"
+                    value={customDetail}
+                    onChange={(e) => setCustomDetail(e.target.value.slice(0, 80))}
+                    placeholder="Optional consequence hint"
+                    maxLength={80}
+                    className="mt-2 w-full rounded-lg border border-[#232b3b] bg-[#0b0d12] px-3 py-2 text-sm outline-none focus:border-[#0d9488]"
+                  />
+                  <button
+                    type="button"
+                    onClick={submitCustomOption}
+                    disabled={!customLabel.trim() || voting}
+                    className="mt-2 rounded-lg bg-[#0d9488] px-3 py-2 text-sm font-semibold text-white hover:brightness-110 disabled:opacity-40"
+                  >
+                    {voting ? "Submitting…" : "Add & vote"}
+                  </button>
+                </div>
+              )}
+
               <div className="mt-3 text-xs text-[#5a6376]">
                 {yourVote
                   ? `${totalVotes.toLocaleString()} vote${totalVotes === 1 ? "" : "s"} · yours is in`
@@ -416,21 +570,21 @@ export default function PilotClient() {
               </div>
             </div>
 
-            {/* Run cycle — test control */}
             <div className="rounded-2xl border border-dashed border-[#3a4356] bg-[#11141c] p-5">
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <div>
                   <h3 className="font-bold">⚡ Run cycle</h3>
                   <p className="text-xs text-[#8b93a5] mt-1 max-w-md">
                     Test control: fast-forward one night. Closes the poll,
-                    Claude writes the next beat from the winning vote,
-                    Higgsfield renders it, the next poll opens.
+                    Claude writes the next beat from the winning vote, then
+                    queues video for the Higgsfield consumer render session.
                   </p>
                 </div>
                 <button
+                  type="button"
                   onClick={runCycle}
                   disabled={Boolean(cyclePhase)}
-                  className="rounded-xl bg-[#7c5cff] px-4 py-2.5 text-sm font-bold text-white hover:brightness-110 disabled:opacity-50"
+                  className="rounded-xl bg-[#0d9488] px-4 py-2.5 text-sm font-bold text-white hover:brightness-110 disabled:opacity-50"
                 >
                   {cyclePhase ? "Running…" : "Run one night"}
                 </button>
@@ -443,15 +597,19 @@ export default function PilotClient() {
               {error && (
                 <div className="mt-3 text-xs text-[#ff6b6b]">{error}</div>
               )}
-              {!state.renderingEnabled && (
+              {(state.renderMode ?? "session") === "session" && (
                 <div className="mt-3 text-[11px] text-[#5a6376]">
-                  Video rendering off (no HF_API_KEY / HF_API_SECRET set) —
-                  cycles will produce script-only episodes.
+                  Video uses the Higgsfield consumer app (CLI/MCP), not platform
+                  API keys. Pending jobs:{" "}
+                  <code className="text-[#8b93a5]">
+                    GET /api/pilot/render?key=…&amp;pending=1
+                  </code>{" "}
+                  → attach via{" "}
+                  <code className="text-[#8b93a5]">/api/pilot/attach</code>.
                 </div>
               )}
             </div>
 
-            {/* Feature leaderboard — coming soon */}
             <div className="rounded-2xl border border-[#1e2430] bg-[#11141c] p-5 relative overflow-hidden">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <h3 className="font-bold">Feature leaderboard</h3>

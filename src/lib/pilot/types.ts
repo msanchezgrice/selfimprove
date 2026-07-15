@@ -46,4 +46,6 @@ export type PublicState = {
   episodes: Array<Omit<PilotEpisode, 'videoPrompt' | 'hfRequestId'>>
   currentEpisodeId: string | null
   renderingEnabled: boolean
+  /** `session` = consumer app → attach; `api` = platform keys; `off` = script-only */
+  renderMode?: 'session' | 'api' | 'off'
 }

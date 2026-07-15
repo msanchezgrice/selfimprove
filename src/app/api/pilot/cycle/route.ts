@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { callClaude } from '@/lib/ai/call-claude'
-import { getState, saveState, toPublicState, hasRenderCreds } from '@/lib/pilot/store'
+import {
+  getState,
+  saveState,
+  toPublicState,
+  hasRenderCreds,
+  getRenderMode,
+  hasCloudApiCreds,
+} from '@/lib/pilot/store'
 import { submitImageToVideo } from '@/lib/pilot/higgsfield'
 import { DEVON_SEED_IMAGE } from '@/lib/pilot/seed'
 import type { PilotEpisode, PilotState } from '@/lib/pilot/types'
@@ -14,8 +21,14 @@ export const maxDuration = 60
  *
  * 1. Close the current poll, pick the winner.
  * 2. Claude writes the next beat from character state + the winning choice.
- * 3. Apply state deltas; render the episode via Higgsfield (if creds set).
- * 4. Open the next poll.
+ * 3. Apply state deltas.
+ * 4. Queue video render:
+ *    - Default (`PILOT_RENDER_MODE=session`): leave episode as `rendering`
+ *      for the Higgsfield *consumer* render session (CLI/MCP). It posts the
+ *      mp4 to `/api/pilot/attach`. Do NOT call platform.higgsfield.ai —
+ *      that surface is a separate product and usually has 0 credits.
+ *    - Opt-in (`PILOT_RENDER_MODE=api`): submit via HF_API_KEY cloud API.
+ * 5. Open the next poll.
  */
 
 const MIN_CYCLE_GAP_MS = 60_000
@@ -93,15 +106,15 @@ function historySummary(state: PilotState): string {
 }
 
 export async function POST() {
-  return runCycle(false)
+  return runCycle(true)
 }
 
 /**
  * Keyed GET so the nightly render session (and Vercel crons) can trigger a
  * cycle from environments limited to simple GET requests:
  *   GET /api/pilot/cycle?key=CRON_SECRET
- * The keyed response additionally includes the new episode's videoPrompt so
- * the render session can generate the video without guessing.
+ * The keyed response includes videoPrompt + seedImageUrl for the consumer
+ * render session.
  */
 export async function GET(req: NextRequest) {
   const key =
@@ -172,7 +185,8 @@ async function runCycle(includePrompt: boolean) {
     state.character.social = beat.state_delta.social
     state.character.mood = beat.state_delta.mood
 
-    // 4. Create the next episode and kick off the render.
+    // 4. Create the next episode and queue render.
+    const renderMode = getRenderMode()
     const episode: PilotEpisode = {
       id: `ep-${current.number + 1}`,
       number: current.number + 1,
@@ -194,7 +208,12 @@ async function runCycle(includePrompt: boolean) {
       createdAt: new Date().toISOString(),
     }
 
-    if (hasRenderCreds()) {
+    let renderError: string | null = null
+
+    if (renderMode === 'session') {
+      // Consumer app path: render session picks this up and POSTs to /attach.
+      episode.renderStatus = 'rendering'
+    } else if (renderMode === 'api' && hasCloudApiCreds()) {
       try {
         const { requestId } = await submitImageToVideo({
           prompt: beat.video_prompt,
@@ -203,10 +222,12 @@ async function runCycle(includePrompt: boolean) {
         episode.hfRequestId = requestId
         episode.renderStatus = 'rendering'
       } catch (err) {
-        console.error('pilot: render submit failed', err)
+        console.error('pilot: cloud API render submit failed', err)
         episode.renderStatus = 'failed'
+        renderError = err instanceof Error ? err.message : 'cloud API render failed'
       }
     }
+    // renderMode === 'off' → script-only (renderStatus stays 'none')
 
     state.episodes.push(episode)
     state.lastCycleAt = new Date().toISOString()
@@ -221,7 +242,15 @@ async function runCycle(includePrompt: boolean) {
         newEpisodeId: episode.id,
         rendering: episode.renderStatus === 'rendering',
         renderingEnabled: hasRenderCreds(),
-        ...(includePrompt ? { videoPrompt: episode.videoPrompt, script: episode.script } : {}),
+        renderMode,
+        renderError,
+        ...(includePrompt
+          ? {
+              videoPrompt: episode.videoPrompt,
+              script: episode.script,
+              seedImageUrl: DEVON_SEED_IMAGE,
+            }
+          : {}),
       },
     })
   } catch (err) {
