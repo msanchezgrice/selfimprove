@@ -2,18 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getState, saveState, toPublicState, getRenderMode } from '@/lib/pilot/store'
 import { checkRender } from '@/lib/pilot/higgsfield'
 import { DEVON_SEED_IMAGE } from '@/lib/pilot/seed'
+import { buildCoherentVideoPrompt } from '@/lib/pilot/video-prompt'
 
 export const dynamic = 'force-dynamic'
 
 /**
  * Poll / inspect render status.
  *
- * - session mode (default): client should prefer GET /api/pilot/state — this
- *   endpoint just echoes status (video lands via /api/pilot/attach).
- * - api mode: polls platform.higgsfield.ai for the cloud job.
- *
  * Keyed GET returns the oldest pending session-mode job for the consumer
- * render worker:
+ * render worker, with a rebuilt coherent videoPrompt:
  *   GET /api/pilot/render?key=CRON_SECRET&pending=1
  */
 export async function GET(req: NextRequest) {
@@ -33,12 +30,23 @@ export async function GET(req: NextRequest) {
     if (!pending) {
       return NextResponse.json({ pending: null })
     }
+
+    const videoPrompt = buildCoherentVideoPrompt({
+      script: pending.script,
+      mood: state.character.mood,
+      visualBeat: pending.options.find((o) => o.id === pending.winnerOptionId)?.visualBeat,
+    })
+    if (videoPrompt !== pending.videoPrompt) {
+      pending.videoPrompt = videoPrompt
+      await saveState(state)
+    }
+
     return NextResponse.json({
       pending: {
         episodeId: pending.id,
         number: pending.number,
         title: pending.title,
-        videoPrompt: pending.videoPrompt,
+        videoPrompt,
         seedImageUrl: pending.posterUrl || DEVON_SEED_IMAGE,
         script: pending.script,
       },
@@ -61,7 +69,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'unknown episode' }, { status: 404 })
     }
 
-    // Cloud API jobs only — session-mode episodes land via /attach.
     if (
       getRenderMode() === 'api' &&
       episode.renderStatus === 'rendering' &&

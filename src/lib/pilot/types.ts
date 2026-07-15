@@ -3,6 +3,11 @@ export type PilotOption = {
   label: string
   detail: string
   votes: number
+  /**
+   * Director note for video coherence — what we should SEE Devon do
+   * if this option wins (used when writing the next episode's i2v prompt).
+   */
+  visualBeat?: string
 }
 
 export type RenderStatus = 'none' | 'rendering' | 'done' | 'failed'

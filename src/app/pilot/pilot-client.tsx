@@ -6,7 +6,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 /* Types mirrored from src/lib/pilot/types.ts (public shape)           */
 /* ------------------------------------------------------------------ */
 
-type Option = { id: string; label: string; detail: string; votes: number };
+type Option = {
+  id: string;
+  label: string;
+  detail: string;
+  votes: number;
+  visualBeat?: string;
+};
 type Episode = {
   id: string;
   number: number;
@@ -75,8 +81,10 @@ export default function PilotClient() {
   const [viewingId, setViewingId] = useState<string | null>(null);
   const [customLabel, setCustomLabel] = useState("");
   const [customDetail, setCustomDetail] = useState("");
+  const [customVisualBeat, setCustomVisualBeat] = useState("");
   const playerRef = useRef<HTMLDivElement | null>(null);
   const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const cycleAbort = useRef<AbortController | null>(null);
 
   const applyState = useCallback((data: PublicState) => {
     setState(data);
@@ -197,7 +205,8 @@ export default function PilotClient() {
 
   async function submitCustomOption() {
     const label = customLabel.trim();
-    if (!current || !label || yourVote || voting || pollClosed) return;
+    const visual = customVisualBeat.trim();
+    if (!current || !label || !visual || yourVote || voting || pollClosed) return;
     setVoting(true);
     setError(null);
     try {
@@ -208,6 +217,7 @@ export default function PilotClient() {
           episodeId: current.id,
           customLabel: label,
           customDetail: customDetail.trim() || undefined,
+          customVisualBeat: visual,
         }),
       });
       const data = await res.json();
@@ -219,6 +229,7 @@ export default function PilotClient() {
       setYourVote(data.yourVote ?? null);
       setCustomLabel("");
       setCustomDetail("");
+      setCustomVisualBeat("");
     } catch (e) {
       setError(e instanceof Error ? e.message : "vote failed");
     } finally {
@@ -228,37 +239,64 @@ export default function PilotClient() {
 
   async function runCycle() {
     if (cyclePhase) return;
-    setCyclePhase("Closing poll & tallying votes…");
     setError(null);
+    setCyclePhase("1/3 Closing poll…");
+    const ac = new AbortController();
+    cycleAbort.current = ac;
+    const watchdog = setTimeout(() => ac.abort(), 55_000);
     try {
-      const res = await fetch("/api/pilot/cycle", { method: "POST" });
-      const data = await res.json();
+      // Brief tick so the user sees phase changes while Claude writes.
+      setCyclePhase("2/3 Writing next beat with Claude…");
+      const res = await fetch("/api/pilot/cycle", {
+        method: "POST",
+        signal: ac.signal,
+      });
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setCyclePhase(null);
-        setError(data.error || "cycle failed");
+        // If we raced a completed cycle, refresh so the UI catches up.
+        if (res.status === 429) {
+          await refresh();
+        }
+        setError(data.error || `cycle failed (${res.status})`);
         return;
       }
       applyState(data as PublicState);
       setYourVote(null);
       setViewingId(null);
       const mode = data.cycle?.renderMode ?? data.renderMode ?? "session";
+      if (data.cycle?.recovered) {
+        setCyclePhase(null);
+        // Soft sync after a double-click / in-flight cycle — not a hard error.
+        return;
+      }
       if (data.cycle?.rendering) {
         setCyclePhase(
           mode === "session"
-            ? "Episode written — waiting for consumer render session to attach video…"
-            : "Episode written — rendering video (2-5 min)…"
+            ? "3/3 Episode written — queued for consumer video render…"
+            : "3/3 Episode written — rendering video (2-5 min)…"
         );
+        // Don't leave the button locked forever in session mode.
+        setTimeout(() => setCyclePhase(null), 4000);
       } else if (data.cycle?.renderError) {
         setCyclePhase(null);
         setError(data.cycle.renderError);
-      } else if (!data.cycle?.renderingEnabled) {
-        setCyclePhase(null);
       } else {
         setCyclePhase(null);
       }
     } catch (e) {
       setCyclePhase(null);
-      setError(e instanceof Error ? e.message : "cycle failed");
+      if (e instanceof DOMException && e.name === "AbortError") {
+        await refresh();
+        setError(
+          "Cycle timed out waiting for Claude — refresh if a new episode already appeared, then try again."
+        );
+      } else {
+        setError(e instanceof Error ? e.message : "cycle failed");
+      }
+    } finally {
+      clearTimeout(watchdog);
+      cycleAbort.current = null;
     }
   }
 
@@ -520,6 +558,11 @@ export default function PilotClient() {
                           <div className="text-xs text-[#8b93a5] mt-0.5">
                             {o.detail}
                           </div>
+                          {o.visualBeat && (
+                            <div className="text-[11px] text-[#0d9488]/90 mt-1 font-mono">
+                              film: {o.visualBeat}
+                            </div>
+                          )}
                         </div>
                         {revealed && (
                           <div className="font-mono text-sm shrink-0">{pct}%</div>
@@ -532,31 +575,43 @@ export default function PilotClient() {
 
               {/* Custom write-in */}
               {!yourVote && !pollClosed && (
-                <div className="mt-4 rounded-xl border border-dashed border-[#3a4356] p-3">
-                  <div className="text-xs font-semibold text-[#8b93a5] mb-2">
+                <div className="mt-4 rounded-xl border border-dashed border-[#3a4356] p-3 space-y-2">
+                  <div className="text-xs font-semibold text-[#8b93a5]">
                     Write your own option
                   </div>
+                  <p className="text-[11px] text-[#5a6376] leading-relaxed">
+                    Include a visual beat so the next video matches your choice —
+                    image-to-video can only film Devon in close-up, not the whole bar.
+                  </p>
                   <input
                     type="text"
                     value={customLabel}
                     onChange={(e) => setCustomLabel(e.target.value.slice(0, 48))}
-                    placeholder="What should Devon do?"
+                    placeholder="What should Devon do? (vote label)"
                     maxLength={48}
                     className="w-full rounded-lg border border-[#232b3b] bg-[#0b0d12] px-3 py-2 text-sm outline-none focus:border-[#0d9488]"
                   />
                   <input
                     type="text"
                     value={customDetail}
-                    onChange={(e) => setCustomDetail(e.target.value.slice(0, 80))}
-                    placeholder="Optional consequence hint"
-                    maxLength={80}
-                    className="mt-2 w-full rounded-lg border border-[#232b3b] bg-[#0b0d12] px-3 py-2 text-sm outline-none focus:border-[#0d9488]"
+                    onChange={(e) => setCustomDetail(e.target.value.slice(0, 100))}
+                    placeholder="Consequence hint (optional)"
+                    maxLength={100}
+                    className="w-full rounded-lg border border-[#232b3b] bg-[#0b0d12] px-3 py-2 text-sm outline-none focus:border-[#0d9488]"
+                  />
+                  <input
+                    type="text"
+                    value={customVisualBeat}
+                    onChange={(e) => setCustomVisualBeat(e.target.value.slice(0, 100))}
+                    placeholder='Visual beat — e.g. "sets his phone face-down and meets her eyes"'
+                    maxLength={100}
+                    className="w-full rounded-lg border border-[#0d9488]/40 bg-[#0b0d12] px-3 py-2 text-sm outline-none focus:border-[#0d9488]"
                   />
                   <button
                     type="button"
                     onClick={submitCustomOption}
-                    disabled={!customLabel.trim() || voting}
-                    className="mt-2 rounded-lg bg-[#0d9488] px-3 py-2 text-sm font-semibold text-white hover:brightness-110 disabled:opacity-40"
+                    disabled={!customLabel.trim() || !customVisualBeat.trim() || voting}
+                    className="rounded-lg bg-[#0d9488] px-3 py-2 text-sm font-semibold text-white hover:brightness-110 disabled:opacity-40"
                   >
                     {voting ? "Submitting…" : "Add & vote"}
                   </button>

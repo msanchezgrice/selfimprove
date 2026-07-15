@@ -9,7 +9,8 @@ export const dynamic = 'force-dynamic'
 
 const VOTER_COOKIE = 'pilot_voter'
 const MAX_CUSTOM_LABEL = 48
-const MAX_CUSTOM_DETAIL = 80
+const MAX_CUSTOM_DETAIL = 100
+const MAX_VISUAL_BEAT = 100
 
 function slugOptionId(label: string, existing: Set<string>): string {
   const base =
@@ -33,6 +34,7 @@ export async function POST(req: NextRequest) {
       optionId?: string
       customLabel?: string
       customDetail?: string
+      customVisualBeat?: string
     }
     const { episodeId } = body
     if (!episodeId) {
@@ -41,6 +43,7 @@ export async function POST(req: NextRequest) {
 
     const customLabel = body.customLabel?.trim()
     const customDetail = body.customDetail?.trim()
+    const customVisualBeat = body.customVisualBeat?.trim()
     if (customLabel && customLabel.length > MAX_CUSTOM_LABEL) {
       return NextResponse.json(
         { error: `custom label max ${MAX_CUSTOM_LABEL} chars` },
@@ -50,6 +53,12 @@ export async function POST(req: NextRequest) {
     if (customDetail && customDetail.length > MAX_CUSTOM_DETAIL) {
       return NextResponse.json(
         { error: `custom detail max ${MAX_CUSTOM_DETAIL} chars` },
+        { status: 400 }
+      )
+    }
+    if (customVisualBeat && customVisualBeat.length > MAX_VISUAL_BEAT) {
+      return NextResponse.json(
+        { error: `visual beat max ${MAX_VISUAL_BEAT} chars` },
         { status: 400 }
       )
     }
@@ -85,19 +94,24 @@ export async function POST(req: NextRequest) {
 
       if (customLabel) {
         const ids = new Set(episode.options.map((o) => o.id))
-        // Reuse an existing custom option with the same label (case-insensitive).
         const match = episode.options.find(
           (o) => o.label.toLowerCase() === customLabel.toLowerCase()
         )
         if (match) {
           votedOptionId = match.id
           match.votes += 1
+          if (customVisualBeat && !match.visualBeat) {
+            match.visualBeat = customVisualBeat
+          }
         } else {
           votedOptionId = slugOptionId(customLabel, ids)
           episode.options.push({
             id: votedOptionId,
             label: customLabel,
             detail: customDetail || 'Audience write-in',
+            visualBeat:
+              customVisualBeat ||
+              `follows through on: ${customLabel.replace(/[^\w\s]/g, '').trim()}`,
             votes: 1,
           })
         }

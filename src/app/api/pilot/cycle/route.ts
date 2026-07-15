@@ -10,35 +10,28 @@ import {
 } from '@/lib/pilot/store'
 import { submitImageToVideo } from '@/lib/pilot/higgsfield'
 import { DEVON_SEED_IMAGE } from '@/lib/pilot/seed'
+import { buildCoherentVideoPrompt } from '@/lib/pilot/video-prompt'
 import type { PilotEpisode, PilotState } from '@/lib/pilot/types'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 /**
- * "Run cycle" — one accelerated night. In production this runs on a nightly
- * cron; the button exists so nights can be fast-forwarded during testing.
+ * "Run cycle" — one accelerated night.
  *
- * 1. Close the current poll, pick the winner.
- * 2. Claude writes the next beat from character state + the winning choice.
- * 3. Apply state deltas.
- * 4. Queue video render:
- *    - Default (`PILOT_RENDER_MODE=session`): leave episode as `rendering`
- *      for the Higgsfield *consumer* render session (CLI/MCP). It posts the
- *      mp4 to `/api/pilot/attach`. Do NOT call platform.higgsfield.ai —
- *      that surface is a separate product and usually has 0 credits.
- *    - Opt-in (`PILOT_RENDER_MODE=api`): submit via HF_API_KEY cloud API.
- * 5. Open the next poll.
+ * Video is generated via the Higgsfield *consumer* session by default
+ * (CLI/MCP → /api/pilot/attach). Platform API keys are opt-in only.
  */
 
-const MIN_CYCLE_GAP_MS = 60_000
+const MIN_CYCLE_GAP_MS = 15_000
 
 type Beat = {
   title: string
   logline: string
   script: string
-  video_prompt: string
-  options: Array<{ label: string; detail: string }>
+  /** Single Devon-locked visual action for i2v (verb phrase, no camera jargon) */
+  visual_action: string
+  options: Array<{ label: string; detail: string; visual_beat: string }>
   state_delta: {
     savings_change: number
     energy_change: number
@@ -56,12 +49,12 @@ const BEAT_SCHEMA = {
     script: {
       type: 'string',
       description:
-        'The scene, max 90 words, present tense, includes at most two short spoken lines',
+        'The scene for readers, max 90 words, present tense, at most two short spoken lines. Can mention other characters.',
     },
-    video_prompt: {
+    visual_action: {
       type: 'string',
       description:
-        'Prompt for a 10s single-shot vertical AI video of the scene. MUST say no legible text on any screen or surface. Devon: 26, short curly brown hair, light stubble. End held on his face.',
+        'ONE concrete action Devon performs on camera this episode, max 20 words, present tense, starting with a verb (e.g. "winces as Sam turns away, laugh dying in his chest"). Must be filmable as a medium close-up of Devon alone. No other named characters in frame.',
     },
     options: {
       type: 'array',
@@ -72,8 +65,13 @@ const BEAT_SCHEMA = {
         properties: {
           label: { type: 'string', description: 'Voteable action, max 6 words, one emoji' },
           detail: { type: 'string', description: 'Consequence hint, max 12 words' },
+          visual_beat: {
+            type: 'string',
+            description:
+              'If this option wins, the Devon-locked action we should film next (max 16 words, verb phrase)',
+          },
         },
-        required: ['label', 'detail'],
+        required: ['label', 'detail', 'visual_beat'],
       },
     },
     state_delta: {
@@ -88,7 +86,7 @@ const BEAT_SCHEMA = {
       required: ['savings_change', 'energy_change', 'job', 'social', 'mood'],
     },
   },
-  required: ['title', 'logline', 'script', 'video_prompt', 'options', 'state_delta'],
+  required: ['title', 'logline', 'script', 'visual_action', 'options', 'state_delta'],
 }
 
 function pickWinner(episode: PilotEpisode) {
@@ -100,7 +98,8 @@ function historySummary(state: PilotState): string {
     .slice(-6)
     .map((e) => {
       const winner = e.options.find((o) => o.id === e.winnerOptionId)
-      return `Ep ${e.number} "${e.title}": ${e.logline}${winner ? ` → audience chose: ${winner.label}` : ' (poll open)'}`
+      const visual = winner?.visualBeat ? ` [visual: ${winner.visualBeat}]` : ''
+      return `Ep ${e.number} "${e.title}": ${e.logline}${winner ? ` → audience chose: ${winner.label}${visual}` : ' (poll open)'}`
     })
     .join('\n')
 }
@@ -109,13 +108,6 @@ export async function POST() {
   return runCycle(true)
 }
 
-/**
- * Keyed GET so the nightly render session (and Vercel crons) can trigger a
- * cycle from environments limited to simple GET requests:
- *   GET /api/pilot/cycle?key=CRON_SECRET
- * The keyed response includes videoPrompt + seedImageUrl for the consumer
- * render session.
- */
 export async function GET(req: NextRequest) {
   const key =
     req.nextUrl.searchParams.get('key') ||
@@ -130,19 +122,69 @@ async function runCycle(includePrompt: boolean) {
   try {
     const state = await getState()
     const current = state.episodes[state.episodes.length - 1]
+    if (!current) {
+      return NextResponse.json({ error: 'no episodes' }, { status: 400 })
+    }
 
     if (state.lastCycleAt && Date.now() - Date.parse(state.lastCycleAt) < MIN_CYCLE_GAP_MS) {
+      const latest = state.episodes[state.episodes.length - 1]
+      // Soft success: return current state so a stuck client can unlock + sync.
       return NextResponse.json(
-        { error: 'cycle already ran in the last minute — slow down' },
-        { status: 429 }
+        {
+          ...toPublicState(state),
+          error: 'cycle already ran in the last 15s — showing latest state',
+          cycle: {
+            closedEpisode: Math.max(1, latest.number - 1),
+            winner: null,
+            newEpisode: latest.number,
+            newEpisodeId: latest.id,
+            rendering: latest.renderStatus === 'rendering',
+            renderingEnabled: hasRenderCreds(),
+            renderMode: getRenderMode(),
+            recovered: true,
+            ...(includePrompt
+              ? {
+                  videoPrompt: latest.videoPrompt,
+                  script: latest.script,
+                  seedImageUrl: latest.posterUrl || DEVON_SEED_IMAGE,
+                }
+              : {}),
+          },
+        },
+        { status: 200 }
       )
     }
 
-    // 1. Close the poll.
+    // Avoid double-append if a prior attempt already opened the next night.
+    if (current.winnerOptionId) {
+      const existingNext = state.episodes.find((e) => e.number === current.number + 1)
+      if (existingNext) {
+        return NextResponse.json({
+          ...toPublicState(state),
+          cycle: {
+            closedEpisode: current.number,
+            winner: current.options.find((o) => o.id === current.winnerOptionId)?.label ?? null,
+            newEpisode: existingNext.number,
+            newEpisodeId: existingNext.id,
+            rendering: existingNext.renderStatus === 'rendering',
+            renderingEnabled: hasRenderCreds(),
+            renderMode: getRenderMode(),
+            recovered: true,
+            ...(includePrompt
+              ? {
+                  videoPrompt: existingNext.videoPrompt,
+                  script: existingNext.script,
+                  seedImageUrl: existingNext.posterUrl || DEVON_SEED_IMAGE,
+                }
+              : {}),
+          },
+        })
+      }
+    }
+
     const winner = pickWinner(current)
     current.winnerOptionId = winner.id
 
-    // 2. Write the next beat.
     const beat = await callClaude<Beat>({
       prompt: [
         `You are the nightly writer for "Patch Notes", a vertical-video life-sim drama.`,
@@ -160,22 +202,26 @@ async function runCycle(includePrompt: boolean) {
         historySummary(state),
         ``,
         `THE AUDIENCE JUST CHOSE: "${winner.label}" (${winner.detail})`,
+        winner.visualBeat
+          ? `DIRECTOR NOTE FROM THE WINNING VOTE (honor this on camera): ${winner.visualBeat}`
+          : `No director note — invent a Devon-locked visual_action that clearly shows the choice's consequence.`,
         ``,
         `Write the next episode beat. Rules:`,
         `- Grounded, relatable, a little funny. PG-13. No melodrama.`,
         `- Consequences must follow from the choice AND the character state (money, energy, friendships compound).`,
-        `- The three new options must be genuinely different paths people will argue about.`,
+        `- The script can mention Sam/Marcus/etc for readers.`,
+        `- visual_action MUST be filmable as a medium close-up of Devon ALONE (image-to-video from his face photo). Do NOT put other named characters in the visual_action.`,
+        `- visual_action must literally enact the audience's choice, not a generic "sips beer looking sad".`,
+        `- Each option needs a visual_beat so the next night's video stays coherent if that option wins.`,
         `- Savings changes must be realistic for the action taken.`,
-        `- The video prompt is for a 10-second single-shot vertical clip starting from a reference photo of Devon; it must forbid legible on-screen text.`,
       ].join('\n'),
       schema: BEAT_SCHEMA,
       schemaName: 'next_episode_beat',
       schemaDescription: 'The next episode of the life-sim drama',
       maxTokens: 2048,
-      temperature: 1,
+      temperature: 0.9,
     })
 
-    // 3. Apply state deltas.
     state.character.savings = Math.round(state.character.savings + beat.state_delta.savings_change)
     state.character.energy = Math.max(
       0,
@@ -185,7 +231,12 @@ async function runCycle(includePrompt: boolean) {
     state.character.social = beat.state_delta.social
     state.character.mood = beat.state_delta.mood
 
-    // 4. Create the next episode and queue render.
+    const videoPrompt = buildCoherentVideoPrompt({
+      script: beat.script,
+      mood: beat.state_delta.mood,
+      visualBeat: beat.visual_action || winner.visualBeat,
+    })
+
     const renderMode = getRenderMode()
     const episode: PilotEpisode = {
       id: `ep-${current.number + 1}`,
@@ -193,7 +244,7 @@ async function runCycle(includePrompt: boolean) {
       title: beat.title,
       logline: beat.logline,
       script: beat.script,
-      videoPrompt: beat.video_prompt,
+      videoPrompt,
       videoUrl: null,
       posterUrl: DEVON_SEED_IMAGE,
       renderStatus: 'none',
@@ -202,6 +253,7 @@ async function runCycle(includePrompt: boolean) {
         id: ['a', 'b', 'c'][i],
         label: o.label,
         detail: o.detail,
+        visualBeat: o.visual_beat,
         votes: 0,
       })),
       winnerOptionId: null,
@@ -211,12 +263,11 @@ async function runCycle(includePrompt: boolean) {
     let renderError: string | null = null
 
     if (renderMode === 'session') {
-      // Consumer app path: render session picks this up and POSTs to /attach.
       episode.renderStatus = 'rendering'
     } else if (renderMode === 'api' && hasCloudApiCreds()) {
       try {
         const { requestId } = await submitImageToVideo({
-          prompt: beat.video_prompt,
+          prompt: videoPrompt,
           imageUrl: DEVON_SEED_IMAGE,
         })
         episode.hfRequestId = requestId
@@ -227,7 +278,6 @@ async function runCycle(includePrompt: boolean) {
         renderError = err instanceof Error ? err.message : 'cloud API render failed'
       }
     }
-    // renderMode === 'off' → script-only (renderStatus stays 'none')
 
     state.episodes.push(episode)
     state.lastCycleAt = new Date().toISOString()
@@ -249,6 +299,7 @@ async function runCycle(includePrompt: boolean) {
               videoPrompt: episode.videoPrompt,
               script: episode.script,
               seedImageUrl: DEVON_SEED_IMAGE,
+              visualAction: beat.visual_action,
             }
           : {}),
       },
