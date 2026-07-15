@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { callClaude } from '@/lib/ai/call-claude'
 import { getState, saveState, toPublicState, hasRenderCreds } from '@/lib/pilot/store'
 import { submitImageToVideo } from '@/lib/pilot/higgsfield'
@@ -93,6 +93,27 @@ function historySummary(state: PilotState): string {
 }
 
 export async function POST() {
+  return runCycle(false)
+}
+
+/**
+ * Keyed GET so the nightly render session (and Vercel crons) can trigger a
+ * cycle from environments limited to simple GET requests:
+ *   GET /api/pilot/cycle?key=CRON_SECRET
+ * The keyed response additionally includes the new episode's videoPrompt so
+ * the render session can generate the video without guessing.
+ */
+export async function GET(req: NextRequest) {
+  const key =
+    req.nextUrl.searchParams.get('key') ||
+    req.headers.get('authorization')?.replace('Bearer ', '')
+  if (!process.env.CRON_SECRET || key !== process.env.CRON_SECRET) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  }
+  return runCycle(true)
+}
+
+async function runCycle(includePrompt: boolean) {
   try {
     const state = await getState()
     const current = state.episodes[state.episodes.length - 1]
@@ -197,8 +218,10 @@ export async function POST() {
         closedEpisode: current.number,
         winner: winner.label,
         newEpisode: episode.number,
+        newEpisodeId: episode.id,
         rendering: episode.renderStatus === 'rendering',
         renderingEnabled: hasRenderCreds(),
+        ...(includePrompt ? { videoPrompt: episode.videoPrompt, script: episode.script } : {}),
       },
     })
   } catch (err) {
