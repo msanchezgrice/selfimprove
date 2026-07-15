@@ -36,10 +36,14 @@ export async function submitImageToVideo(opts: {
       Authorization: `Key ${creds}`,
       'Content-Type': 'application/json',
     },
+    // The REST endpoint wraps generation inputs in a `params` object
+    // (422 "body.params Field required" without it).
     body: JSON.stringify({
-      model,
-      prompt: opts.prompt,
-      input_images: [{ type: 'image_url', image_url: opts.imageUrl }],
+      params: {
+        model,
+        prompt: opts.prompt,
+        input_images: [{ type: 'image_url', image_url: opts.imageUrl }],
+      },
     }),
   })
 

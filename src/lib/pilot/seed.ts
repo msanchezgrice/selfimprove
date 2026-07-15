@@ -5,10 +5,10 @@ import type { PilotState } from './types'
  * render so his look stays consistent across the season.
  */
 export const DEVON_SEED_IMAGE =
-  'https://d8j0ntlcm91z4.cloudfront.net/user_3CRsmmUcswTHKARjqkkx1XlBGHU/hf_20260715_200448_f1f8a5d2-5cef-4976-aa50-cd891682d264.png'
+  'https://d8j0ntlcm91z4.cloudfront.net/user_3CRsmmUcswTHKARjqkkx1XlBGHU/hf_20260715_205804_28d73e3b-67e5-45ec-9a92-63b27c3dbdf2.png'
 
 const EPISODE_1_VIDEO =
-  'https://d8j0ntlcm91z4.cloudfront.net/user_3CRsmmUcswTHKARjqkkx1XlBGHU/hf_20260715_201253_97335504-e2cd-424a-b4b6-984f095893d9.mp4'
+  'https://d8j0ntlcm91z4.cloudfront.net/user_3CRsmmUcswTHKARjqkkx1XlBGHU/hf_20260715_210005_1751f566-3d4e-49e9-a99b-e21d5f9c45f0.mp4'
 
 export function seedState(): PilotState {
   const now = new Date().toISOString()
