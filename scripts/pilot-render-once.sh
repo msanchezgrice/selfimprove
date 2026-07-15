@@ -36,34 +36,31 @@ SEED=$(echo "$PENDING" | python3 -c 'import sys,json; print(json.load(sys.stdin)
 
 echo "Rendering $EPISODE_ID via consumer CLI…"
 
-# Image-to-video via consumer models. Prefer kling / seedance when available;
-# fall back to whatever the CLI exposes for i2v.
+SEED_PATH="$SEED"
+if [[ "$SEED" == http://* || "$SEED" == https://* ]]; then
+  SEED_PATH=$(mktemp /tmp/pilot-seed.XXXXXX.png)
+  curl -fsSL "$SEED" -o "$SEED_PATH"
+fi
+
+# Vertical image-to-video on the funded consumer account (not platform API keys).
 OUT=$(higgsfield generate create kling2_6 \
   --prompt "$PROMPT" \
-  --start-image "$SEED" \
-  --wait --json 2>/dev/null || true)
+  --image "$SEED_PATH" \
+  --aspect_ratio 9:16 \
+  --duration 10 \
+  --wait --json)
 
 URL=$(echo "$OUT" | python3 -c '
 import sys,json
-try:
-  data=json.load(sys.stdin)
-except Exception:
-  sys.exit(0)
-# CLI --wait --json returns a job array or object
+data=json.load(sys.stdin)
 jobs = data if isinstance(data, list) else [data]
 for j in jobs:
-  for k in ("url","video_url","result_url"):
+  if j.get("result_url"):
+    print(j["result_url"]); raise SystemExit
+  for k in ("url","video_url"):
     if j.get(k):
-      print(j[k]); sys.exit(0)
-  results=j.get("results") or j.get("output") or {}
-  if isinstance(results, dict):
-    for k in ("url","raw","video"):
-      v=results.get(k)
-      if isinstance(v, str) and v.startswith("http"):
-        print(v); sys.exit(0)
-      if isinstance(v, dict) and v.get("url"):
-        print(v["url"]); sys.exit(0)
-' || true)
+      print(j[k]); raise SystemExit
+')
 
 if [[ -z "$URL" ]]; then
   echo "Render produced no URL — marking failed"
