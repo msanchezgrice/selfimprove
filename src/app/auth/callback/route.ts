@@ -40,10 +40,15 @@ export async function GET(request: Request) {
         const { data: { session } } = await supabase.auth.getSession()
         const providerToken = session?.provider_token
         if (providerToken) {
-          await admin
-            .from('org_members')
-            .update({ github_token: encrypt(providerToken) })
-            .eq('user_id', user.id)
+          try {
+            await admin
+              .from('org_members')
+              .update({ github_token: encrypt(providerToken) })
+              .eq('user_id', user.id)
+          } catch (err) {
+            // Never block sign-in on token persistence (e.g. missing TOKEN_ENCRYPTION_KEY)
+            console.error('[auth/callback] failed to persist GitHub token:', err)
+          }
         }
 
         const { data: membership } = await admin
