@@ -1,12 +1,9 @@
-import type { Metadata } from "next";
-import PilotClient from "./pilot-client";
+import { permanentRedirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "Pilot — The Show That Ships Itself",
-  description:
-    "A self-improving pilot: the community votes on the story every night and on platform features every morning. One AI writes the episodes, renders the video, and ships the code.",
-};
-
+/**
+ * Canon is now a standalone product with its own repository and Vercel
+ * project. Keep the legacy SelfImprove URL as a permanent handoff only.
+ */
 export default function PilotPage() {
-  return <PilotClient />;
+  permanentRedirect("https://makeitcanon.com");
 }
