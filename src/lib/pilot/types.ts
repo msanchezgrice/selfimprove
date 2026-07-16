@@ -4,10 +4,12 @@ export type PilotOption = {
   detail: string
   votes: number
   /**
-   * Director note for video coherence — what we should SEE Devon do
-   * if this option wins (used when writing the next episode's i2v prompt).
+   * Locked camera package — pre-approved at vote time.
+   * When this option wins, Kling films THIS action (not a post-hoc rewrite).
    */
   visualBeat?: string
+  /** Locked blocking / open-middle-close for the i2v shot if this option wins. */
+  stageDirection?: string
 }
 
 export type RenderStatus = 'none' | 'rendering' | 'done' | 'failed'

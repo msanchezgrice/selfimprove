@@ -11,6 +11,7 @@ const VOTER_COOKIE = 'pilot_voter'
 const MAX_CUSTOM_LABEL = 48
 const MAX_CUSTOM_DETAIL = 100
 const MAX_VISUAL_BEAT = 100
+const MAX_STAGE = 220
 
 function slugOptionId(label: string, existing: Set<string>): string {
   const base =
@@ -35,6 +36,7 @@ export async function POST(req: NextRequest) {
       customLabel?: string
       customDetail?: string
       customVisualBeat?: string
+      customStageDirection?: string
     }
     const { episodeId } = body
     if (!episodeId) {
@@ -44,6 +46,7 @@ export async function POST(req: NextRequest) {
     const customLabel = body.customLabel?.trim()
     const customDetail = body.customDetail?.trim()
     const customVisualBeat = body.customVisualBeat?.trim()
+    const customStageDirection = body.customStageDirection?.trim()
     if (customLabel && customLabel.length > MAX_CUSTOM_LABEL) {
       return NextResponse.json(
         { error: `custom label max ${MAX_CUSTOM_LABEL} chars` },
@@ -59,6 +62,12 @@ export async function POST(req: NextRequest) {
     if (customVisualBeat && customVisualBeat.length > MAX_VISUAL_BEAT) {
       return NextResponse.json(
         { error: `visual beat max ${MAX_VISUAL_BEAT} chars` },
+        { status: 400 }
+      )
+    }
+    if (customStageDirection && customStageDirection.length > MAX_STAGE) {
+      return NextResponse.json(
+        { error: `stage direction max ${MAX_STAGE} chars` },
         { status: 400 }
       )
     }
@@ -103,15 +112,21 @@ export async function POST(req: NextRequest) {
           if (customVisualBeat && !match.visualBeat) {
             match.visualBeat = customVisualBeat
           }
+          if (customStageDirection && !match.stageDirection) {
+            match.stageDirection = customStageDirection
+          }
         } else {
+          const safeLabel = customLabel.replace(/[^\w\s]/g, '').trim()
           votedOptionId = slugOptionId(customLabel, ids)
           episode.options.push({
             id: votedOptionId,
             label: customLabel,
             detail: customDetail || 'Audience write-in',
             visualBeat:
-              customVisualBeat ||
-              `follows through on: ${customLabel.replace(/[^\w\s]/g, '').trim()}`,
+              customVisualBeat || `follows through on: ${safeLabel}`,
+            stageDirection:
+              customStageDirection ||
+              `Fade in on Devon. He follows through on ${safeLabel || 'the audience choice'}. Hold on his face for the fade-out.`,
             votes: 1,
           })
         }

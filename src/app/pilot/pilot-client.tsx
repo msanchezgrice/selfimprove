@@ -12,6 +12,7 @@ type Option = {
   detail: string;
   votes: number;
   visualBeat?: string;
+  stageDirection?: string;
 };
 type Episode = {
   id: string;
@@ -82,6 +83,7 @@ export default function PilotClient() {
   const [customLabel, setCustomLabel] = useState("");
   const [customDetail, setCustomDetail] = useState("");
   const [customVisualBeat, setCustomVisualBeat] = useState("");
+  const [customStageDirection, setCustomStageDirection] = useState("");
   const [resetting, setResetting] = useState(false);
   const [videoReady, setVideoReady] = useState(false);
   const [videoError, setVideoError] = useState<string | null>(null);
@@ -290,6 +292,7 @@ export default function PilotClient() {
       setCustomLabel("");
       setCustomDetail("");
       setCustomVisualBeat("");
+      setCustomStageDirection("");
       setCyclePhase(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "reset failed");
@@ -325,7 +328,8 @@ export default function PilotClient() {
   async function submitCustomOption() {
     const label = customLabel.trim();
     const visual = customVisualBeat.trim();
-    if (!current || !label || !visual || yourVote || voting || pollClosed) return;
+    const stage = customStageDirection.trim();
+    if (!current || !label || !visual || !stage || yourVote || voting || pollClosed) return;
     setVoting(true);
     setError(null);
     try {
@@ -337,6 +341,7 @@ export default function PilotClient() {
           customLabel: label,
           customDetail: customDetail.trim() || undefined,
           customVisualBeat: visual,
+          customStageDirection: stage,
         }),
       });
       const data = await res.json();
@@ -349,6 +354,7 @@ export default function PilotClient() {
       setCustomLabel("");
       setCustomDetail("");
       setCustomVisualBeat("");
+      setCustomStageDirection("");
     } catch (e) {
       setError(e instanceof Error ? e.message : "vote failed");
     } finally {
@@ -765,10 +771,10 @@ export default function PilotClient() {
                 </span>
               </div>
               <p className="text-sm text-[#8b93a5] mt-1 mb-4">
-                These options are for what happens <em>next</em> — the winning
-                vote writes and films Episode {current ? current.number + 1 : "N+1"}.
-                The clip you&apos;re watching already came from last night&apos;s
-                choice. Or write in your own option below.
+                You&apos;re voting on a <em>pre-baked camera package</em> — the
+                winning option&apos;s film/stage lines are what Kling shoots for
+                Episode {current ? current.number + 1 : "N+1"}. Or write in your
+                own package below.
               </p>
               <div className="space-y-2">
                 {current?.options.map((o) => {
@@ -809,6 +815,11 @@ export default function PilotClient() {
                               film: {o.visualBeat}
                             </div>
                           )}
+                          {o.stageDirection && (
+                            <div className="text-[11px] text-[#8b93a5] mt-1 leading-snug">
+                              stage: {o.stageDirection}
+                            </div>
+                          )}
                         </div>
                         {revealed && (
                           <div className="font-mono text-sm shrink-0">{pct}%</div>
@@ -826,8 +837,8 @@ export default function PilotClient() {
                     Write your own option
                   </div>
                   <p className="text-[11px] text-[#5a6376] leading-relaxed">
-                    Seed video → your choice → next render. Devon&apos;s face
-                    stays locked; the visual beat is the action we film on him.
+                    Lock the shot before you vote: label + visual beat + stage
+                    direction. That package is what gets filmed if you win.
                   </p>
                   <input
                     type="text"
@@ -853,10 +864,23 @@ export default function PilotClient() {
                     maxLength={100}
                     className="w-full rounded-lg border border-[#0d9488]/40 bg-[#0b0d12] px-3 py-2 text-sm outline-none focus:border-[#0d9488]"
                   />
+                  <textarea
+                    value={customStageDirection}
+                    onChange={(e) => setCustomStageDirection(e.target.value.slice(0, 220))}
+                    placeholder="Stage — fade in / middle action / hold on his face (no weapons or violence)"
+                    maxLength={220}
+                    rows={2}
+                    className="w-full rounded-lg border border-[#0d9488]/40 bg-[#0b0d12] px-3 py-2 text-sm outline-none focus:border-[#0d9488] resize-none"
+                  />
                   <button
                     type="button"
                     onClick={submitCustomOption}
-                    disabled={!customLabel.trim() || !customVisualBeat.trim() || voting}
+                    disabled={
+                      !customLabel.trim() ||
+                      !customVisualBeat.trim() ||
+                      !customStageDirection.trim() ||
+                      voting
+                    }
                     className="rounded-lg bg-[#0d9488] px-3 py-2 text-sm font-semibold text-white hover:brightness-110 disabled:opacity-40"
                   >
                     {voting ? "Submitting…" : "Add & vote"}

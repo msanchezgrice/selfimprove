@@ -2,10 +2,8 @@ import type { PilotEpisode, PilotState } from './types'
 
 /**
  * Patch Notes continuity model:
- *   seed video (Ep 1) → audience chooses → render next clip
- * Character consistency is the product. Each new episode starts from Devon's
- * face (seed still, or the previous episode's last frame) so he stays the
- * same person night to night.
+ *   seed video (Ep 1) → audience chooses a LOCKED camera package → render
+ * Character consistency is the product. Face always starts from the seed still.
  */
 
 /** Canonical still of Devon — identity lock for image-to-video. */
@@ -18,10 +16,7 @@ export const DEVON_SEED_VIDEO =
 
 /**
  * Continuity inputs for rendering episode N.
- *
- * Face consistency: ALWAYS start i2v from the canonical Devon seed still.
- * Scene/wardrobe may change with the story; the face must not.
- * previousVideoUrl is kept for future last-frame experiments / tooling.
+ * Face lock: always the canonical Devon seed still.
  */
 export function continuityForEpisode(
   state: PilotState,
@@ -70,6 +65,8 @@ export function seedState(): PilotState {
             detail: 'The group chat wins. Social +, Energy −, Savings −$60',
             visualBeat:
               'grabs his jacket off the chair, pockets his phone mid-buzz, and walks toward the office exit',
+            stageDirection:
+              'Fade in on Devon at his desk under monitor glow. He reads the group chat, exhales, stands, pulls on his jacket, and walks toward the dark office door. Hold on his face in the doorway for the fade-out.',
             votes: 0,
           },
           {
@@ -78,6 +75,8 @@ export function seedState(): PilotState {
             detail: 'Discipline arc continues. Energy +, Social −',
             visualBeat:
               'closes the laptop, stands, and swings a gym bag onto his shoulder under the office lights',
+            stageDirection:
+              'Fade in on Devon ignoring another group-chat buzz. He shuts the laptop, stands, hooks a gym bag over one shoulder, and turns toward the elevators. End on his determined face.',
             votes: 0,
           },
           {
@@ -86,6 +85,8 @@ export function seedState(): PilotState {
             detail: 'Grind. Boss notices? Energy −−, Career +?',
             visualBeat:
               'silences the group chat, cracks his knuckles, and leans back into the glowing monitor',
+            stageDirection:
+              'Fade in on the buzzing phone. Devon flips it face-down, rolls his shoulders, cracks his knuckles, and leans into the ticket on screen. Close on his tired face lit by the monitor.',
             votes: 0,
           },
         ],

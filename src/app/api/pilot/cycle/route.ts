@@ -35,12 +35,14 @@ const MIN_CYCLE_GAP_MS = 15_000
 type Beat = {
   title: string
   logline: string
+  /** Reader script — must describe the LOCKED winning camera package, not invent a new one */
   script: string
-  /** Single Devon-locked visual action for i2v (verb phrase, no camera jargon) */
-  visual_action: string
-  /** Thorough cinematic stage direction connecting this shot to the previous night */
-  stage_direction: string
-  options: Array<{ label: string; detail: string; visual_beat: string }>
+  options: Array<{
+    label: string
+    detail: string
+    visual_beat: string
+    stage_direction: string
+  }>
   state_delta: {
     savings_change: number
     energy_change: number
@@ -58,17 +60,7 @@ const BEAT_SCHEMA = {
     script: {
       type: 'string',
       description:
-        'Reader script, max 90 words, present tense, at most two short spoken lines. Can mention other characters.',
-    },
-    visual_action: {
-      type: 'string',
-      description:
-        'ONE concrete action Devon performs on camera, max 20 words, present tense, verb-first. Filmable as a medium close-up of Devon alone.',
-    },
-    stage_direction: {
-      type: 'string',
-      description:
-        'Thorough stage direction for a connected TV beat (2-4 sentences): where we left him last night, how this shot opens (fade-in / match cut), blocking, eyeline, prop business, how it closes on his face for tomorrow. Max 80 words.',
+        'Reader script, max 90 words, present tense. MUST narrate the LOCKED camera package from the winning vote — do not invent a different action (no finger-guns, no new business). At most two short spoken lines. Can mention other characters for readers.',
     },
     options: {
       type: 'array',
@@ -82,10 +74,15 @@ const BEAT_SCHEMA = {
           visual_beat: {
             type: 'string',
             description:
-              'If this option wins, the Devon-locked action we should film next (max 16 words, verb phrase)',
+              'LOCKED if this wins: ONE safe Devon-only action to film (max 16 words, verb phrase). No guns/weapons/violence metaphors.',
+          },
+          stage_direction: {
+            type: 'string',
+            description:
+              'LOCKED if this wins: 2-3 sentences of open/middle/close blocking for a medium close-up of Devon alone. PG workplace comedy only. Max 60 words.',
           },
         },
-        required: ['label', 'detail', 'visual_beat'],
+        required: ['label', 'detail', 'visual_beat', 'stage_direction'],
       },
     },
     state_delta: {
@@ -100,15 +97,7 @@ const BEAT_SCHEMA = {
       required: ['savings_change', 'energy_change', 'job', 'social', 'mood'],
     },
   },
-  required: [
-    'title',
-    'logline',
-    'script',
-    'visual_action',
-    'stage_direction',
-    'options',
-    'state_delta',
-  ],
+  required: ['title', 'logline', 'script', 'options', 'state_delta'],
 }
 
 function pickWinner(episode: PilotEpisode) {
@@ -120,7 +109,7 @@ function historySummary(state: PilotState): string {
     .slice(-6)
     .map((e) => {
       const winner = e.options.find((o) => o.id === e.winnerOptionId)
-      const visual = winner?.visualBeat ? ` [visual: ${winner.visualBeat}]` : ''
+      const visual = winner?.visualBeat ? ` [filmed: ${winner.visualBeat}]` : ''
       return `Ep ${e.number} "${e.title}": ${e.logline}${winner ? ` → audience chose: ${winner.label}${visual}` : ' (poll open)'}`
     })
     .join('\n')
@@ -207,10 +196,17 @@ async function runCycle(includePrompt: boolean) {
     const winner = pickWinner(current)
     current.winnerOptionId = winner.id
 
+    const lockedVisual =
+      winner.visualBeat?.trim() ||
+      `follows through on: ${winner.label.replace(/[^\w\s]/g, '').trim()}`
+    const lockedStage =
+      winner.stageDirection?.trim() ||
+      `Fade in on Devon. He ${lockedVisual.replace(/^devon\s+/i, '')}. Hold on his face for the fade-out.`
+
     const beat = await callClaude<Beat>({
       prompt: [
         `You are the nightly writer for "Patch Notes", a vertical-video life-sim drama.`,
-        `The audience votes each night on what Devon does next; their choice becomes the next episode.`,
+        `The audience votes on a PRE-APPROVED camera package. You do NOT invent the shot — you narrate the locked package and open the next poll.`,
         ``,
         `CHARACTER STATE`,
         `Name: ${state.character.name} (26)`,
@@ -224,26 +220,23 @@ async function runCycle(includePrompt: boolean) {
         historySummary(state),
         ``,
         `THE AUDIENCE JUST CHOSE: "${winner.label}" (${winner.detail})`,
-        winner.visualBeat
-          ? `DIRECTOR NOTE FROM THE WINNING VOTE (honor this on camera): ${winner.visualBeat}`
-          : `No director note — invent a Devon-locked visual_action that clearly shows the choice's consequence.`,
+        `LOCKED VISUAL (film this exactly — do not replace): ${lockedVisual}`,
+        `LOCKED STAGE DIRECTION (honor this blocking): ${lockedStage}`,
         ``,
-        `Write the next episode beat. Rules:`,
-        `- Grounded, relatable, a little funny. PG-13. No melodrama.`,
-        `- Treat nights as consecutive scenes in ONE show — stage_direction must bridge from the previous episode's ending into this shot (match cut / eyeline / prop carry).`,
-        `- Consequences must follow from the choice AND the character state (money, energy, friendships compound).`,
-        `- The script can mention Sam/Marcus/etc for readers.`,
-        `- visual_action MUST be filmable as a medium close-up of Devon ALONE. Do NOT put other named characters in visual_action.`,
-        `- stage_direction is thorough blocking for the camera: open (fade-in), middle action, close (fade-out on his face for tomorrow).`,
-        `- visual_action must literally enact the audience's choice, not a generic "sips beer looking sad".`,
-        `- Each option needs a visual_beat so the next night's video stays coherent if that option wins.`,
+        `Write the episode that results from that choice. Rules:`,
+        `- Reader script MUST describe the locked visual/stage — no alternate business, no "finger-guns", no weapons, no violence metaphors.`,
+        `- Soft PG workplace/life comedy. Grounded, relatable, a little funny.`,
+        `- Consequences must follow from the choice AND character state.`,
+        `- For EACH of the 3 next options, pre-bake a full camera package: visual_beat + stage_direction. Those packages are what get filmed if that option wins tomorrow — make them specific and safe.`,
+        `- visual_beat / stage_direction: Devon alone in medium close-up; no other named characters on camera.`,
+        `- NEVER put guns, weapons, shooting, fighting, blood, or violent jokes in options.`,
         `- Savings changes must be realistic for the action taken.`,
       ].join('\n'),
       schema: BEAT_SCHEMA,
       schemaName: 'next_episode_beat',
-      schemaDescription: 'The next episode of the life-sim drama',
+      schemaDescription: 'Narrate the locked vote and open tomorrow\'s poll with pre-baked camera packages',
       maxTokens: 2048,
-      temperature: 0.9,
+      temperature: 0.7,
     })
 
     state.character.savings = Math.round(state.character.savings + beat.state_delta.savings_change)
@@ -255,16 +248,16 @@ async function runCycle(includePrompt: boolean) {
     state.character.social = beat.state_delta.social
     state.character.mood = beat.state_delta.mood
 
+    // Kling uses ONLY the pre-voted camera package — never Claude's free invention.
     const videoPrompt = buildCoherentVideoPrompt({
       script: beat.script,
       mood: beat.state_delta.mood,
-      visualBeat: beat.visual_action || winner.visualBeat,
-      stageDirection: beat.stage_direction,
+      visualBeat: lockedVisual,
+      stageDirection: lockedStage,
       continuing: state.episodes.some((e) => e.videoUrl),
     })
 
     const renderMode = getRenderMode()
-    // Face lock: always i2v from the canonical Devon seed still.
     const continuityStill = DEVON_SEED_IMAGE
 
     const episode: PilotEpisode = {
@@ -283,6 +276,7 @@ async function runCycle(includePrompt: boolean) {
         label: o.label,
         detail: o.detail,
         visualBeat: o.visual_beat,
+        stageDirection: o.stage_direction,
         votes: 0,
       })),
       winnerOptionId: null,
@@ -397,7 +391,8 @@ async function runCycle(includePrompt: boolean) {
               seedImageUrl: continuity.startImageUrl,
               startImageUrl: continuity.startImageUrl,
               previousVideoUrl: continuity.previousVideoUrl,
-              visualAction: beat.visual_action,
+              visualAction: lockedVisual,
+              stageDirection: lockedStage,
             }
           : {}),
       },
