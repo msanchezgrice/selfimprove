@@ -69,13 +69,8 @@ body {
 }
 
 .pilot-video-fade {
-  opacity: 0;
-  transition: opacity 0.55s ease;
-}
-
-.pilot-video-fade.is-ready {
   opacity: 1;
-  animation: pilot-fade-in 0.55s ease both;
+  transition: opacity 0.55s ease;
 }
 
 .pilot-video-fade.is-fading-out {

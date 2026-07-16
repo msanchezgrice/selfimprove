@@ -194,33 +194,40 @@ export default function PilotClient() {
     setClipEnded(false);
     const el = videoRef.current;
     if (!el) return;
+    // Autoplay may be blocked — controls still work once ready.
     el.play().catch(() => undefined);
   }
 
-  // Reset ready state when the active episode changes; catch cache hits where
-  // canplay already fired before React attached handlers.
+  // When the episode/src changes, clear error state and recover from missed
+  // media events (cache hits, slow first byte on large mp4s).
   useEffect(() => {
-    setVideoReady(false);
+    if (!viewing?.videoUrl) {
+      setVideoReady(false);
+      return;
+    }
+
     setVideoError(null);
     setFadingOut(false);
     setClipEnded(false);
+    // Keep prior ready=true only if we're not switching clips; otherwise hide
+    // the spinner as soon as the element has data.
+    setVideoReady(false);
 
     let cancelled = false;
     const check = () => {
       if (cancelled) return;
       const el = videoRef.current;
       if (!el) return;
-      // HAVE_CURRENT_DATA or better — enough to show the player
       if (el.readyState >= 2) markVideoReady();
     };
 
-    const t0 = window.setTimeout(check, 0);
-    const t1 = window.setTimeout(check, 250);
+    const t0 = window.setTimeout(check, 50);
+    const t1 = window.setTimeout(check, 300);
     const t2 = window.setTimeout(check, 1000);
-    // Fail open: show player even if events never fire
+    // Fail open quickly — never leave the user on an infinite spinner.
     const t3 = window.setTimeout(() => {
       if (!cancelled) setVideoReady(true);
-    }, 3000);
+    }, 1200);
 
     return () => {
       cancelled = true;
@@ -229,7 +236,7 @@ export default function PilotClient() {
       window.clearTimeout(t2);
       window.clearTimeout(t3);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-run on episode identity
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewing?.id, viewing?.videoUrl]);
 
   function onVideoTimeUpdate() {
@@ -478,19 +485,11 @@ export default function PilotClient() {
               {viewing?.videoUrl ? (
                 <>
                   {!videoReady && !videoError && (
-                    <div className="absolute inset-0 z-[5] flex flex-col items-center justify-center gap-3 bg-[#0b0d12]">
+                    <div className="absolute inset-0 z-[5] flex flex-col items-center justify-center gap-3 bg-[#0b0d12]/80 pointer-events-none">
                       <div className="pilot-spinner" aria-hidden />
                       <div className="text-xs font-mono text-[#ffb347]">
                         Loading episode {viewing.number}…
                       </div>
-                      <a
-                        href={viewing.videoUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-[11px] text-[#8fb6ff] underline"
-                      >
-                        Open video directly
-                      </a>
                     </div>
                   )}
                   {videoError && (
@@ -547,7 +546,7 @@ export default function PilotClient() {
                     </div>
                   )}
                   <video
-                    key={viewing.id}
+                    key={viewing.videoUrl || viewing.id}
                     ref={videoRef}
                     src={viewing.videoUrl}
                     controls
@@ -562,10 +561,11 @@ export default function PilotClient() {
                     onPlay={() => {
                       setFadingOut(false);
                       setClipEnded(false);
+                      setVideoReady(true);
                     }}
                     className={`w-full aspect-[9/16] object-cover bg-black pilot-video-fade ${
-                      videoReady ? "is-ready" : ""
-                    } ${fadingOut && !clipEnded ? "is-fading-out" : ""}`}
+                      fadingOut && !clipEnded ? "is-fading-out" : ""
+                    }`}
                   />
                 </>
               ) : (
