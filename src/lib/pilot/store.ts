@@ -1,5 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
-import { seedState } from './seed'
+import { seedState, upgradePilotState } from './seed'
 import type { PilotState, PublicState } from './types'
 
 const BUCKET = 'pilot'
@@ -52,10 +52,11 @@ export async function saveState(state: PilotState): Promise<void> {
 
 async function loadVersioned(): Promise<Versioned> {
   const fromDb = await readFromDb()
-  if (fromDb) return fromDb
+  if (fromDb) return { ...fromDb, state: upgradePilotState(fromDb.state) }
 
   const fromStorage = await readFromStorage()
   if (fromStorage) {
+    upgradePilotState(fromStorage)
     await writeToDb(fromStorage, null).catch(() => undefined)
     return { state: fromStorage, version: null }
   }

@@ -30,9 +30,12 @@ function authFromEnv(): HiggsfieldAuth | null {
   return {
     accessToken: accessToken || '',
     refreshToken: refreshToken || '',
-    accessExpiresAt: accessToken
-      ? new Date(Date.now() + 50 * 60_000).toISOString()
-      : new Date(0).toISOString(),
+    // Environment access tokens do not carry a trustworthy expiry timestamp.
+    // If a refresh token exists, refresh immediately rather than blessing a
+    // potentially stale access token for another 50 minutes.
+    accessExpiresAt: refreshToken
+      ? new Date(0).toISOString()
+      : new Date(Date.now() + 50 * 60_000).toISOString(),
   }
 }
 
@@ -110,20 +113,99 @@ async function apiFetch(
   return fetch(`${API_BASE}${path}`, { ...init, headers })
 }
 
-async function uploadImageFromUrl(token: string, imageUrl: string): Promise<string> {
-  const imgRes = await fetch(imageUrl, { cache: 'no-store' })
-  if (!imgRes.ok) {
-    throw new Error(`higgsfield consumer: failed to fetch start image ${imgRes.status}`)
-  }
-  const buf = Buffer.from(await imgRes.arrayBuffer())
-  const contentType = imgRes.headers.get('content-type')?.split(';')[0] || 'image/png'
-  const ext = contentType.includes('jpeg') || contentType.includes('jpg') ? 'jpg' : 'png'
-  const filename = `pilot-start.${ext}`
+type MediaKind = 'image' | 'video' | 'audio'
+type ConsumerMedia = { id: string; role: string }
+type ConsumerReferenceOptions = {
+  imageUrl: string
+  startImageUrl?: string | null
+  videoReferenceUrl?: string | null
+  audioReferenceUrl?: string | null
+}
 
-  const initRes = await apiFetch(token, '/agents/uploads?type=image', {
+export function buildConsumerReferencePlan(
+  model: string,
+  opts: ConsumerReferenceOptions
+): Array<{ url: string; kind: MediaKind; role: string }> {
+  const seedance = model === 'seedance_2_0' || model === 'seedance_2_0_mini'
+  if (!seedance) {
+    return [{ url: opts.startImageUrl || opts.imageUrl, kind: 'image', role: 'input_image' }]
+  }
+
+  const references: Array<{ url: string; kind: MediaKind; role: string }> = [
+    {
+      url: opts.startImageUrl || opts.imageUrl,
+      kind: 'image',
+      role: 'start_image',
+    },
+  ]
+  if (opts.videoReferenceUrl) {
+    references.push({ url: opts.videoReferenceUrl, kind: 'video', role: 'video' })
+  }
+  if (opts.audioReferenceUrl) {
+    references.push({ url: opts.audioReferenceUrl, kind: 'audio', role: 'audio' })
+  }
+  return references
+}
+
+export function buildConsumerJobPayload(
+  model: string,
+  prompt: string,
+  duration: 5 | 10,
+  medias: ConsumerMedia[]
+) {
+  const seedance = model === 'seedance_2_0' || model === 'seedance_2_0_mini'
+  return {
+    job_set_type: model,
+    params: seedance
+      ? {
+          prompt,
+          aspect_ratio: '9:16',
+          duration,
+          resolution: '720p',
+          ...(model === 'seedance_2_0' ? { mode: 'std' } : {}),
+          genre: 'comedy',
+          bitrate_mode: 'standard',
+          generate_audio: true,
+        }
+      : {
+          prompt,
+          aspect_ratio: '9:16',
+          duration,
+          sound: true,
+        },
+    medias,
+  }
+}
+
+async function uploadMediaFromUrl(
+  token: string,
+  mediaUrl: string,
+  kind: MediaKind
+): Promise<string> {
+  const mediaRes = await fetch(mediaUrl, { cache: 'no-store' })
+  if (!mediaRes.ok) {
+    throw new Error(`higgsfield consumer: failed to fetch ${kind} ${mediaRes.status}`)
+  }
+  const buf = Buffer.from(await mediaRes.arrayBuffer())
+  const fallbackType = kind === 'video' ? 'video/mp4' : kind === 'audio' ? 'audio/wav' : 'image/png'
+  const contentType = mediaRes.headers.get('content-type')?.split(';')[0] || fallbackType
+  const ext = contentType.includes('jpeg') || contentType.includes('jpg')
+    ? 'jpg'
+    : contentType.includes('mp4')
+      ? 'mp4'
+      : contentType.includes('mpeg')
+        ? 'mp3'
+        : contentType.includes('ogg')
+          ? 'ogg'
+          : contentType.includes('wav')
+            ? 'wav'
+            : 'png'
+  const filename = `pilot-${kind}.${ext}`
+
+  const initRes = await apiFetch(token, `/agents/uploads?type=${kind}`, {
     method: 'POST',
     body: JSON.stringify({
-      type: 'image',
+      type: kind,
       length: buf.length,
       filename,
       content_type: contentType,
@@ -148,7 +230,7 @@ async function uploadImageFromUrl(token: string, imageUrl: string): Promise<stri
     throw new Error(`higgsfield consumer: upload PUT ${putRes.status}: ${text.slice(0, 200)}`)
   }
 
-  const confRes = await apiFetch(token, `/agents/uploads/${initJson.id}/confirm?type=image`, {
+  const confRes = await apiFetch(token, `/agents/uploads/${initJson.id}/confirm?type=${kind}`, {
     method: 'POST',
   })
   if (!confRes.ok) {
@@ -161,24 +243,28 @@ async function uploadImageFromUrl(token: string, imageUrl: string): Promise<stri
 
 export async function submitConsumerImageToVideo(
   state: PilotState,
-  opts: { prompt: string; imageUrl: string; duration?: 5 | 10 }
+  opts: ConsumerReferenceOptions & {
+    prompt: string
+    duration?: 5 | 10
+  }
 ): Promise<{ requestId: string; authChanged: boolean }> {
   const { token, authChanged } = await ensureConsumerAuth(state)
-  // Always lock identity to the provided still (caller should pass Devon seed).
-  const mediaId = await uploadImageFromUrl(token, opts.imageUrl)
+  const model = process.env.HIGGSFIELD_CONSUMER_MODEL || 'seedance_2_0'
+  const medias: ConsumerMedia[] = []
+
+  // Live Seedance validation rejects a generic image plus a separate start
+  // image as duplicate start_image roles. The pure plan is regression-tested
+  // before any uploads or credits are involved.
+  for (const reference of buildConsumerReferencePlan(model, opts)) {
+    const id = await uploadMediaFromUrl(token, reference.url, reference.kind)
+    medias.push({ id, role: reference.role })
+  }
 
   const res = await apiFetch(token, '/agents/jobs', {
     method: 'POST',
-    body: JSON.stringify({
-      job_set_type: process.env.HIGGSFIELD_CONSUMER_MODEL || 'kling2_6',
-      params: {
-        prompt: opts.prompt,
-        aspect_ratio: '9:16',
-        duration: opts.duration ?? 10,
-        sound: true,
-      },
-      medias: [{ id: mediaId, role: 'input_image' }],
-    }),
+    body: JSON.stringify(
+      buildConsumerJobPayload(model, opts.prompt, opts.duration ?? 10, medias)
+    ),
   })
   if (!res.ok) {
     const text = await res.text().catch(() => '')

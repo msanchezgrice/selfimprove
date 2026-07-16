@@ -4,6 +4,9 @@ import {
   toPublicState,
   yourVoteFor,
 } from '@/lib/pilot/store'
+import { continuityForWriteIn } from '@/lib/pilot/seed'
+import { sanitizeForVideo } from '@/lib/pilot/video-prompt'
+import type { PilotOption } from '@/lib/pilot/types'
 
 export const dynamic = 'force-dynamic'
 
@@ -47,6 +50,12 @@ export async function POST(req: NextRequest) {
     const customDetail = body.customDetail?.trim()
     const customVisualBeat = body.customVisualBeat?.trim()
     const customStageDirection = body.customStageDirection?.trim()
+    const safeVisualBeat = customVisualBeat
+      ? sanitizeForVideo(customVisualBeat)
+      : undefined
+    const safeStageDirection = customStageDirection
+      ? sanitizeForVideo(customStageDirection)
+      : undefined
     if (customLabel && customLabel.length > MAX_CUSTOM_LABEL) {
       return NextResponse.json(
         { error: `custom label max ${MAX_CUSTOM_LABEL} chars` },
@@ -109,26 +118,29 @@ export async function POST(req: NextRequest) {
         if (match) {
           votedOptionId = match.id
           match.votes += 1
-          if (customVisualBeat && !match.visualBeat) {
-            match.visualBeat = customVisualBeat
+          if (safeVisualBeat && !match.visualBeat) {
+            match.visualBeat = safeVisualBeat
           }
-          if (customStageDirection && !match.stageDirection) {
-            match.stageDirection = customStageDirection
+          if (safeStageDirection && !match.stageDirection) {
+            match.stageDirection = safeStageDirection
           }
+          match.continuity ||= continuityForWriteIn(draft, episode, match)
         } else {
           const safeLabel = customLabel.replace(/[^\w\s]/g, '').trim()
           votedOptionId = slugOptionId(customLabel, ids)
-          episode.options.push({
+          const writeIn: PilotOption = {
             id: votedOptionId,
             label: customLabel,
             detail: customDetail || 'Audience write-in',
             visualBeat:
-              customVisualBeat || `follows through on: ${safeLabel}`,
+              safeVisualBeat || `follows through on: ${safeLabel}`,
             stageDirection:
-              customStageDirection ||
-              `Fade in on Devon. He follows through on ${safeLabel || 'the audience choice'}. Hold on his face for the fade-out.`,
+              safeStageDirection ||
+              `Match the current final frame. Devon follows through on ${safeLabel || 'the audience choice'}. Hold the exact final body, prop, and motion state.`,
             votes: 1,
-          })
+          }
+          writeIn.continuity = continuityForWriteIn(draft, episode, writeIn)
+          episode.options.push(writeIn)
         }
       } else {
         const option = episode.options.find((o) => o.id === body.optionId)

@@ -16,6 +16,20 @@ export async function POST() {
     if (prev?.higgsfieldAuth) {
       seeded.higgsfieldAuth = prev.higgsfieldAuth
     }
+    // A season reset clears story progress, not the approved production assets
+    // that keep Devon recognizable and sounding like the same character.
+    const previousDevon = prev?.productionBible?.characters.devon
+    const seededDevon = seeded.productionBible?.characters.devon
+    if (previousDevon && seededDevon) {
+      seededDevon.identityReferenceUrl =
+        previousDevon.identityReferenceUrl || seededDevon.identityReferenceUrl
+      seededDevon.identityElementId =
+        previousDevon.identityElementId || seededDevon.identityElementId
+      seededDevon.voice.referenceUrl =
+        previousDevon.voice.referenceUrl || seededDevon.voice.referenceUrl
+      seededDevon.voice.voiceId =
+        previousDevon.voice.voiceId || seededDevon.voice.voiceId
+    }
     await saveState(seeded)
     return NextResponse.json({
       ...toPublicState(seeded),

@@ -13,6 +13,14 @@ type Option = {
   votes: number;
   visualBeat?: string;
   stageDirection?: string;
+  continuity?: {
+    opening: { location: string; motion: string };
+    closing: { location: string; motion: string };
+    transition: {
+      mode: "continuous" | "match-on-action" | "time-bridge";
+      description: string;
+    };
+  };
 };
 type Episode = {
   id: string;
@@ -87,7 +95,6 @@ export default function PilotClient() {
   const [resetting, setResetting] = useState(false);
   const [videoReady, setVideoReady] = useState(false);
   const [videoError, setVideoError] = useState<string | null>(null);
-  const [fadingOut, setFadingOut] = useState(false);
   const [clipEnded, setClipEnded] = useState(false);
   const playerRef = useRef<HTMLDivElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -182,7 +189,6 @@ export default function PilotClient() {
   function selectEpisode(id: string) {
     setVideoReady(false);
     setVideoError(null);
-    setFadingOut(false);
     setClipEnded(false);
     setViewingId(id);
     requestAnimationFrame(() => {
@@ -209,7 +215,6 @@ export default function PilotClient() {
     }
 
     setVideoError(null);
-    setFadingOut(false);
     setClipEnded(false);
     // Keep prior ready=true only if we're not switching clips; otherwise hide
     // the spinner as soon as the element has data.
@@ -238,18 +243,9 @@ export default function PilotClient() {
       window.clearTimeout(t2);
       window.clearTimeout(t3);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewing?.id, viewing?.videoUrl]);
 
-  function onVideoTimeUpdate() {
-    const el = videoRef.current;
-    if (!el || !el.duration || !Number.isFinite(el.duration)) return;
-    // Soft fade-out in the last ~0.7s
-    setFadingOut(el.currentTime >= el.duration - 0.7);
-  }
-
   function onVideoEnded() {
-    setFadingOut(true);
     setClipEnded(true);
   }
 
@@ -539,7 +535,6 @@ export default function PilotClient() {
                         type="button"
                         onClick={() => {
                           setClipEnded(false);
-                          setFadingOut(false);
                           const el = videoRef.current;
                           if (!el) return;
                           el.currentTime = 0;
@@ -561,17 +556,13 @@ export default function PilotClient() {
                     onLoadedData={markVideoReady}
                     onCanPlay={markVideoReady}
                     onPlaying={markVideoReady}
-                    onTimeUpdate={onVideoTimeUpdate}
                     onEnded={onVideoEnded}
                     onError={onVideoError}
                     onPlay={() => {
-                      setFadingOut(false);
                       setClipEnded(false);
                       setVideoReady(true);
                     }}
-                    className={`w-full aspect-[9/16] object-cover bg-black pilot-video-fade ${
-                      fadingOut && !clipEnded ? "is-fading-out" : ""
-                    }`}
+                    className="w-full aspect-[9/16] object-cover bg-black"
                   />
                 </>
               ) : (
@@ -586,7 +577,7 @@ export default function PilotClient() {
                         Rendering episode {viewing.number}…
                       </div>
                       <div className="text-[11px] text-[#5a6376] max-w-xs">
-                        Consumer render usually takes 1–3 minutes. This page
+                        Higgsfield render usually takes 1–3 minutes. This page
                         updates when the clip attaches.
                       </div>
                     </>
@@ -772,9 +763,11 @@ export default function PilotClient() {
               </div>
               <p className="text-sm text-[#8b93a5] mt-1 mb-4">
                 You&apos;re voting on a <em>pre-baked camera package</em> — the
-                winning option&apos;s film/stage lines are what Kling shoots for
+                winning option&apos;s locked start, action, transition, and final
+                frame are what Seedance 2 renders for
                 Episode {current ? current.number + 1 : "N+1"}. Or write in your
-                own package below.
+                own action below; the continuity supervisor normalizes it before
+                it can win.
               </p>
               <div className="space-y-2">
                 {current?.options.map((o) => {
@@ -820,6 +813,13 @@ export default function PilotClient() {
                               stage: {o.stageDirection}
                             </div>
                           )}
+                          {o.continuity && (
+                            <div className="text-[10px] text-[#ffb347]/90 mt-1 font-mono">
+                              continuity: {o.continuity.opening.location} →{" "}
+                              {o.continuity.closing.location} ·{" "}
+                              {o.continuity.transition.mode}
+                            </div>
+                          )}
                         </div>
                         {revealed && (
                           <div className="font-mono text-sm shrink-0">{pct}%</div>
@@ -837,8 +837,10 @@ export default function PilotClient() {
                     Write your own option
                   </div>
                   <p className="text-[11px] text-[#5a6376] leading-relaxed">
-                    Lock the shot before you vote: label + visual beat + stage
-                    direction. That package is what gets filmed if you win.
+                    Lock the action before you vote: label + visual beat + exact
+                    opening/action/final-pose stage direction. The server anchors
+                    it to the current final frame and adds a visible travel bridge
+                    if the location changes.
                   </p>
                   <input
                     type="text"
@@ -867,7 +869,7 @@ export default function PilotClient() {
                   <textarea
                     value={customStageDirection}
                     onChange={(e) => setCustomStageDirection(e.target.value.slice(0, 220))}
-                    placeholder="Stage — fade in / middle action / hold on his face (no weapons or violence)"
+                    placeholder="Stage — continue current pose / action / exact final pose + props (no fades or violence)"
                     maxLength={220}
                     rows={2}
                     className="w-full rounded-lg border border-[#0d9488]/40 bg-[#0b0d12] px-3 py-2 text-sm outline-none focus:border-[#0d9488] resize-none"
@@ -937,7 +939,7 @@ export default function PilotClient() {
                   Render mode is <code>session</code> — set{" "}
                   <code className="text-[#8b93a5]">HF_REFRESH_TOKEN</code> on
                   Vercel so &quot;Run one night&quot; submits video itself.
-                  Legacy CLI path:{" "}
+                  Official continuity CLI path:{" "}
                   <code className="text-[#8b93a5]">
                     GET /api/pilot/render?key=…&amp;pending=1
                   </code>{" "}

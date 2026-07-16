@@ -17,6 +17,15 @@ import {
 } from '@/lib/pilot/higgsfield-consumer'
 import { DEVON_SEED_IMAGE, continuityForEpisode } from '@/lib/pilot/seed'
 import { buildCoherentVideoPrompt } from '@/lib/pilot/video-prompt'
+import {
+  boundary,
+  continuityAdvanceBlocker,
+  continuityForOption,
+  formatBoundary,
+  normalizeScreenDirection,
+  productionBibleFor,
+  shotContinuity,
+} from '@/lib/pilot/continuity'
 import type { PilotEpisode, PilotState } from '@/lib/pilot/types'
 
 export const dynamic = 'force-dynamic'
@@ -42,6 +51,21 @@ type Beat = {
     detail: string
     visual_beat: string
     stage_direction: string
+    dialogue_text: string
+    dialogue_delivery: string
+    transition_mode: 'continuous' | 'match-on-action' | 'time-bridge'
+    transition_description: string
+    end_state: {
+      location: string
+      position: string
+      facing: string
+      screen_direction: string
+      motion: string
+      props: string[]
+      lighting: string
+      camera: string
+      expression: string
+    }
   }>
   state_delta: {
     savings_change: number
@@ -81,8 +105,73 @@ const BEAT_SCHEMA = {
             description:
               'LOCKED if this wins: 2-3 sentences of open/middle/close blocking for a medium close-up of Devon alone. PG workplace comedy only. Max 60 words.',
           },
+          dialogue_text: {
+            type: 'string',
+            description:
+              'Optional exact Devon dialogue, max 10 words. Empty string means he stays silent.',
+          },
+          dialogue_delivery: {
+            type: 'string',
+            description:
+              'If dialogue_text is present, a short delivery note. Otherwise empty string.',
+          },
+          transition_mode: {
+            type: 'string',
+            enum: ['continuous', 'match-on-action', 'time-bridge'],
+            description:
+              'continuous for one reachable space; match-on-action for a camera/location cut that preserves motion; time-bridge for a longer journey shown in three shots.',
+          },
+          transition_description: {
+            type: 'string',
+            description:
+              'Specific limb/prop/screen-direction match through the cut, or exact visible travel bridge. Max 30 words.',
+          },
+          end_state: {
+            type: 'object',
+            description:
+              'Exact visible final frame after this option. This becomes the next clip boundary.',
+            properties: {
+              location: { type: 'string', description: 'Specific location/zone visible in final frame' },
+              position: { type: 'string', description: 'Exact body position and placement in frame' },
+              facing: { type: 'string', description: 'Exact body/head orientation' },
+              screen_direction: {
+                type: 'string',
+                enum: ['camera-left', 'camera-right', 'toward-camera', 'away-from-camera', 'stationary'],
+              },
+              motion: { type: 'string', description: 'Motion still in progress in the final frame' },
+              props: {
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Every visible/carried prop with side, hand, and state',
+              },
+              lighting: { type: 'string', description: 'Specific practical light and color continuity' },
+              camera: { type: 'string', description: 'Framing, height, and side of the 180-degree axis' },
+              expression: { type: 'string', description: 'Readable final facial expression' },
+            },
+            required: [
+              'location',
+              'position',
+              'facing',
+              'screen_direction',
+              'motion',
+              'props',
+              'lighting',
+              'camera',
+              'expression',
+            ],
+          },
         },
-        required: ['label', 'detail', 'visual_beat', 'stage_direction'],
+        required: [
+          'label',
+          'detail',
+          'visual_beat',
+          'stage_direction',
+          'dialogue_text',
+          'dialogue_delivery',
+          'transition_mode',
+          'transition_description',
+          'end_state',
+        ],
       },
     },
     state_delta: {
@@ -110,7 +199,10 @@ function historySummary(state: PilotState): string {
     .map((e) => {
       const winner = e.options.find((o) => o.id === e.winnerOptionId)
       const visual = winner?.visualBeat ? ` [filmed: ${winner.visualBeat}]` : ''
-      return `Ep ${e.number} "${e.title}": ${e.logline}${winner ? ` → audience chose: ${winner.label}${visual}` : ' (poll open)'}`
+      const boundaryState = e.continuity
+        ? ` [ends: ${formatBoundary(e.continuity.closing)}]`
+        : ''
+      return `Ep ${e.number} "${e.title}": ${e.logline}${winner ? ` → audience chose: ${winner.label}${visual}` : ' (poll open)'}${boundaryState}`
     })
     .join('\n')
 }
@@ -193,15 +285,29 @@ async function runCycle(includePrompt: boolean) {
       }
     }
 
+    const continuityBlocker = continuityAdvanceBlocker(current)
+    if (continuityBlocker) {
+      return NextResponse.json(
+        {
+          ...toPublicState(state),
+          error: `continuity gate: ${continuityBlocker}`,
+        },
+        { status: 409 }
+      )
+    }
+
     const winner = pickWinner(current)
     current.winnerOptionId = winner.id
 
-    const lockedVisual =
-      winner.visualBeat?.trim() ||
-      `follows through on: ${winner.label.replace(/[^\w\s]/g, '').trim()}`
+    const lockedContinuity = continuityForOption(current, winner)
+    const lockedVisual = lockedContinuity.action
     const lockedStage =
       winner.stageDirection?.trim() ||
-      `Fade in on Devon. He ${lockedVisual.replace(/^devon\s+/i, '')}. Hold on his face for the fade-out.`
+      `Match the prior final frame. Devon ${lockedVisual.replace(/^devon\s+/i, '')}. Hold the exact final pose and prop state.`
+    const bible = productionBibleFor(state)
+    state.productionBible ||= bible
+    const devonBible = bible.characters.devon
+    const nextOptionOpening = lockedContinuity.closing
 
     const beat = await callClaude<Beat>({
       prompt: [
@@ -215,6 +321,9 @@ async function runCycle(includePrompt: boolean) {
         `Energy: ${state.character.energy}%`,
         `Social: ${state.character.social}`,
         `Mood: ${state.character.mood}`,
+        `Canonical appearance: ${devonBible.face}; ${devonBible.hair}; ${devonBible.body}`,
+        `Canonical wardrobe: ${devonBible.wardrobe}`,
+        `Canonical voice: ${devonBible.voice.description}`,
         ``,
         `RECENT EPISODES`,
         historySummary(state),
@@ -222,12 +331,23 @@ async function runCycle(includePrompt: boolean) {
         `THE AUDIENCE JUST CHOSE: "${winner.label}" (${winner.detail})`,
         `LOCKED VISUAL (film this exactly — do not replace): ${lockedVisual}`,
         `LOCKED STAGE DIRECTION (honor this blocking): ${lockedStage}`,
+        `LOCKED OPENING FRAME: ${formatBoundary(lockedContinuity.opening)}`,
+        `LOCKED FINAL FRAME: ${formatBoundary(lockedContinuity.closing)}`,
+        lockedContinuity.dialogue
+          ? `LOCKED DIALOGUE: "${lockedContinuity.dialogue.text}" (${lockedContinuity.dialogue.delivery})`
+          : `LOCKED DIALOGUE: Devon is silent`,
         ``,
         `Write the episode that results from that choice. Rules:`,
         `- Reader script MUST describe the locked visual/stage — no alternate business, no "finger-guns", no weapons, no violence metaphors.`,
+        `- The first visible moment must match LOCKED OPENING FRAME. The final visible moment must match LOCKED FINAL FRAME. No teleporting, reset, wardrobe change, prop jump, or reversed screen direction.`,
+        `- If LOCKED DIALOGUE is silent, do not invent spoken dialogue. If present, reproduce it verbatim and do not add another Devon line.`,
         `- Soft PG workplace/life comedy. Grounded, relatable, a little funny.`,
         `- Consequences must follow from the choice AND character state.`,
         `- For EACH of the 3 next options, pre-bake a full camera package: visual_beat + stage_direction. Those packages are what get filmed if that option wins tomorrow — make them specific and safe.`,
+        `- Every next option begins from this exact boundary: ${formatBoundary(nextOptionOpening)}`,
+        `- For each end_state, keep Devon's canonical wardrobe and hair unchanged. Track exact location, body position, facing, screen direction, motion-in-progress, every prop/hand, lighting, axis side, and expression.`,
+        `- In continuous mode, a location change must be visibly traversable within one 10-second take. Longer travel requires an explicit match-on-action or time-bridge; never jump locations without showing the transition.`,
+        `- Set transition_mode: continuous for one reachable space; match-on-action when a camera/location change can preserve the exact limb/prop motion; time-bridge for a longer journey that needs departure, travel, and arrival shots. Never teleport.`,
         `- visual_beat / stage_direction: Devon alone in medium close-up; no other named characters on camera.`,
         `- NEVER put guns, weapons, shooting, fighting, blood, or violent jokes in options.`,
         `- Savings changes must be realistic for the action taken.`,
@@ -248,17 +368,21 @@ async function runCycle(includePrompt: boolean) {
     state.character.social = beat.state_delta.social
     state.character.mood = beat.state_delta.mood
 
-    // Kling uses ONLY the pre-voted camera package — never Claude's free invention.
+    // Higgsfield uses ONLY the pre-voted package — never Claude's free invention.
     const videoPrompt = buildCoherentVideoPrompt({
       script: beat.script,
       mood: beat.state_delta.mood,
       visualBeat: lockedVisual,
       stageDirection: lockedStage,
       continuing: state.episodes.some((e) => e.videoUrl),
+      continuity: lockedContinuity,
+      productionBible: bible,
+      hasIdentityImageReference: !current.lastFrameUrl,
+      hasPreviousVideoReference: Boolean(current.videoUrl),
+      hasVoiceReference: Boolean(devonBible.voice.referenceUrl),
     })
 
     const renderMode = getRenderMode()
-    const continuityStill = DEVON_SEED_IMAGE
 
     const episode: PilotEpisode = {
       id: `ep-${current.number + 1}`,
@@ -268,20 +392,56 @@ async function runCycle(includePrompt: boolean) {
       script: beat.script,
       videoPrompt,
       videoUrl: null,
-      posterUrl: continuityStill,
+      posterUrl: current.lastFrameUrl || current.posterUrl || DEVON_SEED_IMAGE,
+      lastFrameUrl: null,
       renderStatus: 'none',
       hfRequestId: null,
-      options: beat.options.map((o, i) => ({
-        id: ['a', 'b', 'c'][i],
-        label: o.label,
-        detail: o.detail,
-        visualBeat: o.visual_beat,
-        stageDirection: o.stage_direction,
-        votes: 0,
-      })),
+      options: beat.options.map((o, i) => {
+        const dialogueText = o.dialogue_text.trim()
+        return {
+          id: ['a', 'b', 'c'][i],
+          label: o.label,
+          detail: o.detail,
+          visualBeat: o.visual_beat,
+          stageDirection: o.stage_direction,
+          continuity: shotContinuity({
+            opening: nextOptionOpening,
+            action: o.visual_beat,
+            closing: boundary({
+              ...nextOptionOpening,
+              location: o.end_state.location,
+              position: o.end_state.position,
+              facing: o.end_state.facing,
+              screenDirection: normalizeScreenDirection(o.end_state.screen_direction),
+              motion: o.end_state.motion,
+              // Hair/wardrobe remain code-owned canonical facts, not model choices.
+              hair: devonBible.hair,
+              wardrobe: devonBible.wardrobe,
+              props: o.end_state.props,
+              lighting: o.end_state.lighting,
+              camera: o.end_state.camera,
+              expression: o.end_state.expression,
+            }),
+            transition: {
+              mode: o.transition_mode,
+              description: o.transition_description,
+            },
+            dialogue: dialogueText
+              ? {
+                  text: dialogueText,
+                  delivery: o.dialogue_delivery.trim() || 'understated and natural',
+                }
+              : null,
+          }),
+          votes: 0,
+        }
+      }),
       winnerOptionId: null,
+      continuity: lockedContinuity,
       createdAt: new Date().toISOString(),
     }
+
+    const continuity = continuityForEpisode(state, episode)
 
     let renderError: string | null = null
 
@@ -289,7 +449,10 @@ async function runCycle(includePrompt: boolean) {
       try {
         const { requestId, authChanged } = await submitConsumerImageToVideo(state, {
           prompt: videoPrompt,
-          imageUrl: DEVON_SEED_IMAGE,
+          imageUrl: continuity.identityImageUrl,
+          startImageUrl: continuity.startImageUrl,
+          videoReferenceUrl: continuity.previousVideoUrl,
+          audioReferenceUrl: continuity.voiceReferenceUrl,
         })
         episode.hfRequestId = requestId
         episode.renderStatus = 'rendering'
@@ -305,7 +468,7 @@ async function runCycle(includePrompt: boolean) {
       try {
         const { requestId } = await submitImageToVideo({
           prompt: videoPrompt,
-          imageUrl: continuityStill,
+          imageUrl: continuity.startImageUrl || continuity.identityImageUrl,
         })
         episode.hfRequestId = requestId
         episode.renderStatus = 'rendering'
@@ -321,8 +484,6 @@ async function runCycle(includePrompt: boolean) {
     state.episodes.push(episode)
     state.lastCycleAt = new Date().toISOString()
     await saveState(state)
-
-    const continuity = continuityForEpisode(state, episode)
 
     // Keep polling after the response so the clip attaches even if the tab closes.
     if (episode.renderStatus === 'rendering' && episode.hfRequestId) {

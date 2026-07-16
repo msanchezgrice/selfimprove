@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getState, saveState, toPublicState, getRenderMode } from '@/lib/pilot/store'
-import { checkRender } from '@/lib/pilot/higgsfield'
+import { checkRender, submitImageToVideo } from '@/lib/pilot/higgsfield'
 import {
   hasConsumerCreds,
   submitConsumerImageToVideo,
   checkConsumerRender,
 } from '@/lib/pilot/higgsfield-consumer'
 import { continuityForEpisode, DEVON_SEED_IMAGE } from '@/lib/pilot/seed'
+import { buildCoherentVideoPrompt } from '@/lib/pilot/video-prompt'
+import { productionBibleFor } from '@/lib/pilot/continuity'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -20,6 +22,9 @@ export const maxDuration = 60
  * Client poll after "Run one night":
  *   POST /api/pilot/render { episodeId }
  *   — checks consumer/platform job; if stuck with no job id, submits one.
+ *
+ * Force re-render (e.g. after a bad model literalization; requires CRON_SECRET):
+ *   POST /api/pilot/render { episodeId, force: true }
  */
 export async function GET(req: NextRequest) {
   const key =
@@ -49,9 +54,11 @@ export async function GET(req: NextRequest) {
         number: pending.number,
         title: pending.title,
         videoPrompt: pending.videoPrompt,
-        seedImageUrl: continuity.startImageUrl || DEVON_SEED_IMAGE,
+        seedImageUrl: continuity.identityImageUrl || DEVON_SEED_IMAGE,
+        identityImageUrl: continuity.identityImageUrl || DEVON_SEED_IMAGE,
         startImageUrl: continuity.startImageUrl || DEVON_SEED_IMAGE,
         previousVideoUrl: continuity.previousVideoUrl,
+        voiceReferenceUrl: continuity.voiceReferenceUrl,
         previousEpisodeId: continuity.previousEpisodeId,
         sourceChoice: sourceChoice
           ? {
@@ -70,9 +77,21 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { episodeId } = (await req.json()) as { episodeId?: string }
+    const { episodeId, force, key } = (await req.json()) as {
+      episodeId?: string
+      force?: boolean
+      key?: string
+    }
     if (!episodeId) {
       return NextResponse.json({ error: 'episodeId required' }, { status: 400 })
+    }
+    if (
+      force &&
+      (!process.env.CRON_SECRET ||
+        (key || req.headers.get('authorization')?.replace('Bearer ', '')) !==
+          process.env.CRON_SECRET)
+    ) {
+      return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
     }
 
     const state = await getState()
@@ -83,6 +102,28 @@ export async function POST(req: NextRequest) {
 
     const mode = getRenderMode()
     let authDirty = false
+    const continuity = continuityForEpisode(state, episode)
+
+    if (force) {
+      const bible = productionBibleFor(state)
+      episode.videoPrompt = buildCoherentVideoPrompt({
+        script: episode.script,
+        mood: state.character.mood,
+        visualBeat: episode.continuity?.action,
+        continuity: episode.continuity,
+        productionBible: bible,
+        continuing: Boolean(continuity.previousEpisodeId),
+        hasIdentityImageReference:
+          !continuity.startImageUrl ||
+          continuity.startImageUrl === continuity.identityImageUrl,
+        hasPreviousVideoReference: Boolean(continuity.previousVideoUrl),
+        hasVoiceReference: Boolean(continuity.voiceReferenceUrl),
+      })
+      episode.videoUrl = null
+      episode.lastFrameUrl = null
+      episode.hfRequestId = null
+      episode.renderStatus = 'rendering'
+    }
 
     // Stuck episode: written but never submitted — kick off consumer render now.
     if (
@@ -94,15 +135,40 @@ export async function POST(req: NextRequest) {
     ) {
       const { requestId, authChanged } = await submitConsumerImageToVideo(state, {
         prompt: episode.videoPrompt,
-        imageUrl: DEVON_SEED_IMAGE,
+        imageUrl: continuity.identityImageUrl,
+        startImageUrl: continuity.startImageUrl,
+        videoReferenceUrl: continuity.previousVideoUrl,
+        audioReferenceUrl: continuity.voiceReferenceUrl,
       })
       episode.hfRequestId = requestId
       authDirty = authChanged
       await saveState(state)
     }
 
+    if (
+      episode.renderStatus === 'rendering' &&
+      !episode.videoUrl &&
+      !episode.hfRequestId &&
+      mode === 'api'
+    ) {
+      const { requestId } = await submitImageToVideo({
+        prompt: episode.videoPrompt,
+        imageUrl: continuity.startImageUrl || continuity.identityImageUrl,
+      })
+      episode.hfRequestId = requestId
+      await saveState(state)
+    } else if (
+      episode.renderStatus === 'rendering' &&
+      !episode.videoUrl &&
+      !episode.hfRequestId &&
+      mode === 'session' &&
+      force
+    ) {
+      await saveState(state)
+    }
+
     if (episode.renderStatus === 'rendering' && episode.hfRequestId) {
-      if (mode === 'consumer' || hasConsumerCreds(state)) {
+      if (mode === 'consumer') {
         const { check, authChanged } = await checkConsumerRender(state, episode.hfRequestId)
         authDirty = authDirty || authChanged
         if (check.status === 'completed') {
