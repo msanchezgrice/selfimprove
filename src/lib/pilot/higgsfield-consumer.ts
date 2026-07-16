@@ -164,6 +164,7 @@ export async function submitConsumerImageToVideo(
   opts: { prompt: string; imageUrl: string; duration?: 5 | 10 }
 ): Promise<{ requestId: string; authChanged: boolean }> {
   const { token, authChanged } = await ensureConsumerAuth(state)
+  // Always lock identity to the provided still (caller should pass Devon seed).
   const mediaId = await uploadImageFromUrl(token, opts.imageUrl)
 
   const res = await apiFetch(token, '/agents/jobs', {
@@ -174,7 +175,7 @@ export async function submitConsumerImageToVideo(
         prompt: opts.prompt,
         aspect_ratio: '9:16',
         duration: opts.duration ?? 10,
-        sound: false,
+        sound: true,
       },
       medias: [{ id: mediaId, role: 'input_image' }],
     }),
@@ -196,7 +197,7 @@ export async function submitConsumerImageToVideo(
 
 export type ConsumerRenderCheck =
   | { status: 'pending' }
-  | { status: 'completed'; videoUrl: string }
+  | { status: 'completed'; videoUrl: string; thumbnailUrl?: string | null }
   | { status: 'failed'; reason: string }
 
 export async function checkConsumerRender(
@@ -212,10 +213,18 @@ export async function checkConsumerRender(
   const json = (await res.json()) as {
     status?: string
     result_url?: string | null
+    thumbnail_url?: string | null
   }
   const status = (json.status || 'queued').toLowerCase()
   if ((status === 'completed' || status === 'success') && json.result_url) {
-    return { check: { status: 'completed', videoUrl: json.result_url }, authChanged }
+    return {
+      check: {
+        status: 'completed',
+        videoUrl: json.result_url,
+        thumbnailUrl: json.thumbnail_url || null,
+      },
+      authChanged,
+    }
   }
   if (status === 'failed' || status === 'nsfw' || status === 'cancelled') {
     return { check: { status: 'failed', reason: status }, authChanged }

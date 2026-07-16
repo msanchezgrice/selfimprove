@@ -2,11 +2,12 @@
  * Image-to-video continuity for Patch Notes.
  *
  * Loop: seed video → audience chooses → render next clip.
- * Identity lock: same Devon. Scenes must feel like consecutive shots in one show.
+ * Character consistency is the product: every i2v job starts from the same
+ * Devon seed face still. Keep the prompt short so identity instructions win.
  */
 
 const DEVON_LOOK =
-  'Devon, 26, short curly brown hair, light stubble — SAME person as the reference / previous clip'
+  'same man as the reference image: Devon, 26, short curly brown hair, light stubble, warm olive skin, soft brown eyes — do NOT change his face, age, hairline, or bone structure'
 
 export function buildCoherentVideoPrompt(opts: {
   script: string
@@ -21,42 +22,60 @@ export function buildCoherentVideoPrompt(opts: {
   const setting =
     opts.settingHint?.trim() ||
     inferSetting(opts.script) ||
-    'dim warm bar interior, shallow depth of field, soft amber practical lights'
-
-  const continuity = opts.continuing
-    ? `CONTINUITY: Pick up from the previous episode's last frame. Same Devon — identical face, hair, age, skin. Wardrobe may shift only if the story moved locations; otherwise keep it. This is the next shot in the same show, not a reboot.`
-    : `IDENTITY: Start from the reference photo of ${DEVON_LOOK}. Season identity lock.`
+    'dim warm interior, shallow depth of field'
 
   const stage =
     opts.stageDirection?.trim() ||
-    `Beat: ${action}. Camera starts tight on Devon, holds through the action, ends on his face.`
+    `Devon ${action.replace(/^Devon\s+/i, '')}. Hold on his face at the end.`
+
+  const audio = inferAudio(opts.script, opts.mood)
 
   return [
-    `Vertical 9:16, ~10 second SINGLE continuous shot, cinematic drama, no cuts, no montage.`,
-    `FADE: open with a soft 0.5s fade-in from black; close with a soft 0.5s fade-out to black on Devon's face (tomorrow's match cut).`,
-    continuity,
+    // Identity first — models overweight early tokens.
+    `FACE LOCK: animate the reference image. ${DEVON_LOOK}.`,
+    `Vertical 9:16, ~10s, ONE continuous shot, no cuts.`,
     `SETTING: ${setting}.`,
-    `STAGE DIRECTION: ${stage}`,
-    `ON-CAMERA ACTION (Devon only in focus): ${action}`,
-    `CAMERA: medium close-up on Devon, face + upper body; motivated micro-moves only (slow push-in or hold). Other people stay off-frame or extreme soft bokeh — never steal focus.`,
-    `PERFORMANCE: mood "${opts.mood}" — grounded micro-expressions, living-room TV drama, not a trailer.`,
-    `STRICT: no legible text on phones/screens/signs/glass; no subtitles; no logos; no jump cuts.`,
-    `LAST FRAME: hold Devon's face after the fade begins — that still is tomorrow's opening.`,
+    `ACTION: ${action}.`,
+    `BLOCKING: ${stage.slice(0, 280)}`,
+    `CAMERA: medium close-up on Devon face + shoulders; slow push-in or hold. Nobody else in focus.`,
+    `MOOD: ${opts.mood}. Grounded micro-expressions, not trailer acting.`,
+    `AUDIO: ${audio}`,
+    `STRICT: keep his face identical to reference; no face morph; no text/logos/subtitles; soft fade-in and fade-out on his face.`,
   ].join(' ')
 }
 
 function inferSetting(script: string): string | null {
   const s = script.toLowerCase()
   if (s.includes('office') || s.includes('desk') || s.includes('ticket')) {
-    return 'dim open-plan office at night, blue monitor glow, empty desks'
+    return 'dim open-plan office at night, blue monitor glow'
   }
   if (s.includes('lucho') || s.includes('bar') || s.includes('drink') || s.includes('beer')) {
-    return 'crowded neighborhood bar, warm amber lights, soft background crowd blur'
+    return 'neighborhood bar, warm amber lights, soft crowd bokeh'
   }
   if (s.includes('street') || s.includes('outside') || s.includes('jacket')) {
-    return 'night sidewalk outside a bar, cool sodium streetlight, light traffic bokeh'
+    return 'night sidewalk, cool streetlight, light traffic bokeh'
+  }
+  if (s.includes('gym')) {
+    return 'quiet gym interior, cool overhead lights'
   }
   return null
+}
+
+function inferAudio(script: string, mood: string): string {
+  const s = script.toLowerCase()
+  if (s.includes('lucho') || s.includes('bar') || s.includes('drink')) {
+    return 'diegetic bar ambience — low chatter, glasses, distant music; no voiceover'
+  }
+  if (s.includes('office') || s.includes('desk') || s.includes('ticket')) {
+    return 'quiet office night tone — soft HVAC, distant keyboard, phone buzz; no voiceover'
+  }
+  if (s.includes('street') || s.includes('outside')) {
+    return 'night street ambience — distant traffic, footsteps; no voiceover'
+  }
+  if (s.includes('gym')) {
+    return 'quiet gym ambience — weights clink faintly; no voiceover'
+  }
+  return `natural diegetic room tone matching mood "${mood}"; no voiceover, no music score`
 }
 
 function extractDevonAction(script: string, visualBeat?: string | null): string {
@@ -82,5 +101,5 @@ function extractDevonAction(script: string, visualBeat?: string | null): string 
     sentences[0] ||
     'Devon reacts quietly, eyes adjusting to what just happened'
 
-  return devonFirst.slice(0, 180)
+  return devonFirst.slice(0, 160)
 }

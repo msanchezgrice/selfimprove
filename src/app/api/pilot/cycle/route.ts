@@ -264,9 +264,8 @@ async function runCycle(includePrompt: boolean) {
     })
 
     const renderMode = getRenderMode()
-    // Continuity still: prefer last episode poster / seed face so Devon stays locked.
-    const priorWithVideo = [...state.episodes].reverse().find((e) => e.videoUrl)
-    const continuityStill = priorWithVideo?.posterUrl || DEVON_SEED_IMAGE
+    // Face lock: always i2v from the canonical Devon seed still.
+    const continuityStill = DEVON_SEED_IMAGE
 
     const episode: PilotEpisode = {
       id: `ep-${current.number + 1}`,
@@ -296,7 +295,7 @@ async function runCycle(includePrompt: boolean) {
       try {
         const { requestId, authChanged } = await submitConsumerImageToVideo(state, {
           prompt: videoPrompt,
-          imageUrl: continuityStill,
+          imageUrl: DEVON_SEED_IMAGE,
         })
         episode.hfRequestId = requestId
         episode.renderStatus = 'rendering'

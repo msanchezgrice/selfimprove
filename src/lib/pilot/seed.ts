@@ -17,9 +17,11 @@ export const DEVON_SEED_VIDEO =
   'https://d8j0ntlcm91z4.cloudfront.net/user_3CRsmmUcswTHKARjqkkx1XlBGHU/hf_20260715_210005_1751f566-3d4e-49e9-a99b-e21d5f9c45f0.mp4'
 
 /**
- * Continuity inputs for rendering episode N:
- * - previousVideoUrl: the clip we just played (or the seed video)
- * - startImageUrl: still to feed image-to-video (seed face, or last frame of previous)
+ * Continuity inputs for rendering episode N.
+ *
+ * Face consistency: ALWAYS start i2v from the canonical Devon seed still.
+ * Scene/wardrobe may change with the story; the face must not.
+ * previousVideoUrl is kept for future last-frame experiments / tooling.
  */
 export function continuityForEpisode(
   state: PilotState,
@@ -31,8 +33,7 @@ export function continuityForEpisode(
 
   return {
     previousVideoUrl: prior?.videoUrl || DEVON_SEED_VIDEO,
-    // Prefer prior poster if it was captured from that episode; else seed face.
-    startImageUrl: prior?.posterUrl || DEVON_SEED_IMAGE,
+    startImageUrl: DEVON_SEED_IMAGE,
     previousEpisodeId: prior?.id ?? null,
   }
 }

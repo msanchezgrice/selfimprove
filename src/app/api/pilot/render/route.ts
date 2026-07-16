@@ -92,10 +92,9 @@ export async function POST(req: NextRequest) {
       mode === 'consumer' &&
       hasConsumerCreds(state)
     ) {
-      const continuity = continuityForEpisode(state, episode)
       const { requestId, authChanged } = await submitConsumerImageToVideo(state, {
         prompt: episode.videoPrompt,
-        imageUrl: continuity.startImageUrl || DEVON_SEED_IMAGE,
+        imageUrl: DEVON_SEED_IMAGE,
       })
       episode.hfRequestId = requestId
       authDirty = authChanged
@@ -108,6 +107,7 @@ export async function POST(req: NextRequest) {
         authDirty = authDirty || authChanged
         if (check.status === 'completed') {
           episode.videoUrl = check.videoUrl
+          if (check.thumbnailUrl) episode.posterUrl = check.thumbnailUrl
           episode.renderStatus = 'done'
           await saveState(state)
         } else if (check.status === 'failed') {
