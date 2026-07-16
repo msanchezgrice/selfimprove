@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# Pick up the oldest pending /pilot episode and render it via the Higgsfield
-# *consumer* CLI (funded account), then attach the mp4.
+# Render the next /pilot episode from the season continuity chain:
+#   seed video → choice → render (Devon stays the same person)
 #
-# Requires:
-#   - higgsfield CLI authenticated (`higgsfield account status`)
-#   - CRON_SECRET + APP_BASE_URL (or pass BASE as $1)
+# Uses the previous episode's last frame (or the seed face) as the i2v start
+# image so character identity carries forward.
+#
+# Requires: higgsfield CLI auth, ffmpeg, CRON_SECRET, APP_BASE_URL
 #
 # Usage:
 #   CRON_SECRET=… APP_BASE_URL=https://selfimprove-iota.vercel.app ./scripts/pilot-render-once.sh
@@ -24,6 +25,11 @@ if ! command -v higgsfield >/dev/null 2>&1; then
   exit 1
 fi
 
+if ! command -v ffmpeg >/dev/null 2>&1; then
+  echo "ffmpeg required to pull the previous episode's last frame" >&2
+  exit 1
+fi
+
 PENDING=$(curl -fsS "$BASE/api/pilot/render?key=$KEY&pending=1")
 EPISODE_ID=$(echo "$PENDING" | python3 -c 'import sys,json; p=json.load(sys.stdin).get("pending"); print(p["episodeId"] if p else "")')
 if [[ -z "$EPISODE_ID" ]]; then
@@ -32,20 +38,35 @@ if [[ -z "$EPISODE_ID" ]]; then
 fi
 
 PROMPT=$(echo "$PENDING" | python3 -c 'import sys,json; print(json.load(sys.stdin)["pending"]["videoPrompt"])')
-SEED=$(echo "$PENDING" | python3 -c 'import sys,json; print(json.load(sys.stdin)["pending"]["seedImageUrl"])')
+PREV_VIDEO=$(echo "$PENDING" | python3 -c 'import sys,json; print(json.load(sys.stdin)["pending"].get("previousVideoUrl") or "")')
+START_STILL=$(echo "$PENDING" | python3 -c 'import sys,json; p=json.load(sys.stdin)["pending"]; print(p.get("startImageUrl") or p.get("seedImageUrl") or "")')
 
-echo "Rendering $EPISODE_ID via consumer CLI…"
+WORKDIR=$(mktemp -d /tmp/pilot-render.XXXXXX)
+trap 'rm -rf "$WORKDIR"' EXIT
 
-SEED_PATH="$SEED"
-if [[ "$SEED" == http://* || "$SEED" == https://* ]]; then
-  SEED_PATH=$(mktemp /tmp/pilot-seed.XXXXXX.png)
-  curl -fsSL "$SEED" -o "$SEED_PATH"
+START_PATH="$WORKDIR/start.png"
+
+# Prefer last frame of the previous episode video — that's the continuity lock.
+if [[ -n "$PREV_VIDEO" ]]; then
+  echo "Pulling last frame from previous episode for Devon continuity…"
+  curl -fsSL "$PREV_VIDEO" -o "$WORKDIR/prev.mp4"
+  # -sseof seeks from end; one frame near the hold on Devon's face.
+  ffmpeg -y -sseof -0.4 -i "$WORKDIR/prev.mp4" -frames:v 1 -q:v 2 "$START_PATH" >/dev/null 2>&1 \
+    || ffmpeg -y -i "$WORKDIR/prev.mp4" -vf "select=eq(n\,0)" -frames:v 1 -q:v 2 "$START_PATH" >/dev/null 2>&1 \
+    || true
 fi
 
-# Vertical image-to-video on the funded consumer account (not platform API keys).
+# Fallback: seed / prior poster still.
+if [[ ! -s "$START_PATH" ]]; then
+  echo "Falling back to start still…"
+  curl -fsSL "$START_STILL" -o "$START_PATH"
+fi
+
+echo "Rendering $EPISODE_ID (character-locked from continuity frame)…"
+
 OUT=$(higgsfield generate create kling2_6 \
   --prompt "$PROMPT" \
-  --image "$SEED_PATH" \
+  --image "$START_PATH" \
   --aspect_ratio 9:16 \
   --duration 10 \
   --wait --json)
@@ -68,7 +89,16 @@ if [[ -z "$URL" ]]; then
   exit 1
 fi
 
+# Capture this episode's last frame as its poster for tomorrow's continuity.
+curl -fsSL "$URL" -o "$WORKDIR/new.mp4"
+POSTER="$WORKDIR/poster.png"
+ffmpeg -y -sseof -0.3 -i "$WORKDIR/new.mp4" -frames:v 1 -q:v 2 "$POSTER" >/dev/null 2>&1 || true
+
 ENC=$(python3 -c 'import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1], safe=""))' "$URL")
-curl -fsS "$BASE/api/pilot/attach?key=$KEY&episodeId=$EPISODE_ID&url=$ENC"
+ATTACH_URL="$BASE/api/pilot/attach?key=$KEY&episodeId=$EPISODE_ID&url=$ENC"
+
+# Optional poster upload via data URL is too large — pass poster only if we host it.
+# For now attach video; poster stays prior continuity still until we add upload.
+curl -fsS "$ATTACH_URL"
 echo
 echo "Attached $URL → $EPISODE_ID"

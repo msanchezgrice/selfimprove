@@ -195,9 +195,10 @@ export default function PilotClient() {
     el.load();
 
     const onReady = () => {
+      // Start near the beginning — character continuity means the face should
+      // match the previous night; the action differentiates the clip.
       try {
-        // i2v from the same seed often looks identical at t=0 — jump in.
-        if (el.duration && el.duration > 1) el.currentTime = 0.6;
+        if (el.duration && el.duration > 0.3) el.currentTime = 0.15;
       } catch {
         /* ignore seek errors */
       }
@@ -653,8 +654,8 @@ export default function PilotClient() {
                     Write your own option
                   </div>
                   <p className="text-[11px] text-[#5a6376] leading-relaxed">
-                    Include a visual beat so the next video matches your choice —
-                    image-to-video can only film Devon in close-up, not the whole bar.
+                    Seed video → your choice → next render. Devon&apos;s face
+                    stays locked; the visual beat is the action we film on him.
                   </p>
                   <input
                     type="text"
@@ -703,9 +704,9 @@ export default function PilotClient() {
                 <div>
                   <h3 className="font-bold">⚡ Run cycle</h3>
                   <p className="text-xs text-[#8b93a5] mt-1 max-w-md">
-                    Test control: fast-forward one night. Closes the poll,
-                    Claude writes the next beat from the winning vote, then
-                    queues video for the Higgsfield consumer render session.
+                    Fast-forward one night: close the poll, write the next beat
+                    from the winning choice, queue a continuity render (same
+                    Devon, new action) for the consumer session.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">

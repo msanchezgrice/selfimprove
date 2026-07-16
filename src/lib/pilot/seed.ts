@@ -1,14 +1,41 @@
-import type { PilotState } from './types'
+import type { PilotEpisode, PilotState } from './types'
 
 /**
- * Devon's canonical seed image — used as the start frame for every episode
- * render so his look stays consistent across the season.
+ * Patch Notes continuity model:
+ *   seed video (Ep 1) → audience chooses → render next clip
+ * Character consistency is the product. Each new episode starts from Devon's
+ * face (seed still, or the previous episode's last frame) so he stays the
+ * same person night to night.
  */
+
+/** Canonical still of Devon — identity lock for image-to-video. */
 export const DEVON_SEED_IMAGE =
   'https://d8j0ntlcm91z4.cloudfront.net/user_3CRsmmUcswTHKARjqkkx1XlBGHU/hf_20260715_205804_28d73e3b-67e5-45ec-9a92-63b27c3dbdf2.png'
 
-const EPISODE_1_VIDEO =
+/** Opening seed video — Episode 1. The season starts here. */
+export const DEVON_SEED_VIDEO =
   'https://d8j0ntlcm91z4.cloudfront.net/user_3CRsmmUcswTHKARjqkkx1XlBGHU/hf_20260715_210005_1751f566-3d4e-49e9-a99b-e21d5f9c45f0.mp4'
+
+/**
+ * Continuity inputs for rendering episode N:
+ * - previousVideoUrl: the clip we just played (or the seed video)
+ * - startImageUrl: still to feed image-to-video (seed face, or last frame of previous)
+ */
+export function continuityForEpisode(
+  state: PilotState,
+  episode: PilotEpisode
+): { previousVideoUrl: string; startImageUrl: string; previousEpisodeId: string | null } {
+  const prior = state.episodes
+    .filter((e) => e.number < episode.number && e.videoUrl)
+    .sort((a, b) => b.number - a.number)[0]
+
+  return {
+    previousVideoUrl: prior?.videoUrl || DEVON_SEED_VIDEO,
+    // Prefer prior poster if it was captured from that episode; else seed face.
+    startImageUrl: prior?.posterUrl || DEVON_SEED_IMAGE,
+    previousEpisodeId: prior?.id ?? null,
+  }
+}
 
 export function seedState(): PilotState {
   const now = new Date().toISOString()
@@ -31,7 +58,7 @@ export function seedState(): PilotState {
         script:
           "Dim office, night. Devon's phone buzzes — a voice note from Marcus: \"Dev. We're at Lucho's. Come through, don't be boring.\" Devon looks from the phone to the wall of unfinished tickets. \"One more ticket... or one good night.\"",
         videoPrompt: '',
-        videoUrl: EPISODE_1_VIDEO,
+        videoUrl: DEVON_SEED_VIDEO,
         posterUrl: DEVON_SEED_IMAGE,
         renderStatus: 'done',
         hfRequestId: null,

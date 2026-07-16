@@ -13,8 +13,11 @@ AI writes the beat, renders the video, and opens the next poll — autonomously.
    Structured output via `callClaude` (same wrapper as roadmap/PRD gen).
 3. State deltas are applied — consequences compound, nothing resets.
 4. Video render (default = **consumer app**, not platform API keys):
+   - Continuity model: **seed video → choice → render**. Devon stays the same
+     person; each night's clip starts from the previous episode's last frame
+     (falling back to the seed face still).
    - Cycle leaves the episode as `rendering` and returns `videoPrompt` +
-     `seedImageUrl`.
+     `previousVideoUrl` + `startImageUrl`.
    - The Higgsfield consumer render session (CLI / MCP on the funded account)
      generates the clip and attaches it:
      `GET /api/pilot/attach?key=CRON_SECRET&episodeId=…&url=…`
@@ -23,6 +26,9 @@ AI writes the beat, renders the video, and opens the next poll — autonomously.
      `HF_API_SECRET` (platform.higgsfield.ai is a **separate** product and
      often has 0 credits — do not confuse with consumer account balance).
 5. The next poll opens.
+
+Character consistency is the product. Action/mood change with the vote; the
+face should not. A later upgrade is training Devon as a Higgsfield Soul.
 
 ## Storage
 

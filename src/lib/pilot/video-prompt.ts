@@ -1,12 +1,13 @@
 /**
- * Image-to-video from Devon's seed face can only reliably show DEVON acting.
- * Wide multi-character bar scenes in the script read well as text but produce
- * generic "guy in a bar" clips. This builder forces a single Devon-locked shot
- * that mirrors the script's emotional beat.
+ * Image-to-video continuity for Patch Notes.
+ *
+ * Loop: seed video → audience chooses → render next clip.
+ * Identity lock: always the same Devon (seed face / previous last frame).
+ * Action changes with the winning choice; the face should not.
  */
 
 const DEVON_LOOK =
-  'Devon, 26, short curly brown hair, light stubble, same face as the reference image'
+  'Devon, 26, short curly brown hair, light stubble — SAME person as the reference / previous clip'
 
 export function buildCoherentVideoPrompt(opts: {
   script: string
@@ -14,6 +15,8 @@ export function buildCoherentVideoPrompt(opts: {
   /** Audience/director note — what we should SEE if this choice won */
   visualBeat?: string | null
   settingHint?: string | null
+  /** True when continuing from a previous episode frame (not cold seed) */
+  continuing?: boolean
 }): string {
   const action = extractDevonAction(opts.script, opts.visualBeat)
   const setting =
@@ -21,15 +24,19 @@ export function buildCoherentVideoPrompt(opts: {
     inferSetting(opts.script) ||
     'dim warm bar interior, shallow depth of field, soft amber practical lights'
 
+  const continuity = opts.continuing
+    ? `Continue from the reference frame of the previous episode. Keep Devon's face, hair, wardrobe continuity, and age identical — only the action and micro-expression change.`
+    : `Start from the reference photo of ${DEVON_LOOK}. This is the season identity lock.`
+
   return [
     `Vertical 9:16, 10-second single continuous shot, cinematic, no cuts.`,
-    `Start from the reference photo of ${DEVON_LOOK}.`,
+    continuity,
     `SETTING: ${setting}.`,
-    `ACTION (must match the episode script beat): ${action}`,
-    `Camera: medium close-up on Devon, locked on his face and upper body; other people stay off-frame or soft background bokeh only.`,
-    `Performance: mood is "${opts.mood}" — subtle, grounded, natural micro-expressions, no melodrama.`,
+    `ACTION (this night's choice, on Devon): ${action}`,
+    `Camera: medium close-up on Devon, face and upper body; other people off-frame or soft bokeh only.`,
+    `Performance: mood is "${opts.mood}" — subtle, grounded, natural. No melodrama.`,
     `STRICT: no legible text on any phone, screen, sign, or glass; no subtitles; no logos.`,
-    `End held still on Devon's face for the final second.`,
+    `End held on Devon's face — this last frame becomes the start of tomorrow's episode.`,
   ].join(' ')
 }
 
@@ -47,17 +54,15 @@ function inferSetting(script: string): string | null {
   return null
 }
 
-/**
- * Prefer an explicit visualBeat; otherwise pull Devon's key verb phrase from the script.
- */
 function extractDevonAction(script: string, visualBeat?: string | null): string {
   const beat = visualBeat?.trim()
   if (beat) {
     return `Devon ${beat.replace(/^devon\s+/i, '')}`
   }
 
-  // Prefer a spoken line + reaction if present.
-  const spoken = script.match(/Devon[^.!]{0,40}(?:grins|says|goes|exhales|asks|pulls|nods|sips|laughs|looks)[^.!]{0,80}[.!]/i)
+  const spoken = script.match(
+    /Devon[^.!]{0,40}(?:grins|says|goes|exhales|asks|pulls|nods|sips|laughs|looks)[^.!]{0,80}[.!]/i
+  )
   if (spoken) {
     return spoken[0].replace(/\s+/g, ' ').trim()
   }

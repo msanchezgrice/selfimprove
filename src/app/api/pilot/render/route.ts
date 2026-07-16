@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getState, saveState, toPublicState, getRenderMode } from '@/lib/pilot/store'
 import { checkRender } from '@/lib/pilot/higgsfield'
-import { DEVON_SEED_IMAGE } from '@/lib/pilot/seed'
+import { continuityForEpisode, DEVON_SEED_IMAGE } from '@/lib/pilot/seed'
 import { buildCoherentVideoPrompt } from '@/lib/pilot/video-prompt'
 
 export const dynamic = 'force-dynamic'
@@ -9,9 +9,11 @@ export const dynamic = 'force-dynamic'
 /**
  * Poll / inspect render status.
  *
- * Keyed GET returns the oldest pending session-mode job for the consumer
- * render worker, with a rebuilt coherent videoPrompt:
+ * Keyed pending job for the consumer render worker:
  *   GET /api/pilot/render?key=CRON_SECRET&pending=1
+ *
+ * Returns continuity inputs: previous episode video + start still (seed face
+ * or prior poster) so Devon stays the same person night to night.
  */
 export async function GET(req: NextRequest) {
   const key =
@@ -31,10 +33,12 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ pending: null })
     }
 
+    const continuity = continuityForEpisode(state, pending)
     const videoPrompt = buildCoherentVideoPrompt({
       script: pending.script,
       mood: state.character.mood,
       visualBeat: pending.options.find((o) => o.id === pending.winnerOptionId)?.visualBeat,
+      continuing: Boolean(continuity.previousEpisodeId),
     })
     if (videoPrompt !== pending.videoPrompt) {
       pending.videoPrompt = videoPrompt
@@ -47,7 +51,11 @@ export async function GET(req: NextRequest) {
         number: pending.number,
         title: pending.title,
         videoPrompt,
-        seedImageUrl: pending.posterUrl || DEVON_SEED_IMAGE,
+        /** @deprecated prefer startImageUrl — kept for older render scripts */
+        seedImageUrl: continuity.startImageUrl || DEVON_SEED_IMAGE,
+        startImageUrl: continuity.startImageUrl || DEVON_SEED_IMAGE,
+        previousVideoUrl: continuity.previousVideoUrl,
+        previousEpisodeId: continuity.previousEpisodeId,
         script: pending.script,
       },
     })

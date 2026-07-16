@@ -9,7 +9,7 @@ import {
   hasCloudApiCreds,
 } from '@/lib/pilot/store'
 import { submitImageToVideo } from '@/lib/pilot/higgsfield'
-import { DEVON_SEED_IMAGE } from '@/lib/pilot/seed'
+import { DEVON_SEED_IMAGE, continuityForEpisode } from '@/lib/pilot/seed'
 import { buildCoherentVideoPrompt } from '@/lib/pilot/video-prompt'
 import type { PilotEpisode, PilotState } from '@/lib/pilot/types'
 
@@ -235,9 +235,14 @@ async function runCycle(includePrompt: boolean) {
       script: beat.script,
       mood: beat.state_delta.mood,
       visualBeat: beat.visual_action || winner.visualBeat,
+      continuing: state.episodes.some((e) => e.videoUrl),
     })
 
     const renderMode = getRenderMode()
+    // Continuity still: prefer last episode poster / seed face so Devon stays locked.
+    const priorWithVideo = [...state.episodes].reverse().find((e) => e.videoUrl)
+    const continuityStill = priorWithVideo?.posterUrl || DEVON_SEED_IMAGE
+
     const episode: PilotEpisode = {
       id: `ep-${current.number + 1}`,
       number: current.number + 1,
@@ -246,7 +251,7 @@ async function runCycle(includePrompt: boolean) {
       script: beat.script,
       videoPrompt,
       videoUrl: null,
-      posterUrl: DEVON_SEED_IMAGE,
+      posterUrl: continuityStill,
       renderStatus: 'none',
       hfRequestId: null,
       options: beat.options.map((o, i) => ({
@@ -268,7 +273,7 @@ async function runCycle(includePrompt: boolean) {
       try {
         const { requestId } = await submitImageToVideo({
           prompt: videoPrompt,
-          imageUrl: DEVON_SEED_IMAGE,
+          imageUrl: continuityStill,
         })
         episode.hfRequestId = requestId
         episode.renderStatus = 'rendering'
@@ -282,6 +287,8 @@ async function runCycle(includePrompt: boolean) {
     state.episodes.push(episode)
     state.lastCycleAt = new Date().toISOString()
     await saveState(state)
+
+    const continuity = continuityForEpisode(state, episode)
 
     return NextResponse.json({
       ...toPublicState(state),
@@ -298,7 +305,9 @@ async function runCycle(includePrompt: boolean) {
           ? {
               videoPrompt: episode.videoPrompt,
               script: episode.script,
-              seedImageUrl: DEVON_SEED_IMAGE,
+              seedImageUrl: continuity.startImageUrl,
+              startImageUrl: continuity.startImageUrl,
+              previousVideoUrl: continuity.previousVideoUrl,
               visualAction: beat.visual_action,
             }
           : {}),
