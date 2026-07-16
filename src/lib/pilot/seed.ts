@@ -170,6 +170,16 @@ export function seedState(): PilotState {
           },
         ],
         winnerOptionId: null,
+        continuityReview: {
+          status: 'needed',
+          observedAt: null,
+          confidence: null,
+          travelPhase: null,
+          completedActions: [],
+          mismatches: [],
+          evidence: [],
+          error: null,
+        },
         continuity: shotContinuity({
           opening,
           action:
@@ -358,6 +368,17 @@ export function upgradePilotState(state: PilotState): PilotState {
         mode: 'continuous',
         description: 'one unbroken take with no spatial or temporal jump',
       }
+    }
+
+    episode.continuityReview ||= {
+      status: 'needed',
+      observedAt: null,
+      confidence: null,
+      travelPhase: null,
+      completedActions: [],
+      mismatches: [],
+      evidence: [],
+      error: null,
     }
 
     for (const option of episode.options) {

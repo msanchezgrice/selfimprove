@@ -24,6 +24,17 @@ describe('pilot continuity ledger', () => {
 
     expect(continuityAdvanceBlocker(episode)).toContain('no accepted exact final frame')
     episode.lastFrameUrl = 'https://example.com/ep-2-final.png'
+    expect(continuityAdvanceBlocker(episode)).toContain('observed-frame reconciliation')
+    episode.continuityReview = {
+      status: 'ready',
+      observedAt: new Date().toISOString(),
+      confidence: 0.95,
+      travelPhase: 'arriving',
+      completedActions: ['arrived at the landing'],
+      mismatches: [],
+      evidence: ['subject moves toward camera across final frames'],
+      error: null,
+    }
     expect(continuityAdvanceBlocker(episode)).toBeNull()
   })
 

@@ -205,6 +205,10 @@ export function continuityAdvanceBlocker(episode: PilotEpisode): string | null {
   if (episode.number > 1 && !episode.lastFrameUrl) {
     return `episode ${episode.number} has no accepted exact final frame`
   }
+  if (episode.continuityReview?.status !== 'ready') {
+    const status = episode.continuityReview?.status || 'needed'
+    return `episode ${episode.number} rendered ending has not passed observed-frame reconciliation (${status})`
+  }
   return null
 }
 

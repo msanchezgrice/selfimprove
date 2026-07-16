@@ -101,6 +101,14 @@ export async function POST(req: NextRequest) {
       if (episode.id !== current.id || episode.winnerOptionId) {
         throw Object.assign(new Error('poll is closed'), { status: 409 })
       }
+      if (episode.continuityReview?.status !== 'ready') {
+        throw Object.assign(
+          new Error(
+            `actual rendered ending is still being reconciled (${episode.continuityReview?.status || 'needed'})`
+          ),
+          { status: 409 }
+        )
+      }
 
       draft.voters[episodeId] = draft.voters[episodeId] || {}
       const existing = draft.voters[episodeId][voterId!]

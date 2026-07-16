@@ -437,6 +437,16 @@ async function runCycle(includePrompt: boolean) {
         }
       }),
       winnerOptionId: null,
+      continuityReview: {
+        status: 'needed',
+        observedAt: null,
+        confidence: null,
+        travelPhase: null,
+        completedActions: [],
+        mismatches: [],
+        evidence: [],
+        error: null,
+      },
       continuity: lockedContinuity,
       createdAt: new Date().toISOString(),
     }

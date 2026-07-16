@@ -123,6 +123,16 @@ export async function POST(req: NextRequest) {
       episode.lastFrameUrl = null
       episode.hfRequestId = null
       episode.renderStatus = 'rendering'
+      episode.continuityReview = {
+        status: 'needed',
+        observedAt: null,
+        confidence: null,
+        travelPhase: null,
+        completedActions: [],
+        mismatches: [],
+        evidence: [],
+        error: null,
+      }
     }
 
     // Stuck episode: written but never submitted — kick off consumer render now.

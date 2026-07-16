@@ -86,6 +86,17 @@ export type PilotOption = {
 
 export type RenderStatus = 'none' | 'rendering' | 'done' | 'failed'
 
+export type ContinuityReview = {
+  status: 'needed' | 'analyzing' | 'ready' | 'failed'
+  observedAt: string | null
+  confidence: number | null
+  travelPhase: 'departing' | 'in-transit' | 'arriving' | 'stationary' | 'unclear' | null
+  completedActions: string[]
+  mismatches: string[]
+  evidence: string[]
+  error?: string | null
+}
+
 export type PilotEpisode = {
   id: string
   number: number
@@ -103,6 +114,8 @@ export type PilotEpisode = {
   winnerOptionId: string | null
   /** The locked package that produced this episode. */
   continuity?: ShotContinuity
+  /** Vision-based reconciliation of the rendered ending against the plan. */
+  continuityReview?: ContinuityReview
   createdAt: string
 }
 

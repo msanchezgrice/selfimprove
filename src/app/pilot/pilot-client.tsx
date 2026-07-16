@@ -30,9 +30,26 @@ type Episode = {
   script: string;
   videoUrl: string | null;
   posterUrl: string;
+  lastFrameUrl?: string | null;
   renderStatus: "none" | "rendering" | "done" | "failed";
   options: Option[];
   winnerOptionId: string | null;
+  continuityReview?: {
+    status: "needed" | "analyzing" | "ready" | "failed";
+    observedAt: string | null;
+    confidence: number | null;
+    travelPhase:
+      | "departing"
+      | "in-transit"
+      | "arriving"
+      | "stationary"
+      | "unclear"
+      | null;
+    completedActions: string[];
+    mismatches: string[];
+    evidence: string[];
+    error?: string | null;
+  };
   createdAt: string;
 };
 type Character = {
@@ -67,6 +84,99 @@ const FEATURE_IDEAS = [
   "Votes and episodes on X/Twitter with native polls",
 ];
 
+function waitForSeek(video: HTMLVideoElement, time: number) {
+  return new Promise<void>((resolve, reject) => {
+    const timeout = window.setTimeout(
+      () => reject(new Error("timed out reading rendered frames")),
+      12_000,
+    );
+    const cleanup = () => {
+      window.clearTimeout(timeout);
+      video.removeEventListener("seeked", onSeeked);
+      video.removeEventListener("error", onError);
+    };
+    const onSeeked = () => {
+      cleanup();
+      resolve();
+    };
+    const onError = () => {
+      cleanup();
+      reject(new Error("could not read rendered video for continuity review"));
+    };
+    video.addEventListener("seeked", onSeeked, { once: true });
+    video.addEventListener("error", onError, { once: true });
+    video.currentTime = time;
+  });
+}
+
+async function captureRenderedEndFrames(videoUrl: string): Promise<Blob[]> {
+  const video = document.createElement("video");
+  video.crossOrigin = "anonymous";
+  video.muted = true;
+  video.playsInline = true;
+  video.preload = "auto";
+
+  await new Promise<void>((resolve, reject) => {
+    const timeout = window.setTimeout(
+      () => reject(new Error("timed out loading rendered video")),
+      20_000,
+    );
+    video.addEventListener(
+      "loadedmetadata",
+      () => {
+        window.clearTimeout(timeout);
+        resolve();
+      },
+      { once: true },
+    );
+    video.addEventListener(
+      "error",
+      () => {
+        window.clearTimeout(timeout);
+        reject(new Error("could not load rendered video for continuity review"));
+      },
+      { once: true },
+    );
+    video.src = videoUrl;
+    video.load();
+  });
+
+  if (!Number.isFinite(video.duration) || video.duration <= 0) {
+    throw new Error("rendered video has no readable duration");
+  }
+
+  const times = [
+    Math.max(0.05, video.duration - 1.5),
+    Math.max(0.05, video.duration - 0.75),
+    Math.max(0.05, video.duration - 0.08),
+  ];
+  const width = 360;
+  const height = Math.max(1, Math.round((video.videoHeight / video.videoWidth) * width));
+  const frames: Blob[] = [];
+
+  try {
+    for (const time of times) {
+      await waitForSeek(video, Math.min(time, Math.max(0.05, video.duration - 0.02)));
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("browser could not create continuity frame");
+      context.drawImage(video, 0, 0, width, height);
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob(resolve, "image/jpeg", 0.84),
+      );
+      if (!blob) throw new Error("browser could not encode continuity frame");
+      frames.push(blob);
+    }
+  } finally {
+    video.removeAttribute("src");
+    video.load();
+  }
+
+  return frames;
+}
+
 function useCountdown(target: number) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -96,10 +206,12 @@ export default function PilotClient() {
   const [videoReady, setVideoReady] = useState(false);
   const [videoError, setVideoError] = useState<string | null>(null);
   const [clipEnded, setClipEnded] = useState(false);
+  const [continuityPhase, setContinuityPhase] = useState<string | null>(null);
   const playerRef = useRef<HTMLDivElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const cycleAbort = useRef<AbortController | null>(null);
+  const reconciliationAttempts = useRef(new Set<string>());
 
   const applyState = useCallback((data: PublicState) => {
     setState(data);
@@ -185,6 +297,55 @@ export default function PilotClient() {
     ? current.options.reduce((s, o) => s + o.votes, 0)
     : 0;
   const pollClosed = Boolean(current?.winnerOptionId);
+  const continuityReady = current?.continuityReview?.status === "ready";
+
+  const reconcileCurrentEpisode = useCallback(
+    async (episode: Episode, force = false) => {
+      if (!episode.videoUrl || episode.renderStatus !== "done") return;
+      if (!force && reconciliationAttempts.current.has(episode.id)) return;
+      reconciliationAttempts.current.add(episode.id);
+      setContinuityPhase("Reading the actual final frames…");
+      setError(null);
+      try {
+        const frames = await captureRenderedEndFrames(episode.videoUrl);
+        setContinuityPhase("Rewriting choices from what actually happened…");
+        const form = new FormData();
+        form.set("episodeId", episode.id);
+        frames.forEach((frame, index) => {
+          form.append("frames", frame, `ep-${episode.number}-end-${index + 1}.jpg`);
+        });
+        const res = await fetch("/api/pilot/reconcile", {
+          method: "POST",
+          body: form,
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || `continuity review failed (${res.status})`);
+        applyState(data as PublicState);
+      } catch (reason) {
+        await refresh();
+        setError(
+          reason instanceof Error ? reason.message : "continuity review failed",
+        );
+      } finally {
+        setContinuityPhase(null);
+      }
+    },
+    [applyState, refresh],
+  );
+
+  useEffect(() => {
+    if (!current?.videoUrl || current.renderStatus !== "done") return;
+    const status = current.continuityReview?.status || "needed";
+    if (status !== "needed") return;
+    void reconcileCurrentEpisode(current);
+  }, [
+    current,
+    current?.id,
+    current?.videoUrl,
+    current?.renderStatus,
+    current?.continuityReview?.status,
+    reconcileCurrentEpisode,
+  ]);
 
   function selectEpisode(id: string) {
     setVideoReady(false);
@@ -549,6 +710,7 @@ export default function PilotClient() {
                   <video
                     key={viewing.videoUrl || viewing.id}
                     ref={videoRef}
+                    crossOrigin="anonymous"
                     src={viewing.videoUrl}
                     controls
                     playsInline
@@ -769,7 +931,45 @@ export default function PilotClient() {
                 own action below; the continuity supervisor normalizes it before
                 it can win.
               </p>
-              <div className="space-y-2">
+              {continuityReady ? (
+                <div className="mb-3 rounded-lg border border-[#0d9488]/35 bg-[#0d9488]/10 px-3 py-2 text-[11px] text-[#5eead4]">
+                  ✓ Actual ending verified
+                  {current?.continuityReview?.travelPhase
+                    ? ` · ${current.continuityReview.travelPhase}`
+                    : ""}
+                  {current?.continuityReview?.mismatches.length
+                    ? ` · corrected ${current.continuityReview.mismatches.length} plan mismatch${current.continuityReview.mismatches.length === 1 ? "" : "es"}`
+                    : ""}
+                </div>
+              ) : (
+                <div className="mb-3 rounded-xl border border-[#ffb347]/35 bg-[#ffb347]/10 p-3">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-[#ffb347]">
+                    {(continuityPhase || current?.continuityReview?.status === "analyzing") && (
+                      <span className="pilot-spinner !h-3 !w-3" aria-hidden />
+                    )}
+                    {continuityPhase ||
+                      (current?.renderStatus === "done"
+                        ? current?.continuityReview?.status === "failed"
+                          ? "Actual-ending review failed"
+                          : "Checking what actually happened on screen…"
+                        : "Choices unlock after the video and actual-ending review")}
+                  </div>
+                  <p className="mt-1 text-[11px] leading-relaxed text-[#8b93a5]">
+                    Voting is paused until the last three rendered frames agree with
+                    the proposed location, travel direction, and next actions.
+                  </p>
+                  {current?.continuityReview?.status === "failed" && current.videoUrl && (
+                    <button
+                      type="button"
+                      onClick={() => void reconcileCurrentEpisode(current, true)}
+                      className="mt-2 text-[11px] font-semibold text-[#8fb6ff] underline"
+                    >
+                      Retry actual-ending review
+                    </button>
+                  )}
+                </div>
+              )}
+              <div className={`space-y-2 ${continuityReady ? "" : "hidden"}`}>
                 {current?.options.map((o) => {
                   const pct = totalVotes
                     ? Math.round((o.votes / totalVotes) * 100)
@@ -781,7 +981,7 @@ export default function PilotClient() {
                       key={o.id}
                       type="button"
                       onClick={() => vote(o.id)}
-                      disabled={revealed || voting || pollClosed}
+                      disabled={revealed || voting || pollClosed || !continuityReady}
                       className={`relative w-full overflow-hidden rounded-xl border p-3 text-left transition ${
                         isPicked
                           ? "border-[#0d9488] bg-[#0d948814]"
@@ -831,7 +1031,7 @@ export default function PilotClient() {
               </div>
 
               {/* Custom write-in */}
-              {!yourVote && !pollClosed && (
+              {!yourVote && !pollClosed && continuityReady && (
                 <div className="mt-4 rounded-xl border border-dashed border-[#3a4356] p-3 space-y-2">
                   <div className="text-xs font-semibold text-[#8b93a5]">
                     Write your own option
@@ -911,7 +1111,7 @@ export default function PilotClient() {
                   <button
                     type="button"
                     onClick={runCycle}
-                    disabled={Boolean(cyclePhase) || resetting}
+                    disabled={Boolean(cyclePhase) || resetting || !continuityReady}
                     className="rounded-xl bg-[#0d9488] px-4 py-2.5 text-sm font-bold text-white hover:brightness-110 disabled:opacity-50"
                   >
                     {cyclePhase ? "Running…" : "Run one night"}

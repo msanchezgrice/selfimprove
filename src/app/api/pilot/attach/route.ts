@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { updateState } from '@/lib/pilot/store'
-import { createAdminClient } from '@/lib/supabase/admin'
+import {
+  MAX_PILOT_FRAME_BYTES,
+  uploadPilotContinuityFrame,
+} from '@/lib/pilot/media'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
-
-const MEDIA_BUCKET = 'pilot-media'
-const MAX_FRAME_BYTES = 5 * 1024 * 1024
 
 /**
  * Attach a rendered video to an episode (or mark its render failed).
@@ -103,31 +103,15 @@ export async function POST(req: NextRequest) {
     if (!['image/png', 'image/jpeg'].includes(lastFrame.type)) {
       return NextResponse.json({ error: 'lastFrame must be PNG or JPEG' }, { status: 400 })
     }
-    if (lastFrame.size > MAX_FRAME_BYTES) {
+    if (lastFrame.size > MAX_PILOT_FRAME_BYTES) {
       return NextResponse.json({ error: 'lastFrame exceeds 5 MB' }, { status: 413 })
     }
 
-    const sb = createAdminClient()
-    await sb.storage.createBucket(MEDIA_BUCKET, {
-      public: true,
-      allowedMimeTypes: ['image/png', 'image/jpeg'],
-      fileSizeLimit: MAX_FRAME_BYTES,
-    }).then(({ error }) => {
-      if (error && !/already exists|duplicate/i.test(error.message)) throw error
+    const lastFrameUrl = await uploadPilotContinuityFrame({
+      episodeId,
+      bytes: await lastFrame.arrayBuffer(),
+      contentType: lastFrame.type as 'image/png' | 'image/jpeg',
     })
-
-    const ext = lastFrame.type === 'image/jpeg' ? 'jpg' : 'png'
-    const path = `continuity/${episodeId}-${Date.now()}.${ext}`
-    const { error: uploadError } = await sb.storage
-      .from(MEDIA_BUCKET)
-      .upload(path, Buffer.from(await lastFrame.arrayBuffer()), {
-        contentType: lastFrame.type,
-        upsert: false,
-      })
-    if (uploadError) throw new Error(`last-frame upload failed: ${uploadError.message}`)
-
-    const { data: publicData } = sb.storage.from(MEDIA_BUCKET).getPublicUrl(path)
-    const lastFrameUrl = publicData.publicUrl
 
     const state = await updateState((draft) => {
       const episode = draft.episodes.find((e) => e.id === episodeId)
@@ -136,6 +120,16 @@ export async function POST(req: NextRequest) {
       episode.posterUrl = lastFrameUrl
       episode.lastFrameUrl = lastFrameUrl
       episode.renderStatus = 'done'
+      episode.continuityReview = {
+        status: 'needed',
+        observedAt: null,
+        confidence: null,
+        travelPhase: null,
+        completedActions: [],
+        mismatches: [],
+        evidence: [],
+        error: null,
+      }
     })
 
     const episode = state.episodes.find((e) => e.id === episodeId)!
