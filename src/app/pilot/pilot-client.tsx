@@ -86,6 +86,7 @@ export default function PilotClient() {
   const [videoReady, setVideoReady] = useState(false);
   const [videoError, setVideoError] = useState<string | null>(null);
   const [fadingOut, setFadingOut] = useState(false);
+  const [clipEnded, setClipEnded] = useState(false);
   const playerRef = useRef<HTMLDivElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -179,26 +180,56 @@ export default function PilotClient() {
     setVideoReady(false);
     setVideoError(null);
     setFadingOut(false);
+    setClipEnded(false);
     setViewingId(id);
     requestAnimationFrame(() => {
       playerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   }
 
-  // Reset ready state when the active episode identity changes.
-  useEffect(() => {
-    setVideoReady(false);
-    setVideoError(null);
-    setFadingOut(false);
-  }, [viewing?.id, viewing?.videoUrl]);
-
-  function onVideoCanPlay() {
+  function markVideoReady() {
     setVideoReady(true);
     setVideoError(null);
+    setClipEnded(false);
     const el = videoRef.current;
     if (!el) return;
     el.play().catch(() => undefined);
   }
+
+  // Reset ready state when the active episode changes; catch cache hits where
+  // canplay already fired before React attached handlers.
+  useEffect(() => {
+    setVideoReady(false);
+    setVideoError(null);
+    setFadingOut(false);
+    setClipEnded(false);
+
+    let cancelled = false;
+    const check = () => {
+      if (cancelled) return;
+      const el = videoRef.current;
+      if (!el) return;
+      // HAVE_CURRENT_DATA or better — enough to show the player
+      if (el.readyState >= 2) markVideoReady();
+    };
+
+    const t0 = window.setTimeout(check, 0);
+    const t1 = window.setTimeout(check, 250);
+    const t2 = window.setTimeout(check, 1000);
+    // Fail open: show player even if events never fire
+    const t3 = window.setTimeout(() => {
+      if (!cancelled) setVideoReady(true);
+    }, 3000);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(t0);
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+      window.clearTimeout(t3);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-run on episode identity
+  }, [viewing?.id, viewing?.videoUrl]);
 
   function onVideoTimeUpdate() {
     const el = videoRef.current;
@@ -209,12 +240,18 @@ export default function PilotClient() {
 
   function onVideoEnded() {
     setFadingOut(true);
+    setClipEnded(true);
   }
 
   function onVideoError() {
     setVideoReady(false);
     setVideoError("Couldn't load this clip — try another episode or refresh.");
   }
+
+  const nextEpisode = useMemo(() => {
+    if (!state || !viewing) return null;
+    return state.episodes.find((e) => e.number === viewing.number + 1) ?? null;
+  }, [state, viewing]);
 
   async function resetSeason() {
     if (resetting || cyclePhase) return;
@@ -437,11 +474,27 @@ export default function PilotClient() {
                       <div className="text-xs font-mono text-[#ffb347]">
                         Loading episode {viewing.number}…
                       </div>
+                      <a
+                        href={viewing.videoUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[11px] text-[#8fb6ff] underline"
+                      >
+                        Open video directly
+                      </a>
                     </div>
                   )}
                   {videoError && (
                     <div className="absolute inset-0 z-[5] flex flex-col items-center justify-center gap-2 bg-[#0b0d12] px-6 text-center">
                       <div className="text-xs text-[#ff6b6b]">{videoError}</div>
+                      <a
+                        href={viewing.videoUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs text-[#8fb6ff] underline"
+                      >
+                        Open video directly
+                      </a>
                       <button
                         type="button"
                         className="text-xs text-[#8fb6ff] underline"
@@ -455,6 +508,35 @@ export default function PilotClient() {
                       </button>
                     </div>
                   )}
+                  {clipEnded && nextEpisode && (
+                    <div className="absolute inset-0 z-[6] flex flex-col items-center justify-center gap-3 bg-black/70 px-6 text-center">
+                      <div className="text-xs font-mono text-[#8b93a5]">
+                        END OF EP {viewing.number}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => selectEpisode(nextEpisode.id)}
+                        className="rounded-xl bg-[#0d9488] hover:bg-[#0f766e] text-white px-5 py-3 text-sm font-semibold"
+                      >
+                        Next episode → Ep {nextEpisode.number}
+                        {nextEpisode.title ? `: ${nextEpisode.title}` : ""}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setClipEnded(false);
+                          setFadingOut(false);
+                          const el = videoRef.current;
+                          if (!el) return;
+                          el.currentTime = 0;
+                          el.play().catch(() => undefined);
+                        }}
+                        className="text-xs text-[#8b93a5] hover:text-white"
+                      >
+                        Replay
+                      </button>
+                    </div>
+                  )}
                   <video
                     key={viewing.id}
                     ref={videoRef}
@@ -462,14 +544,19 @@ export default function PilotClient() {
                     controls
                     playsInline
                     preload="auto"
-                    onCanPlay={onVideoCanPlay}
+                    onLoadedData={markVideoReady}
+                    onCanPlay={markVideoReady}
+                    onPlaying={markVideoReady}
                     onTimeUpdate={onVideoTimeUpdate}
                     onEnded={onVideoEnded}
                     onError={onVideoError}
-                    onPlay={() => setFadingOut(false)}
+                    onPlay={() => {
+                      setFadingOut(false);
+                      setClipEnded(false);
+                    }}
                     className={`w-full aspect-[9/16] object-cover bg-black pilot-video-fade ${
                       videoReady ? "is-ready" : ""
-                    } ${fadingOut ? "is-fading-out" : ""}`}
+                    } ${fadingOut && !clipEnded ? "is-fading-out" : ""}`}
                   />
                 </>
               ) : (
@@ -501,7 +588,7 @@ export default function PilotClient() {
 
             {/* Chapter scrubber */}
             {state.episodes.length > 0 && (
-              <div className="mt-3 flex flex-wrap gap-1.5">
+              <div className="mt-3 flex flex-wrap items-center gap-1.5">
                 {state.episodes.map((e) => (
                   <button
                     key={e.id}
@@ -519,7 +606,27 @@ export default function PilotClient() {
                     {e.videoUrl ? "" : e.renderStatus === "rendering" ? " ◉" : ""}
                   </button>
                 ))}
+                {nextEpisode && (
+                  <button
+                    type="button"
+                    onClick={() => selectEpisode(nextEpisode.id)}
+                    className="ml-auto rounded-lg px-2.5 py-1.5 text-xs font-mono border border-[#0d9488]/40 text-[#5eead4] hover:bg-[#0d9488]/15"
+                  >
+                    Next ep →
+                  </button>
+                )}
               </div>
+            )}
+
+            {viewing?.videoUrl && (
+              <a
+                href={viewing.videoUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-2 inline-block text-[11px] text-[#8fb6ff] hover:underline"
+              >
+                Open Ep {viewing.number} video in new tab ↗
+              </a>
             )}
 
             {/* Title / script only after the clip is ready (or if there's no video) */}
@@ -542,6 +649,15 @@ export default function PilotClient() {
                 </div>
                 <h2 className="text-xl font-bold mt-1">{viewing?.title}</h2>
                 <p className="text-sm text-[#8b93a5] mt-1">{viewing?.logline}</p>
+                {nextEpisode && (
+                  <button
+                    type="button"
+                    onClick={() => selectEpisode(nextEpisode.id)}
+                    className="mt-3 rounded-lg bg-[#171b26] hover:bg-[#1b2233] border border-[#1e2430] px-3 py-2 text-xs font-mono text-[#5eead4]"
+                  >
+                    Next episode → Ep {nextEpisode.number}: {nextEpisode.title}
+                  </button>
+                )}
               </div>
             )}
 
