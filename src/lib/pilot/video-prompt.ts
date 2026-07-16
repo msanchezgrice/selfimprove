@@ -16,7 +16,9 @@ import type { PilotProductionBible, ShotContinuity } from './types'
 const UNSAFE_PATTERNS: Array<{ re: RegExp; replace: string }> = [
   { re: /\bfinger[- ]?guns?\b/gi, replace: 'an awkward friendly wave' },
   { re: /\bguns?\s+blazing\b/gi, replace: 'full awkward energy' },
-  { re: /\b(shoot|shoots|shooting|shot)\b/gi, replace: 'points playfully' },
+  // "shot" is core camera language; replacing it corrupts directions such as
+  // "hold the shot." Keep blocking verbs unsafe without mangling film terms.
+  { re: /\b(shoot|shoots|shooting)\b/gi, replace: 'points playfully' },
   { re: /\b(gun|guns|pistol|rifle|firearm|weapon|weapons)\b/gi, replace: 'phone' },
   { re: /\b(kill|kills|killing|murder|stab|stabbing|blood|bloody)\b/gi, replace: 'awkward' },
   { re: /\b(explode|explosion|bomb|grenade)\b/gi, replace: 'surprise' },

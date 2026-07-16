@@ -311,6 +311,7 @@ export default function PilotClient() {
         setContinuityPhase("Rewriting choices from what actually happened…");
         const form = new FormData();
         form.set("episodeId", episode.id);
+        if (force) form.set("force", "true");
         frames.forEach((frame, index) => {
           form.append("frames", frame, `ep-${episode.number}-end-${index + 1}.jpg`);
         });

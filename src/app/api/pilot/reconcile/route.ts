@@ -28,6 +28,7 @@ export async function POST(req: NextRequest) {
   try {
     const form = await req.formData()
     episodeId = String(form.get('episodeId') || '')
+    const force = String(form.get('force') || '') === 'true'
     const frames = form.getAll('frames').filter((value): value is File => value instanceof File)
     if (!episodeId) throw statusError('episodeId required', 400)
     if (frames.length < 2 || frames.length > 3) {
@@ -55,7 +56,7 @@ export async function POST(req: NextRequest) {
     if (episode.options.some((option) => option.votes > 0)) {
       throw statusError('cannot rewrite options after voting begins', 409)
     }
-    if (episode.continuityReview?.status === 'ready') {
+    if (episode.continuityReview?.status === 'ready' && !force) {
       return NextResponse.json({ ...toPublicState(initial), reconciled: true })
     }
 

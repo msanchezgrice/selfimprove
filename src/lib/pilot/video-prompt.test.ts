@@ -39,5 +39,8 @@ describe('Higgsfield continuity prompt', () => {
     expect(sanitizeForVideo('Devon enters with finger-guns, guns blazing.')).not.toMatch(
       /gun/i
     )
+    expect(sanitizeForVideo('Hold the low-angle shot as Devon exits.')).toContain(
+      'low-angle shot'
+    )
   })
 })

@@ -50,6 +50,45 @@ export type FrameReconciliation = {
   options: ReconciledOption[]
 }
 
+function optionText(option: ReconciledOption): string {
+  return [
+    option.label,
+    option.detail,
+    option.visual_beat,
+    option.stage_direction,
+    option.transition_description,
+    option.end_state.location,
+    option.end_state.position,
+    option.end_state.motion,
+  ].join(' ').toLowerCase()
+}
+
+/** Hard temporal postconditions that model prose is not allowed to override. */
+export function temporalOptionViolations(result: FrameReconciliation): string[] {
+  const observed = [
+    result.observed.travel_phase,
+    result.observed.motion,
+    ...result.observed.completed_actions,
+    ...result.observed.evidence,
+  ].join(' ').toLowerCase()
+  const arriving =
+    result.observed.travel_phase === 'arriving' ||
+    /\b(arriv|ascend|came up|coming up|emerg|reached the top|onto the street|onto the sidewalk)/i.test(
+      observed
+    )
+  if (!arriving) return []
+
+  const backwardTravel =
+    /\b(descend|descending|go down|going down|down the stairs?|platform|turnstile|transit card|ride the|ride in|board (?:the )?train|subway bench)/i
+  return result.options.flatMap((option, index) =>
+    backwardTravel.test(optionText(option))
+      ? [
+          `option ${index + 1} reverses or repeats completed subway travel after an observed arrival: ${option.label}`,
+        ]
+      : []
+  )
+}
+
 const BOUNDARY_PROPERTIES = {
   location: { type: 'string' },
   position: { type: 'string' },
@@ -197,8 +236,9 @@ export async function reconcileRenderedFrames(opts: {
       `Classify whether Devon is departing, in transit, arriving, stationary, or unclear. List actions already completed on screen.`,
       `Then write exactly three mutually exclusive NEXT actions that move story time forward from the actual final frame.`,
       `Temporal guardrails: never repeat travel/action already completed; never describe descending if he visibly arrived upward; never offer riding if the ride is already complete; never reset him to an earlier location.`,
+      `DEFINITION: travel_phase=arriving means the prior travel is complete. Every option must move away from that origin into a genuinely later beat. It is invalid to descend, return to the platform, use a turnstile, board, or ride after an arrival at street level.`,
       `A reversal is allowed only as an explicit choice whose label and first action show him physically turning around. At most one reversal choice.`,
-      `Each stage direction must begin by restating the observed pose/location/motion, then show one reachable action, then hold a precise end pose.`,
+      `Each stage direction must be 45-70 words: begin by restating the observed pose/location/motion, show one reachable action, then hold a precise end pose.`,
       `Every option is filmable in ten seconds. Use continuous only within a directly reachable space. Use match-on-action for one motivated cut. Use time-bridge only for new travel that visibly shows departure, transit, and arrival.`,
       `Preserve the wardrobe, hair, visible props, hand occupancy, 180-degree axis, and travel direction seen in the final frame unless the action visibly changes them.`,
       `No fades, time reversal, teleporting, repeated commute beats, new people, weapons, or violence. Keep grounded PG life comedy.`,
@@ -206,27 +246,44 @@ export async function reconcileRenderedFrames(opts: {
     ].join('\n'),
   })
 
-  const response = await getClient().messages.create({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 5000,
-    temperature: 0,
-    messages: [{ role: 'user', content }],
-    tools: [
-      {
-        name: 'reconcile_rendered_boundary',
-        description:
-          'Record the observed final boundary and three temporally coherent next camera packages.',
-        input_schema: RECONCILIATION_SCHEMA as Anthropic.Messages.Tool.InputSchema,
-      },
-    ],
-    tool_choice: { type: 'tool', name: 'reconcile_rendered_boundary' },
-  })
+  let repairFeedback = ''
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const attemptContent: Anthropic.Messages.ContentBlockParam[] = repairFeedback
+      ? [
+          ...content,
+          {
+            type: 'text',
+            text: `Your prior draft failed deterministic temporal validation:\n${repairFeedback}\nRewrite all three options. Do not reinterpret the observed arrival as a departure.`,
+          },
+        ]
+      : content
+    const response = await getClient().messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 5000,
+      temperature: 0,
+      messages: [{ role: 'user', content: attemptContent }],
+      tools: [
+        {
+          name: 'reconcile_rendered_boundary',
+          description:
+            'Record the observed final boundary and three temporally coherent next camera packages.',
+          input_schema: RECONCILIATION_SCHEMA as Anthropic.Messages.Tool.InputSchema,
+        },
+      ],
+      tool_choice: { type: 'tool', name: 'reconcile_rendered_boundary' },
+    })
 
-  const tool = response.content.find(
-    (block): block is Anthropic.Messages.ToolUseBlock => block.type === 'tool_use'
-  )
-  if (!tool) throw new Error('pilot reconciliation returned no structured result')
-  return tool.input as FrameReconciliation
+    const tool = response.content.find(
+      (block): block is Anthropic.Messages.ToolUseBlock => block.type === 'tool_use'
+    )
+    if (!tool) throw new Error('pilot reconciliation returned no structured result')
+    const result = tool.input as FrameReconciliation
+    const violations = temporalOptionViolations(result)
+    if (!violations.length) return result
+    repairFeedback = violations.join('\n')
+  }
+
+  throw new Error(`pilot reconciliation remained temporally incoherent: ${repairFeedback}`)
 }
 
 function nonempty(value: string | undefined, fallback: string): string {
@@ -275,7 +332,7 @@ export function applyFrameReconciliation(opts: {
       detail: candidate.detail.trim().slice(0, 140),
       votes: 0,
       visualBeat: sanitizeForVideo(candidate.visual_beat).slice(0, 180),
-      stageDirection: sanitizeForVideo(candidate.stage_direction).slice(0, 520),
+      stageDirection: sanitizeForVideo(candidate.stage_direction).slice(0, 900),
       continuity: shotContinuity({
         opening: observed,
         action: sanitizeForVideo(candidate.visual_beat),

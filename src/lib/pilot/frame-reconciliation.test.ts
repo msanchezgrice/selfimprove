@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { applyFrameReconciliation, type FrameReconciliation } from './frame-reconciliation'
+import {
+  applyFrameReconciliation,
+  temporalOptionViolations,
+  type FrameReconciliation,
+} from './frame-reconciliation'
 import { boundaryViolations } from './continuity'
 import { seedState } from './seed'
 
@@ -98,6 +102,16 @@ function reconciliation(): FrameReconciliation {
 }
 
 describe('rendered-frame continuity reconciliation', () => {
+  it('rejects subway descent and ride options after an observed arrival', () => {
+    const result = reconciliation()
+    result.options[0].label = 'Just ride in silence'
+    result.options[0].visual_beat = 'Devon descends the stairs and sits on the platform bench.'
+
+    expect(temporalOptionViolations(result)).toEqual([
+      expect.stringContaining('reverses or repeats completed subway travel'),
+    ])
+  })
+
   it('replaces screenplay assumptions with the observed final boundary', () => {
     const state = seedState()
     const episode = state.episodes[0]
