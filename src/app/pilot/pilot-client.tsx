@@ -253,6 +253,14 @@ export default function PilotClient() {
     return state.episodes.find((e) => e.number === viewing.number + 1) ?? null;
   }, [state, viewing]);
 
+  /** The prior night's winning vote that produced the clip you're watching. */
+  const sourceChoice = useMemo(() => {
+    if (!state || !viewing || viewing.number < 2) return null;
+    const prior = state.episodes.find((e) => e.number === viewing.number - 1);
+    if (!prior?.winnerOptionId) return null;
+    return prior.options.find((o) => o.id === prior.winnerOptionId) ?? null;
+  }, [state, viewing]);
+
   async function resetSeason() {
     if (resetting || cyclePhase) return;
     const ok = window.confirm(
@@ -649,6 +657,14 @@ export default function PilotClient() {
                 </div>
                 <h2 className="text-xl font-bold mt-1">{viewing?.title}</h2>
                 <p className="text-sm text-[#8b93a5] mt-1">{viewing?.logline}</p>
+                {sourceChoice && (
+                  <p className="text-[11px] font-mono text-[#0d9488] mt-2">
+                    filmed from vote: {sourceChoice.label}
+                    {sourceChoice.visualBeat
+                      ? ` · ${sourceChoice.visualBeat}`
+                      : ""}
+                  </p>
+                )}
                 {nextEpisode && (
                   <button
                     type="button"
@@ -735,14 +751,23 @@ export default function PilotClient() {
           <section className="space-y-6">
             <div className="rounded-2xl border border-[#1e2430] bg-[#11141c] p-5">
               <div className="flex items-center justify-between flex-wrap gap-2">
-                <h3 className="font-bold">Tonight&apos;s decision</h3>
+                <h3 className="font-bold">
+                  Tonight&apos;s decision
+                  {current ? (
+                    <span className="ml-2 font-mono text-xs font-normal text-[#0d9488]">
+                      → Ep {current.number + 1}
+                    </span>
+                  ) : null}
+                </h3>
                 <span className="text-xs font-mono text-[#ffb347]">
                   {pollClosed ? "poll closed" : `poll closes in ${countdown}`}
                 </span>
               </div>
               <p className="text-sm text-[#8b93a5] mt-1 mb-4">
-                The winner becomes the next episode — written, rendered, and
-                published autonomously. Or write in your own option below.
+                These options are for what happens <em>next</em> — the winning
+                vote writes and films Episode {current ? current.number + 1 : "N+1"}.
+                The clip you&apos;re watching already came from last night&apos;s
+                choice. Or write in your own option below.
               </p>
               <div className="space-y-2">
                 {current?.options.map((o) => {

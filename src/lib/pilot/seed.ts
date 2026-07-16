@@ -67,18 +67,24 @@ export function seedState(): PilotState {
             id: 'a',
             label: "Go to Lucho's 🍻",
             detail: 'The group chat wins. Social +, Energy −, Savings −$60',
+            visualBeat:
+              'grabs his jacket off the chair, pockets his phone mid-buzz, and walks toward the office exit',
             votes: 0,
           },
           {
             id: 'b',
             label: 'Hit the gym 🏋️',
             detail: 'Discipline arc continues. Energy +, Social −',
+            visualBeat:
+              'closes the laptop, stands, and swings a gym bag onto his shoulder under the office lights',
             votes: 0,
           },
           {
             id: 'c',
             label: 'One more ticket 💻',
             detail: 'Grind. Boss notices? Energy −−, Career +?',
+            visualBeat:
+              'silences the group chat, cracks his knuckles, and leans back into the glowing monitor',
             votes: 0,
           },
         ],

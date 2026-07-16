@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getState, saveState, toPublicState, getRenderMode } from '@/lib/pilot/store'
 import { checkRender } from '@/lib/pilot/higgsfield'
 import { continuityForEpisode, DEVON_SEED_IMAGE } from '@/lib/pilot/seed'
-import { buildCoherentVideoPrompt } from '@/lib/pilot/video-prompt'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,6 +13,11 @@ export const dynamic = 'force-dynamic'
  *
  * Returns continuity inputs: previous episode video + start still (seed face
  * or prior poster) so Devon stays the same person night to night.
+ *
+ * Important: use the episode's stored `videoPrompt` from cycle — that prompt
+ * already encodes the *previous* night's winning vote (visual_action /
+ * stage_direction). Do NOT rebuild from `pending.winnerOptionId` (always null
+ * on a freshly opened episode — those options are for *tomorrow's* vote).
  */
 export async function GET(req: NextRequest) {
   const key =
@@ -34,28 +38,27 @@ export async function GET(req: NextRequest) {
     }
 
     const continuity = continuityForEpisode(state, pending)
-    const videoPrompt = buildCoherentVideoPrompt({
-      script: pending.script,
-      mood: state.character.mood,
-      visualBeat: pending.options.find((o) => o.id === pending.winnerOptionId)?.visualBeat,
-      continuing: Boolean(continuity.previousEpisodeId),
-    })
-    if (videoPrompt !== pending.videoPrompt) {
-      pending.videoPrompt = videoPrompt
-      await saveState(state)
-    }
+    const prior = state.episodes.find((e) => e.id === continuity.previousEpisodeId)
+    const sourceChoice = prior?.options.find((o) => o.id === prior.winnerOptionId)
 
     return NextResponse.json({
       pending: {
         episodeId: pending.id,
         number: pending.number,
         title: pending.title,
-        videoPrompt,
+        videoPrompt: pending.videoPrompt,
         /** @deprecated prefer startImageUrl — kept for older render scripts */
         seedImageUrl: continuity.startImageUrl || DEVON_SEED_IMAGE,
         startImageUrl: continuity.startImageUrl || DEVON_SEED_IMAGE,
         previousVideoUrl: continuity.previousVideoUrl,
         previousEpisodeId: continuity.previousEpisodeId,
+        sourceChoice: sourceChoice
+          ? {
+              label: sourceChoice.label,
+              detail: sourceChoice.detail,
+              visualBeat: sourceChoice.visualBeat ?? null,
+            }
+          : null,
         script: pending.script,
       },
     })
