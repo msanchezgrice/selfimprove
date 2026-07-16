@@ -39,7 +39,7 @@ type PublicState = {
   episodes: Episode[];
   currentEpisodeId: string | null;
   renderingEnabled: boolean;
-  renderMode?: "session" | "api" | "off";
+  renderMode?: "consumer" | "session" | "api" | "off";
   yourVote?: string | null;
   alreadyVoted?: boolean;
 };
@@ -116,7 +116,7 @@ export default function PilotClient() {
     refresh();
   }, [refresh]);
 
-  // Poll while the latest episode is awaiting video (session attach or API job).
+  // Poll while the latest episode is awaiting video.
   useEffect(() => {
     const current = state?.episodes[state.episodes.length - 1];
     if (!current || current.renderStatus !== "rendering") {
@@ -128,9 +128,10 @@ export default function PilotClient() {
     }
     if (pollTimer.current) return;
 
-    const mode = state?.renderMode ?? "session";
+    const mode = state?.renderMode ?? "consumer";
     pollTimer.current = setInterval(async () => {
-      if (mode === "api") {
+      // consumer + api: ask the server to check (and kick) the job
+      if (mode === "api" || mode === "consumer" || mode === "session") {
         const res = await fetch("/api/pilot/render", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -142,12 +143,12 @@ export default function PilotClient() {
           if (data.renderStatus !== "rendering") {
             setCyclePhase(null);
           }
-        }
-      } else {
-        const data = await refresh();
-        const ep = data?.episodes.find((e) => e.id === current.id);
-        if (ep && ep.renderStatus !== "rendering") {
-          setCyclePhase(null);
+        } else {
+          const data = await refresh();
+          const ep = data?.episodes.find((e) => e.id === current.id);
+          if (ep && ep.renderStatus !== "rendering") {
+            setCyclePhase(null);
+          }
         }
       }
     }, 5000);
@@ -375,7 +376,7 @@ export default function PilotClient() {
       applyState(data as PublicState);
       setYourVote(null);
       setViewingId(null);
-      const mode = data.cycle?.renderMode ?? data.renderMode ?? "session";
+      const mode = data.cycle?.renderMode ?? data.renderMode ?? "consumer";
       if (data.cycle?.recovered) {
         setCyclePhase(null);
         // Soft sync after a double-click / in-flight cycle — not a hard error.
@@ -384,11 +385,11 @@ export default function PilotClient() {
       if (data.cycle?.rendering) {
         setCyclePhase(
           mode === "session"
-            ? "3/3 Episode written — queued for consumer video render…"
-            : "3/3 Episode written — rendering video (2-5 min)…"
+            ? "3/3 Episode written — waiting on external render attach…"
+            : "3/3 Episode written — rendering video with Higgsfield (1–3 min)…"
         );
-        // Don't leave the button locked forever in session mode.
-        setTimeout(() => setCyclePhase(null), 4000);
+        // Unlock the button; polling continues until the clip attaches.
+        setTimeout(() => setCyclePhase(null), mode === "session" ? 4000 : 12_000);
       } else if (data.cycle?.renderError) {
         setCyclePhase(null);
         setError(data.cycle.renderError);
@@ -876,8 +877,8 @@ export default function PilotClient() {
                   <h3 className="font-bold">⚡ Run cycle</h3>
                   <p className="text-xs text-[#8b93a5] mt-1 max-w-md">
                     Fast-forward one night: close the poll, write the next beat
-                    from the winning choice, queue a continuity render (same
-                    Devon, new action) for the consumer session.
+                    from the winning choice, and render the continuity clip
+                    (same Devon, new action) on Higgsfield.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -907,15 +908,23 @@ export default function PilotClient() {
               {error && (
                 <div className="mt-3 text-xs text-[#ff6b6b]">{error}</div>
               )}
-              {(state.renderMode ?? "session") === "session" && (
+              {(state.renderMode ?? "consumer") === "session" && (
                 <div className="mt-3 text-[11px] text-[#5a6376]">
-                  Video uses the Higgsfield consumer app (CLI/MCP), not platform
-                  API keys. Pending jobs:{" "}
+                  Render mode is <code>session</code> — set{" "}
+                  <code className="text-[#8b93a5]">HF_REFRESH_TOKEN</code> on
+                  Vercel so &quot;Run one night&quot; submits video itself.
+                  Legacy CLI path:{" "}
                   <code className="text-[#8b93a5]">
                     GET /api/pilot/render?key=…&amp;pending=1
                   </code>{" "}
-                  → attach via{" "}
+                  →{" "}
                   <code className="text-[#8b93a5]">/api/pilot/attach</code>.
+                </div>
+              )}
+              {(state.renderMode === "consumer" || state.renderMode === "api") && (
+                <div className="mt-3 text-[11px] text-[#5a6376]">
+                  Render mode: <code className="text-[#8b93a5]">{state.renderMode}</code>
+                  {" "}— video submits when you click Run one night.
                 </div>
               )}
             </div>

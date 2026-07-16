@@ -158,18 +158,20 @@ async function writeToStorage(state: PilotState): Promise<void> {
 /**
  * Render backend for /pilot.
  *
- * Default `session` = consumer app (Higgsfield CLI / MCP on the funded
- * account). Cycle leaves the episode as `rendering` and returns videoPrompt;
- * the render session posts the mp4 to `/api/pilot/attach`.
- *
- * Opt-in `api` = platform.higgsfield.ai with HF_API_KEY (separate product —
- * usually 0 credits; do not use unless you mean to).
+ * Default `auto`:
+ *   1. consumer — fnf.higgsfield.ai with HF_REFRESH_TOKEN (funded Ultra account)
+ *   2. api — platform.higgsfield.ai with HF_API_KEY (often 0 credits)
+ *   3. session — leave `rendering` for external CLI → /api/pilot/attach
  */
-export type PilotRenderMode = 'session' | 'api' | 'off'
+export type PilotRenderMode = 'auto' | 'consumer' | 'session' | 'api' | 'off'
 
-export function getRenderMode(): PilotRenderMode {
-  const mode = (process.env.PILOT_RENDER_MODE || 'session').toLowerCase()
-  if (mode === 'api' || mode === 'off' || mode === 'session') return mode
+export function getRenderMode(): Exclude<PilotRenderMode, 'auto'> {
+  const mode = (process.env.PILOT_RENDER_MODE || 'auto').toLowerCase()
+  if (mode === 'api' || mode === 'off' || mode === 'session' || mode === 'consumer') {
+    return mode
+  }
+  if (process.env.HF_REFRESH_TOKEN || process.env.HF_ACCESS_TOKEN) return 'consumer'
+  if (hasCloudApiCreds()) return 'api'
   return 'session'
 }
 
@@ -180,12 +182,14 @@ export function hasCloudApiCreds(): boolean {
   )
 }
 
-/** @deprecated Use getRenderMode() — cloud API keys ≠ consumer credits. */
 export function hasRenderCreds(): boolean {
   const mode = getRenderMode()
   if (mode === 'off') return false
   if (mode === 'api') return hasCloudApiCreds()
-  return true // session mode — consumer app / attach path
+  if (mode === 'consumer') {
+    return Boolean(process.env.HF_REFRESH_TOKEN || process.env.HF_ACCESS_TOKEN)
+  }
+  return true // session — external attach path
 }
 
 export function toPublicState(state: PilotState): PublicState {

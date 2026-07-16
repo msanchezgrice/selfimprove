@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { saveState, toPublicState } from '@/lib/pilot/store'
+import { getState, saveState, toPublicState } from '@/lib/pilot/store'
 import { seedState } from '@/lib/pilot/seed'
 
 export const dynamic = 'force-dynamic'
@@ -10,7 +10,12 @@ export const dynamic = 'force-dynamic'
  */
 export async function POST() {
   try {
+    const prev = await getState().catch(() => null)
     const seeded = seedState()
+    // Keep rotating consumer OAuth across season resets.
+    if (prev?.higgsfieldAuth) {
+      seeded.higgsfieldAuth = prev.higgsfieldAuth
+    }
     await saveState(seeded)
     return NextResponse.json({
       ...toPublicState(seeded),

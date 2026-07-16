@@ -12,16 +12,15 @@ AI writes the beat, renders the video, and opens the next poll — autonomously.
    savings, energy, social, mood) + episode history + the winning choice.
    Structured output via `callClaude` (same wrapper as roadmap/PRD gen).
 3. State deltas are applied — consequences compound, nothing resets.
-4. Video render (default = **consumer app**, not platform API keys):
+4. Video render (default = **consumer HTTP** on click):
    - Continuity model: **seed video → choice → render**. Devon stays the same
      person; each night's clip starts from the previous episode's last frame
      (falling back to the seed face still).
-   - Cycle leaves the episode as `rendering` and returns `videoPrompt` +
-     `previousVideoUrl` + `startImageUrl`.
-   - The Higgsfield consumer render session (CLI / MCP on the funded account)
-     generates the clip and attaches it:
+   - Cycle submits a Kling job to `fnf.higgsfield.ai` using `HF_REFRESH_TOKEN`,
+     stores `hfRequestId`, and returns. Client + `after()` poll until the mp4
+     attaches.
+   - Legacy `session` mode leaves `rendering` for an external CLI →
      `GET /api/pilot/attach?key=CRON_SECRET&episodeId=…&url=…`
-   - Client polls `/api/pilot/state` until `videoUrl` lands.
    - Opt-in cloud API: set `PILOT_RENDER_MODE=api` + `HF_API_KEY` /
      `HF_API_SECRET` (platform.higgsfield.ai is a **separate** product and
      often has 0 credits — do not confuse with consumer account balance).
@@ -40,12 +39,17 @@ a `pilot_voter` cookie.
 
 | Var | Purpose |
 |---|---|
-| `PILOT_RENDER_MODE` | `session` (default, consumer→attach), `api` (platform keys), or `off` (script-only) |
+| `PILOT_RENDER_MODE` | `auto` (default), `consumer`, `api`, `session`, or `off` |
+| `HF_REFRESH_TOKEN` | Consumer OAuth refresh (from `~/.config/higgsfield/credentials.json`) — required for click-to-render |
+| `HF_ACCESS_TOKEN` | Optional warm access token; refreshed automatically |
 | `CRON_SECRET` | Auth for keyed cycle / attach / pending-render endpoints |
-| `HF_API_KEY` / `HF_API_SECRET` | Only if `PILOT_RENDER_MODE=api`. Not the consumer account. |
+| `HF_API_KEY` / `HF_API_SECRET` | Only if `PILOT_RENDER_MODE=api` (platform keys — separate product) |
 | `ANTHROPIC_API_KEY` | Beat writing |
 
-Helper for a local consumer render pass:
+With `HF_REFRESH_TOKEN` set, **Run one night** submits Kling i2v on the funded
+consumer account and the page polls until the clip attaches. No local CLI step.
+
+Legacy CLI helper (session mode only):
 `CRON_SECRET=… APP_BASE_URL=https://… ./scripts/pilot-render-once.sh`
 
 ## Distribution: X/Twitter (to implement)

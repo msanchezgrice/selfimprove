@@ -43,6 +43,12 @@ export type PilotState = {
   /** episodeId -> voterId -> optionId */
   voters: Record<string, Record<string, string>>
   lastCycleAt: string | null
+  /** Rotating consumer OAuth tokens for fnf.higgsfield.ai (server-only). */
+  higgsfieldAuth?: {
+    accessToken: string
+    refreshToken: string
+    accessExpiresAt: string
+  }
 }
 
 /** What the client sees (no voter map). */
@@ -51,6 +57,6 @@ export type PublicState = {
   episodes: Array<Omit<PilotEpisode, 'videoPrompt' | 'hfRequestId'>>
   currentEpisodeId: string | null
   renderingEnabled: boolean
-  /** `session` = consumer app → attach; `api` = platform keys; `off` = script-only */
-  renderMode?: 'session' | 'api' | 'off'
+  /** `consumer` = funded fnf account; `api` = platform keys; `session` = external CLI attach; `off` */
+  renderMode?: 'consumer' | 'session' | 'api' | 'off'
 }

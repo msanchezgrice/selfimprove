@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { after } from 'next/server'
 import { callClaude } from '@/lib/ai/call-claude'
 import {
   getState,
@@ -8,19 +9,25 @@ import {
   getRenderMode,
   hasCloudApiCreds,
 } from '@/lib/pilot/store'
-import { submitImageToVideo } from '@/lib/pilot/higgsfield'
+import { submitImageToVideo, checkRender } from '@/lib/pilot/higgsfield'
+import {
+  hasConsumerCreds,
+  submitConsumerImageToVideo,
+  checkConsumerRender,
+} from '@/lib/pilot/higgsfield-consumer'
 import { DEVON_SEED_IMAGE, continuityForEpisode } from '@/lib/pilot/seed'
 import { buildCoherentVideoPrompt } from '@/lib/pilot/video-prompt'
 import type { PilotEpisode, PilotState } from '@/lib/pilot/types'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60
+export const maxDuration = 120
 
 /**
  * "Run cycle" — one accelerated night.
  *
- * Video is generated via the Higgsfield *consumer* session by default
- * (CLI/MCP → /api/pilot/attach). Platform API keys are opt-in only.
+ * Default path: write beat → submit Higgsfield consumer job → client (and
+ * after()) poll until the mp4 attaches. No separate CLI step required when
+ * HF_REFRESH_TOKEN is configured.
  */
 
 const MIN_CYCLE_GAP_MS = 15_000
@@ -285,8 +292,22 @@ async function runCycle(includePrompt: boolean) {
 
     let renderError: string | null = null
 
-    if (renderMode === 'session') {
-      episode.renderStatus = 'rendering'
+    if (renderMode === 'consumer' && hasConsumerCreds(state)) {
+      try {
+        const { requestId, authChanged } = await submitConsumerImageToVideo(state, {
+          prompt: videoPrompt,
+          imageUrl: continuityStill,
+        })
+        episode.hfRequestId = requestId
+        episode.renderStatus = 'rendering'
+        if (authChanged) {
+          // auth already written onto state by ensureConsumerAuth
+        }
+      } catch (err) {
+        console.error('pilot: consumer render submit failed', err)
+        episode.renderStatus = 'failed'
+        renderError = err instanceof Error ? err.message : 'consumer render failed'
+      }
     } else if (renderMode === 'api' && hasCloudApiCreds()) {
       try {
         const { requestId } = await submitImageToVideo({
@@ -300,6 +321,8 @@ async function runCycle(includePrompt: boolean) {
         episode.renderStatus = 'failed'
         renderError = err instanceof Error ? err.message : 'cloud API render failed'
       }
+    } else if (renderMode === 'session') {
+      episode.renderStatus = 'rendering'
     }
 
     state.episodes.push(episode)
@@ -307,6 +330,54 @@ async function runCycle(includePrompt: boolean) {
     await saveState(state)
 
     const continuity = continuityForEpisode(state, episode)
+
+    // Keep polling after the response so the clip attaches even if the tab closes.
+    if (episode.renderStatus === 'rendering' && episode.hfRequestId) {
+      const episodeId = episode.id
+      const requestId = episode.hfRequestId
+      const mode = renderMode
+      after(async () => {
+        try {
+          for (let i = 0; i < 36; i++) {
+            await new Promise((r) => setTimeout(r, 5_000))
+            const latest = await getState()
+            const ep = latest.episodes.find((e) => e.id === episodeId)
+            if (!ep || ep.renderStatus !== 'rendering' || !ep.hfRequestId) return
+
+            if (mode === 'consumer') {
+              const { check, authChanged } = await checkConsumerRender(latest, requestId)
+              if (authChanged) await saveState(latest)
+              if (check.status === 'completed') {
+                ep.videoUrl = check.videoUrl
+                ep.renderStatus = 'done'
+                await saveState(latest)
+                return
+              }
+              if (check.status === 'failed') {
+                ep.renderStatus = 'failed'
+                await saveState(latest)
+                return
+              }
+            } else if (mode === 'api') {
+              const check = await checkRender(requestId)
+              if (check.status === 'completed') {
+                ep.videoUrl = check.videoUrl
+                ep.renderStatus = 'done'
+                await saveState(latest)
+                return
+              }
+              if (check.status === 'failed') {
+                ep.renderStatus = 'failed'
+                await saveState(latest)
+                return
+              }
+            }
+          }
+        } catch (err) {
+          console.error('pilot: background render poll failed', err)
+        }
+      })
+    }
 
     return NextResponse.json({
       ...toPublicState(state),

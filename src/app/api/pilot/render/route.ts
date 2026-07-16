@@ -1,23 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getState, saveState, toPublicState, getRenderMode } from '@/lib/pilot/store'
 import { checkRender } from '@/lib/pilot/higgsfield'
+import {
+  hasConsumerCreds,
+  submitConsumerImageToVideo,
+  checkConsumerRender,
+} from '@/lib/pilot/higgsfield-consumer'
 import { continuityForEpisode, DEVON_SEED_IMAGE } from '@/lib/pilot/seed'
 
 export const dynamic = 'force-dynamic'
+export const maxDuration = 60
 
 /**
- * Poll / inspect render status.
+ * Poll / inspect / kick render status.
  *
- * Keyed pending job for the consumer render worker:
+ * Keyed pending job (legacy CLI worker):
  *   GET /api/pilot/render?key=CRON_SECRET&pending=1
  *
- * Returns continuity inputs: previous episode video + start still (seed face
- * or prior poster) so Devon stays the same person night to night.
- *
- * Important: use the episode's stored `videoPrompt` from cycle — that prompt
- * already encodes the *previous* night's winning vote (visual_action /
- * stage_direction). Do NOT rebuild from `pending.winnerOptionId` (always null
- * on a freshly opened episode — those options are for *tomorrow's* vote).
+ * Client poll after "Run one night":
+ *   POST /api/pilot/render { episodeId }
+ *   — checks consumer/platform job; if stuck with no job id, submits one.
  */
 export async function GET(req: NextRequest) {
   const key =
@@ -47,7 +49,6 @@ export async function GET(req: NextRequest) {
         number: pending.number,
         title: pending.title,
         videoPrompt: pending.videoPrompt,
-        /** @deprecated prefer startImageUrl — kept for older render scripts */
         seedImageUrl: continuity.startImageUrl || DEVON_SEED_IMAGE,
         startImageUrl: continuity.startImageUrl || DEVON_SEED_IMAGE,
         previousVideoUrl: continuity.previousVideoUrl,
@@ -80,26 +81,58 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'unknown episode' }, { status: 404 })
     }
 
+    const mode = getRenderMode()
+    let authDirty = false
+
+    // Stuck episode: written but never submitted — kick off consumer render now.
     if (
-      getRenderMode() === 'api' &&
       episode.renderStatus === 'rendering' &&
-      episode.hfRequestId
+      !episode.videoUrl &&
+      !episode.hfRequestId &&
+      mode === 'consumer' &&
+      hasConsumerCreds(state)
     ) {
-      const check = await checkRender(episode.hfRequestId)
-      if (check.status === 'completed') {
-        episode.videoUrl = check.videoUrl
-        episode.renderStatus = 'done'
-        await saveState(state)
-      } else if (check.status === 'failed') {
-        episode.renderStatus = 'failed'
-        await saveState(state)
+      const continuity = continuityForEpisode(state, episode)
+      const { requestId, authChanged } = await submitConsumerImageToVideo(state, {
+        prompt: episode.videoPrompt,
+        imageUrl: continuity.startImageUrl || DEVON_SEED_IMAGE,
+      })
+      episode.hfRequestId = requestId
+      authDirty = authChanged
+      await saveState(state)
+    }
+
+    if (episode.renderStatus === 'rendering' && episode.hfRequestId) {
+      if (mode === 'consumer' || hasConsumerCreds(state)) {
+        const { check, authChanged } = await checkConsumerRender(state, episode.hfRequestId)
+        authDirty = authDirty || authChanged
+        if (check.status === 'completed') {
+          episode.videoUrl = check.videoUrl
+          episode.renderStatus = 'done'
+          await saveState(state)
+        } else if (check.status === 'failed') {
+          episode.renderStatus = 'failed'
+          await saveState(state)
+        } else if (authDirty) {
+          await saveState(state)
+        }
+      } else if (mode === 'api') {
+        const check = await checkRender(episode.hfRequestId)
+        if (check.status === 'completed') {
+          episode.videoUrl = check.videoUrl
+          episode.renderStatus = 'done'
+          await saveState(state)
+        } else if (check.status === 'failed') {
+          episode.renderStatus = 'failed'
+          await saveState(state)
+        }
       }
     }
 
     return NextResponse.json({
       ...toPublicState(state),
       renderStatus: episode.renderStatus,
-      renderMode: getRenderMode(),
+      renderMode: mode,
     })
   } catch (err) {
     return NextResponse.json(
