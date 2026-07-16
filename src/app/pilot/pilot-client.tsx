@@ -82,7 +82,10 @@ export default function PilotClient() {
   const [customLabel, setCustomLabel] = useState("");
   const [customDetail, setCustomDetail] = useState("");
   const [customVisualBeat, setCustomVisualBeat] = useState("");
+  const [resetting, setResetting] = useState(false);
+  const [videoReady, setVideoReady] = useState(false);
   const playerRef = useRef<HTMLDivElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
   const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const cycleAbort = useRef<AbortController | null>(null);
 
@@ -171,12 +174,68 @@ export default function PilotClient() {
   const pollClosed = Boolean(current?.winnerOptionId);
 
   function selectEpisode(id: string) {
+    setVideoReady(false);
     setViewingId(id);
-    // Scroll the player into view so chapter clicks feel like something happened
-    // (failed episodes share the same poster — title/script change is easy to miss).
     requestAnimationFrame(() => {
       playerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
+  }
+
+  // When the active episode changes, force the <video> element to load that
+  // clip and skip the shared seed first-frame so chapter switches are obvious.
+  useEffect(() => {
+    setVideoReady(false);
+    const el = videoRef.current;
+    if (!el || !viewing?.videoUrl) return;
+
+    el.pause();
+    el.removeAttribute("src");
+    el.load();
+    el.src = viewing.videoUrl;
+    el.load();
+
+    const onReady = () => {
+      try {
+        // i2v from the same seed often looks identical at t=0 — jump in.
+        if (el.duration && el.duration > 1) el.currentTime = 0.6;
+      } catch {
+        /* ignore seek errors */
+      }
+      setVideoReady(true);
+      el.play().catch(() => undefined);
+    };
+
+    el.addEventListener("loadeddata", onReady, { once: true });
+    return () => el.removeEventListener("loadeddata", onReady);
+  }, [viewing?.id, viewing?.videoUrl]);
+
+  async function resetSeason() {
+    if (resetting || cyclePhase) return;
+    const ok = window.confirm(
+      "Reset Patch Notes to Episode 1?\n\nThis wipes all episodes, votes, and character progress."
+    );
+    if (!ok) return;
+    setResetting(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/pilot/reset", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || `reset failed (${res.status})`);
+        return;
+      }
+      applyState(data as PublicState);
+      setYourVote(null);
+      setViewingId(null);
+      setCustomLabel("");
+      setCustomDetail("");
+      setCustomVisualBeat("");
+      setCyclePhase(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "reset failed");
+    } finally {
+      setResetting(false);
+    }
   }
 
   async function vote(optionId: string) {
@@ -362,17 +421,30 @@ export default function PilotClient() {
             >
               <div className="absolute top-3 left-3 z-10 rounded-md bg-black/70 px-2 py-1 text-[11px] font-mono text-[#ffb347]">
                 EP {viewing?.number}
+                {viewing?.title ? ` · ${viewing.title}` : ""}
               </div>
               {viewing?.videoUrl ? (
-                <video
-                  key={viewing.videoUrl}
-                  controls
-                  playsInline
-                  autoPlay
-                  poster={viewing.posterUrl}
-                  src={viewing.videoUrl}
-                  className="w-full aspect-[9/16] object-cover"
-                />
+                <>
+                  {!videoReady && (
+                    <div className="absolute inset-0 z-[5] flex flex-col items-center justify-center bg-[#0b0d12] px-6 text-center">
+                      <div className="text-xs font-mono text-[#ffb347] mb-2">
+                        LOADING EP {viewing.number}
+                      </div>
+                      <div className="text-sm font-semibold">{viewing.title}</div>
+                      <div className="mt-2 text-xs text-[#8b93a5] max-w-xs">
+                        {viewing.logline}
+                      </div>
+                    </div>
+                  )}
+                  <video
+                    key={viewing.id}
+                    ref={videoRef}
+                    controls
+                    playsInline
+                    preload="auto"
+                    className="w-full aspect-[9/16] object-cover bg-black"
+                  />
+                </>
               ) : (
                 <div
                   key={viewing?.id}
@@ -405,10 +477,11 @@ export default function PilotClient() {
                     key={e.id}
                     type="button"
                     onClick={() => selectEpisode(e.id)}
-                    className={`rounded-lg px-2.5 py-1.5 text-xs font-mono transition ${
+                    aria-pressed={viewing?.id === e.id}
+                    className={`rounded-lg px-2.5 py-1.5 text-xs font-mono transition border ${
                       viewing?.id === e.id
-                        ? "bg-[#0d9488] text-white"
-                        : "bg-[#171b26] text-[#8b93a5] hover:text-white hover:bg-[#1b2233]"
+                        ? "bg-[#0d9488] text-white border-[#0d9488]"
+                        : "bg-[#171b26] text-[#8b93a5] border-transparent hover:text-white hover:bg-[#1b2233]"
                     }`}
                     title={e.title}
                   >
@@ -448,7 +521,7 @@ export default function PilotClient() {
                   {state.character.name}&apos;s state
                 </h3>
                 <span className="text-[10px] font-mono text-[#5a6376]">
-                  PERSISTENT · NOTHING RESETS
+                  PERSISTENT THIS SEASON
                 </span>
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -635,14 +708,24 @@ export default function PilotClient() {
                     queues video for the Higgsfield consumer render session.
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={runCycle}
-                  disabled={Boolean(cyclePhase)}
-                  className="rounded-xl bg-[#0d9488] px-4 py-2.5 text-sm font-bold text-white hover:brightness-110 disabled:opacity-50"
-                >
-                  {cyclePhase ? "Running…" : "Run one night"}
-                </button>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={runCycle}
+                    disabled={Boolean(cyclePhase) || resetting}
+                    className="rounded-xl bg-[#0d9488] px-4 py-2.5 text-sm font-bold text-white hover:brightness-110 disabled:opacity-50"
+                  >
+                    {cyclePhase ? "Running…" : "Run one night"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={resetSeason}
+                    disabled={resetting || Boolean(cyclePhase)}
+                    className="rounded-xl border border-[#5a6376] px-4 py-2.5 text-sm font-semibold text-[#c7cdd9] hover:border-[#ff6b6b] hover:text-[#ff6b6b] disabled:opacity-50"
+                  >
+                    {resetting ? "Resetting…" : "Reset season"}
+                  </button>
+                </div>
               </div>
               {cyclePhase && (
                 <div className="mt-3 text-xs font-mono text-[#ffb347] animate-pulse">
