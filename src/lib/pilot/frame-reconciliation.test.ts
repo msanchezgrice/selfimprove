@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   applyFrameReconciliation,
+  repairTemporalOptionViolations,
   temporalOptionViolations,
   type FrameReconciliation,
 } from './frame-reconciliation'
@@ -110,6 +111,11 @@ describe('rendered-frame continuity reconciliation', () => {
     expect(temporalOptionViolations(result)).toEqual([
       expect.stringContaining('reverses or repeats completed subway travel'),
     ])
+
+    const repaired = repairTemporalOptionViolations(result)
+    expect(temporalOptionViolations(repaired)).toEqual([])
+    expect(repaired.options[0].label).toBe('Continue aboveground 🚶')
+    expect(repaired.options[0].stage_direction).toMatch(/finishing the observed arrival/i)
   })
 
   it('replaces screenplay assumptions with the observed final boundary', () => {

@@ -89,6 +89,101 @@ export function temporalOptionViolations(result: FrameReconciliation): string[] 
   )
 }
 
+function arrivingFallback(observed: ObservedFrameBoundary, index: number): ReconciledOption {
+  const shared = {
+    dialogue_text: '',
+    dialogue_delivery: '',
+    transition_mode: 'continuous' as const,
+  }
+  if (index === 1) {
+    return {
+      ...shared,
+      label: 'Text Sam from here 📱',
+      detail: 'Pause aboveground before taking another step.',
+      visual_beat: 'Devon clears the stairwell, steps safely aside, and types Sam a short message.',
+      stage_direction: `Devon begins ${observed.position} at ${observed.location}, finishing the observed arrival. He steps fully clear of the stairwell without reversing, moves safely aside, and draws his phone. He types one short message to Sam, reads it once, and holds with his thumb above send.`,
+      transition_description:
+        'Continue the final arrival onto the adjacent street landing, then settle into a stationary phone beat without a cut.',
+      end_state: {
+        location: 'sidewalk beside the subway entrance',
+        position: 'standing safely clear of the stairwell opening with both feet planted',
+        facing: 'front three-quarter toward camera',
+        screen_direction: 'stationary',
+        motion: 'right thumb hovering above the phone send button',
+        props: ['phone held in both hands at chest height', 'black watch on left wrist'],
+        lighting: observed.lighting,
+        camera: observed.camera,
+        expression: 'careful, hopeful, and still deciding',
+      },
+    }
+  }
+  if (index === 2) {
+    return {
+      ...shared,
+      label: 'Check the address 📍',
+      detail: 'Make sure he surfaced on the right block.',
+      visual_beat: 'Devon steps clear of the stairs and checks the destination on his phone.',
+      stage_direction: `Devon begins ${observed.position} at ${observed.location}, finishing the observed arrival. He releases the railing, steps fully onto the sidewalk, and moves clear of the entrance. He checks the destination on his phone, turns his shoulders toward camera-right, and holds ready to continue aboveground.`,
+      transition_description:
+        'Continue the final upward arrival into one unbroken step onto the adjacent sidewalk.',
+      end_state: {
+        location: 'sidewalk beside the subway entrance',
+        position: 'standing clear of the stairs with weight ready on the right foot',
+        facing: 'three-quarter toward camera-right',
+        screen_direction: 'camera-right',
+        motion: 'lowering the phone and preparing to walk along the sidewalk',
+        props: ['phone in right hand', 'black watch on left wrist'],
+        lighting: observed.lighting,
+        camera: observed.camera,
+        expression: 'oriented and ready to move on',
+      },
+    }
+  }
+  return {
+    ...shared,
+    label: 'Continue aboveground 🚶',
+    detail: 'Keep moving forward from the arrival.',
+    visual_beat: 'Devon clears the final stair, releases the railing, and walks along the sidewalk.',
+    stage_direction: `Devon begins ${observed.position} at ${observed.location}, finishing the observed arrival. He steps fully onto the street landing, releases the railing, and turns toward camera-right. He walks along the sidewalk without looking back, then holds mid-stride with the subway entrance receding behind him.`,
+    transition_description:
+      'Continue the final arrival into a same-direction sidewalk walk; no cut and no return belowground.',
+    end_state: {
+      location: 'sidewalk beyond the subway entrance',
+      position: 'two strides past the stairwell with right foot leading',
+      facing: 'profile toward camera-right',
+      screen_direction: 'camera-right',
+      motion: 'walking steadily away from the subway entrance',
+      props: ['phone in trouser pocket', 'black watch on left wrist'],
+      lighting: observed.lighting,
+      camera: 'medium full profile shot on the street side of the stairwell axis',
+      expression: 'resolved and moving forward',
+    },
+  }
+}
+
+/** Replace any model option that still violates a proven arrival boundary. */
+export function repairTemporalOptionViolations(
+  result: FrameReconciliation
+): FrameReconciliation {
+  const violations = temporalOptionViolations(result)
+  if (!violations.length) return result
+  const badIndexes = new Set(
+    violations
+      .map((violation) => Number(violation.match(/^option (\d+)/)?.[1]) - 1)
+      .filter((index) => Number.isInteger(index) && index >= 0)
+  )
+  return {
+    ...result,
+    mismatches: [
+      ...result.mismatches,
+      ...violations.map((violation) => `guardrail repaired: ${violation}`),
+    ],
+    options: result.options.map((option, index) =>
+      badIndexes.has(index) ? arrivingFallback(result.observed, index) : option
+    ),
+  }
+}
+
 const BOUNDARY_PROPERTIES = {
   location: { type: 'string' },
   position: { type: 'string' },
@@ -247,6 +342,7 @@ export async function reconcileRenderedFrames(opts: {
   })
 
   let repairFeedback = ''
+  let lastResult: FrameReconciliation | null = null
   for (let attempt = 0; attempt < 2; attempt++) {
     const attemptContent: Anthropic.Messages.ContentBlockParam[] = repairFeedback
       ? [
@@ -278,11 +374,18 @@ export async function reconcileRenderedFrames(opts: {
     )
     if (!tool) throw new Error('pilot reconciliation returned no structured result')
     const result = tool.input as FrameReconciliation
+    lastResult = result
     const violations = temporalOptionViolations(result)
     if (!violations.length) return result
     repairFeedback = violations.join('\n')
   }
 
+  if (lastResult) {
+    const repaired = repairTemporalOptionViolations(lastResult)
+    const remaining = temporalOptionViolations(repaired)
+    if (!remaining.length) return repaired
+    repairFeedback = remaining.join('\n')
+  }
   throw new Error(`pilot reconciliation remained temporally incoherent: ${repairFeedback}`)
 }
 
