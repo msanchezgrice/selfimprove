@@ -348,6 +348,7 @@ async function runCycle(includePrompt: boolean) {
               if (authChanged) await saveState(latest)
               if (check.status === 'completed') {
                 ep.videoUrl = check.videoUrl
+                if (check.thumbnailUrl) ep.posterUrl = check.thumbnailUrl
                 ep.renderStatus = 'done'
                 await saveState(latest)
                 return
