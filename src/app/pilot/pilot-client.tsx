@@ -84,6 +84,8 @@ export default function PilotClient() {
   const [customVisualBeat, setCustomVisualBeat] = useState("");
   const [resetting, setResetting] = useState(false);
   const [videoReady, setVideoReady] = useState(false);
+  const [videoError, setVideoError] = useState<string | null>(null);
+  const [fadingOut, setFadingOut] = useState(false);
   const playerRef = useRef<HTMLDivElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -175,40 +177,44 @@ export default function PilotClient() {
 
   function selectEpisode(id: string) {
     setVideoReady(false);
+    setVideoError(null);
+    setFadingOut(false);
     setViewingId(id);
     requestAnimationFrame(() => {
       playerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   }
 
-  // When the active episode changes, force the <video> element to load that
-  // clip and skip the shared seed first-frame so chapter switches are obvious.
+  // Reset ready state when the active episode identity changes.
   useEffect(() => {
     setVideoReady(false);
-    const el = videoRef.current;
-    if (!el || !viewing?.videoUrl) return;
-
-    el.pause();
-    el.removeAttribute("src");
-    el.load();
-    el.src = viewing.videoUrl;
-    el.load();
-
-    const onReady = () => {
-      // Start near the beginning — character continuity means the face should
-      // match the previous night; the action differentiates the clip.
-      try {
-        if (el.duration && el.duration > 0.3) el.currentTime = 0.15;
-      } catch {
-        /* ignore seek errors */
-      }
-      setVideoReady(true);
-      el.play().catch(() => undefined);
-    };
-
-    el.addEventListener("loadeddata", onReady, { once: true });
-    return () => el.removeEventListener("loadeddata", onReady);
+    setVideoError(null);
+    setFadingOut(false);
   }, [viewing?.id, viewing?.videoUrl]);
+
+  function onVideoCanPlay() {
+    setVideoReady(true);
+    setVideoError(null);
+    const el = videoRef.current;
+    if (!el) return;
+    el.play().catch(() => undefined);
+  }
+
+  function onVideoTimeUpdate() {
+    const el = videoRef.current;
+    if (!el || !el.duration || !Number.isFinite(el.duration)) return;
+    // Soft fade-out in the last ~0.7s
+    setFadingOut(el.currentTime >= el.duration - 0.7);
+  }
+
+  function onVideoEnded() {
+    setFadingOut(true);
+  }
+
+  function onVideoError() {
+    setVideoReady(false);
+    setVideoError("Couldn't load this clip — try another episode or refresh.");
+  }
 
   async function resetSeason() {
     if (resetting || cyclePhase) return;
@@ -422,55 +428,78 @@ export default function PilotClient() {
             >
               <div className="absolute top-3 left-3 z-10 rounded-md bg-black/70 px-2 py-1 text-[11px] font-mono text-[#ffb347]">
                 EP {viewing?.number}
-                {viewing?.title ? ` · ${viewing.title}` : ""}
               </div>
               {viewing?.videoUrl ? (
                 <>
-                  {!videoReady && (
-                    <div className="absolute inset-0 z-[5] flex flex-col items-center justify-center bg-[#0b0d12] px-6 text-center">
-                      <div className="text-xs font-mono text-[#ffb347] mb-2">
-                        LOADING EP {viewing.number}
+                  {!videoReady && !videoError && (
+                    <div className="absolute inset-0 z-[5] flex flex-col items-center justify-center gap-3 bg-[#0b0d12]">
+                      <div className="pilot-spinner" aria-hidden />
+                      <div className="text-xs font-mono text-[#ffb347]">
+                        Loading episode {viewing.number}…
                       </div>
-                      <div className="text-sm font-semibold">{viewing.title}</div>
-                      <div className="mt-2 text-xs text-[#8b93a5] max-w-xs">
-                        {viewing.logline}
-                      </div>
+                    </div>
+                  )}
+                  {videoError && (
+                    <div className="absolute inset-0 z-[5] flex flex-col items-center justify-center gap-2 bg-[#0b0d12] px-6 text-center">
+                      <div className="text-xs text-[#ff6b6b]">{videoError}</div>
+                      <button
+                        type="button"
+                        className="text-xs text-[#8fb6ff] underline"
+                        onClick={() => {
+                          setVideoError(null);
+                          setVideoReady(false);
+                          videoRef.current?.load();
+                        }}
+                      >
+                        Retry
+                      </button>
                     </div>
                   )}
                   <video
                     key={viewing.id}
                     ref={videoRef}
+                    src={viewing.videoUrl}
                     controls
                     playsInline
                     preload="auto"
-                    className="w-full aspect-[9/16] object-cover bg-black"
+                    onCanPlay={onVideoCanPlay}
+                    onTimeUpdate={onVideoTimeUpdate}
+                    onEnded={onVideoEnded}
+                    onError={onVideoError}
+                    onPlay={() => setFadingOut(false)}
+                    className={`w-full aspect-[9/16] object-cover bg-black pilot-video-fade ${
+                      videoReady ? "is-ready" : ""
+                    } ${fadingOut ? "is-fading-out" : ""}`}
                   />
                 </>
               ) : (
                 <div
                   key={viewing?.id}
-                  className="w-full aspect-[9/16] bg-cover bg-center flex items-end"
-                  style={{ backgroundImage: `url(${viewing?.posterUrl})` }}
+                  className="w-full aspect-[9/16] flex flex-col items-center justify-center gap-3 bg-[#0b0d12] px-6 text-center"
                 >
-                  <div className="w-full bg-gradient-to-t from-black/90 to-transparent p-4 pt-16">
-                    <div className="text-xs font-mono text-[#ffb347] mb-2">
-                      {viewing?.renderStatus === "rendering"
-                        ? state.renderMode === "session"
-                          ? "◉ AWAITING CONSUMER RENDER — session will attach the video"
-                          : "◉ RENDERING — the video is being generated"
-                        : viewing?.renderStatus === "failed"
-                        ? "✕ RENDER FAILED — script-only episode"
-                        : "SCRIPT-ONLY EPISODE"}
+                  {viewing?.renderStatus === "rendering" ? (
+                    <>
+                      <div className="pilot-spinner" aria-hidden />
+                      <div className="text-xs font-mono text-[#ffb347]">
+                        Rendering episode {viewing.number}…
+                      </div>
+                      <div className="text-[11px] text-[#5a6376] max-w-xs">
+                        Consumer render usually takes 1–3 minutes. This page
+                        updates when the clip attaches.
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-xs font-mono text-[#ff6b6b]">
+                      {viewing?.renderStatus === "failed"
+                        ? "Render failed — run cycle again or reset"
+                        : "No video yet"}
                     </div>
-                    <p className="text-sm leading-relaxed text-[#c7cdd9]">
-                      {viewing?.script}
-                    </p>
-                  </div>
+                  )}
                 </div>
               )}
             </div>
 
-            {/* Chapter scrubber — click any episode to load it in the player */}
+            {/* Chapter scrubber */}
             {state.episodes.length > 0 && (
               <div className="mt-3 flex flex-wrap gap-1.5">
                 {state.episodes.map((e) => (
@@ -493,27 +522,28 @@ export default function PilotClient() {
               </div>
             )}
 
-            <div className="mt-3 px-1">
-              <div className="text-xs font-mono text-[#5a6376]">
-                EPISODE {viewing?.number} · SEASON 1
-                {viewing && current && viewing.id !== current.id && (
-                  <button
-                    type="button"
-                    onClick={() => setViewingId(null)}
-                    className="ml-2 text-[#8fb6ff]"
-                  >
-                    ← back to latest
-                  </button>
-                )}
+            {/* Title / script only after the clip is ready (or if there's no video) */}
+            {(videoReady || !viewing?.videoUrl) && (
+              <div className="mt-3 px-1">
+                <div className="text-xs font-mono text-[#5a6376]">
+                  EPISODE {viewing?.number} · SEASON 1
+                  {viewing && current && viewing.id !== current.id && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setViewingId(null);
+                        setVideoReady(false);
+                      }}
+                      className="ml-2 text-[#8fb6ff]"
+                    >
+                      ← back to latest
+                    </button>
+                  )}
+                </div>
+                <h2 className="text-xl font-bold mt-1">{viewing?.title}</h2>
+                <p className="text-sm text-[#8b93a5] mt-1">{viewing?.logline}</p>
               </div>
-              <h2 className="text-xl font-bold mt-1">{viewing?.title}</h2>
-              <p className="text-sm text-[#8b93a5] mt-1">{viewing?.logline}</p>
-              {viewing?.videoUrl && (
-                <p className="mt-3 text-sm leading-relaxed text-[#9aa3b5]">
-                  {viewing.script}
-                </p>
-              )}
-            </div>
+            )}
 
             {/* Character state */}
             <div className="mt-5 rounded-2xl border border-[#1e2430] bg-[#11141c] p-4">

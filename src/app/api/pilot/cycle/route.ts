@@ -31,6 +31,8 @@ type Beat = {
   script: string
   /** Single Devon-locked visual action for i2v (verb phrase, no camera jargon) */
   visual_action: string
+  /** Thorough cinematic stage direction connecting this shot to the previous night */
+  stage_direction: string
   options: Array<{ label: string; detail: string; visual_beat: string }>
   state_delta: {
     savings_change: number
@@ -49,12 +51,17 @@ const BEAT_SCHEMA = {
     script: {
       type: 'string',
       description:
-        'The scene for readers, max 90 words, present tense, at most two short spoken lines. Can mention other characters.',
+        'Reader script, max 90 words, present tense, at most two short spoken lines. Can mention other characters.',
     },
     visual_action: {
       type: 'string',
       description:
-        'ONE concrete action Devon performs on camera this episode, max 20 words, present tense, starting with a verb (e.g. "winces as Sam turns away, laugh dying in his chest"). Must be filmable as a medium close-up of Devon alone. No other named characters in frame.',
+        'ONE concrete action Devon performs on camera, max 20 words, present tense, verb-first. Filmable as a medium close-up of Devon alone.',
+    },
+    stage_direction: {
+      type: 'string',
+      description:
+        'Thorough stage direction for a connected TV beat (2-4 sentences): where we left him last night, how this shot opens (fade-in / match cut), blocking, eyeline, prop business, how it closes on his face for tomorrow. Max 80 words.',
     },
     options: {
       type: 'array',
@@ -86,7 +93,15 @@ const BEAT_SCHEMA = {
       required: ['savings_change', 'energy_change', 'job', 'social', 'mood'],
     },
   },
-  required: ['title', 'logline', 'script', 'visual_action', 'options', 'state_delta'],
+  required: [
+    'title',
+    'logline',
+    'script',
+    'visual_action',
+    'stage_direction',
+    'options',
+    'state_delta',
+  ],
 }
 
 function pickWinner(episode: PilotEpisode) {
@@ -208,9 +223,11 @@ async function runCycle(includePrompt: boolean) {
         ``,
         `Write the next episode beat. Rules:`,
         `- Grounded, relatable, a little funny. PG-13. No melodrama.`,
+        `- Treat nights as consecutive scenes in ONE show — stage_direction must bridge from the previous episode's ending into this shot (match cut / eyeline / prop carry).`,
         `- Consequences must follow from the choice AND the character state (money, energy, friendships compound).`,
         `- The script can mention Sam/Marcus/etc for readers.`,
-        `- visual_action MUST be filmable as a medium close-up of Devon ALONE (image-to-video from his face photo). Do NOT put other named characters in the visual_action.`,
+        `- visual_action MUST be filmable as a medium close-up of Devon ALONE. Do NOT put other named characters in visual_action.`,
+        `- stage_direction is thorough blocking for the camera: open (fade-in), middle action, close (fade-out on his face for tomorrow).`,
         `- visual_action must literally enact the audience's choice, not a generic "sips beer looking sad".`,
         `- Each option needs a visual_beat so the next night's video stays coherent if that option wins.`,
         `- Savings changes must be realistic for the action taken.`,
@@ -235,6 +252,7 @@ async function runCycle(includePrompt: boolean) {
       script: beat.script,
       mood: beat.state_delta.mood,
       visualBeat: beat.visual_action || winner.visualBeat,
+      stageDirection: beat.stage_direction,
       continuing: state.episodes.some((e) => e.videoUrl),
     })
 

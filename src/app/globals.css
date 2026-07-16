@@ -49,3 +49,35 @@ body {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
 }
+
+@keyframes pilot-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pilot-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.pilot-spinner {
+  width: 28px;
+  height: 28px;
+  border-radius: 9999px;
+  border: 2px solid rgba(255, 179, 71, 0.25);
+  border-top-color: #ffb347;
+  animation: pilot-spin 0.7s linear infinite;
+}
+
+.pilot-video-fade {
+  opacity: 0;
+  transition: opacity 0.55s ease;
+}
+
+.pilot-video-fade.is-ready {
+  opacity: 1;
+  animation: pilot-fade-in 0.55s ease both;
+}
+
+.pilot-video-fade.is-fading-out {
+  opacity: 0;
+}

@@ -2,8 +2,7 @@
  * Image-to-video continuity for Patch Notes.
  *
  * Loop: seed video → audience chooses → render next clip.
- * Identity lock: always the same Devon (seed face / previous last frame).
- * Action changes with the winning choice; the face should not.
+ * Identity lock: same Devon. Scenes must feel like consecutive shots in one show.
  */
 
 const DEVON_LOOK =
@@ -12,10 +11,10 @@ const DEVON_LOOK =
 export function buildCoherentVideoPrompt(opts: {
   script: string
   mood: string
-  /** Audience/director note — what we should SEE if this choice won */
   visualBeat?: string | null
+  /** Full cinematic stage direction from the writer */
+  stageDirection?: string | null
   settingHint?: string | null
-  /** True when continuing from a previous episode frame (not cold seed) */
   continuing?: boolean
 }): string {
   const action = extractDevonAction(opts.script, opts.visualBeat)
@@ -25,18 +24,24 @@ export function buildCoherentVideoPrompt(opts: {
     'dim warm bar interior, shallow depth of field, soft amber practical lights'
 
   const continuity = opts.continuing
-    ? `Continue from the reference frame of the previous episode. Keep Devon's face, hair, wardrobe continuity, and age identical — only the action and micro-expression change.`
-    : `Start from the reference photo of ${DEVON_LOOK}. This is the season identity lock.`
+    ? `CONTINUITY: Pick up from the previous episode's last frame. Same Devon — identical face, hair, age, skin. Wardrobe may shift only if the story moved locations; otherwise keep it. This is the next shot in the same show, not a reboot.`
+    : `IDENTITY: Start from the reference photo of ${DEVON_LOOK}. Season identity lock.`
+
+  const stage =
+    opts.stageDirection?.trim() ||
+    `Beat: ${action}. Camera starts tight on Devon, holds through the action, ends on his face.`
 
   return [
-    `Vertical 9:16, 10-second single continuous shot, cinematic, no cuts.`,
+    `Vertical 9:16, ~10 second SINGLE continuous shot, cinematic drama, no cuts, no montage.`,
+    `FADE: open with a soft 0.5s fade-in from black; close with a soft 0.5s fade-out to black on Devon's face (tomorrow's match cut).`,
     continuity,
     `SETTING: ${setting}.`,
-    `ACTION (this night's choice, on Devon): ${action}`,
-    `Camera: medium close-up on Devon, face and upper body; other people off-frame or soft bokeh only.`,
-    `Performance: mood is "${opts.mood}" — subtle, grounded, natural. No melodrama.`,
-    `STRICT: no legible text on any phone, screen, sign, or glass; no subtitles; no logos.`,
-    `End held on Devon's face — this last frame becomes the start of tomorrow's episode.`,
+    `STAGE DIRECTION: ${stage}`,
+    `ON-CAMERA ACTION (Devon only in focus): ${action}`,
+    `CAMERA: medium close-up on Devon, face + upper body; motivated micro-moves only (slow push-in or hold). Other people stay off-frame or extreme soft bokeh — never steal focus.`,
+    `PERFORMANCE: mood "${opts.mood}" — grounded micro-expressions, living-room TV drama, not a trailer.`,
+    `STRICT: no legible text on phones/screens/signs/glass; no subtitles; no logos; no jump cuts.`,
+    `LAST FRAME: hold Devon's face after the fade begins — that still is tomorrow's opening.`,
   ].join(' ')
 }
 
