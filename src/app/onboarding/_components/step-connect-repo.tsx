@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import { GitBranch, Search, Lock, Loader2, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react'
 import { createClient } from '@/lib/supabase/browser'
+import { getAuthCallbackUrl } from '@/lib/app-routes'
 
 type GitHubRepo = {
   full_name: string
@@ -113,7 +114,7 @@ export function StepConnectRepo({
     await supabase.auth.signInWithOAuth({
       provider: 'github',
       options: {
-        redirectTo: `${window.location.origin}/onboarding`,
+        redirectTo: getAuthCallbackUrl('/onboarding', 'github'),
         scopes: 'repo',
       },
     })

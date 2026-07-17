@@ -3,13 +3,15 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendWelcomeEmail } from '@/lib/notifications'
 import { encrypt } from '@/lib/crypto'
+import { getSafeAuthNextPath } from '@/lib/app-routes'
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
   const tokenHash = searchParams.get('token_hash')
   const type = searchParams.get('type')
-  const next = searchParams.get('next') ?? '/dashboard'
+  const oauthProvider = searchParams.get('provider')
+  const next = getSafeAuthNextPath(searchParams.get('next'))
 
   // Magic link flow (CLI-created users)
   if (tokenHash && type) {
@@ -36,28 +38,14 @@ export async function GET(request: Request) {
         // Use admin client to bypass RLS for first-time user setup
         const admin = createAdminClient()
 
-        // Persist GitHub provider_token so it survives JWT refresh
-        const { data: { session } } = await supabase.auth.getSession()
-        const providerToken = session?.provider_token
-        if (providerToken) {
-          try {
-            await admin
-              .from('org_members')
-              .update({ github_token: encrypt(providerToken) })
-              .eq('user_id', user.id)
-          } catch (err) {
-            // Never block sign-in on token persistence (e.g. missing TOKEN_ENCRYPTION_KEY)
-            console.error('[auth/callback] failed to persist GitHub token:', err)
-          }
-        }
-
         const { data: membership } = await admin
           .from('org_members')
           .select('id')
           .eq('user_id', user.id)
           .limit(1)
-          .single()
+          .maybeSingle()
 
+        const needsOnboarding = !membership
         if (!membership) {
           const displayName =
             user.user_metadata?.full_name ||
@@ -81,11 +69,28 @@ export async function GET(request: Request) {
             await admin
               .from('org_members')
               .insert({ org_id: org.id, user_id: user.id, role: 'owner' })
-
             // Send welcome email (fire-and-forget)
             sendWelcomeEmail(user.id, org.id).catch(() => {})
           }
+        }
 
+        // GitHub grants a provider token with repo access. Store it only after
+        // membership exists; Google tokens must never overwrite this column.
+        const { data: { session } } = await supabase.auth.getSession()
+        const providerToken = session?.provider_token
+        if (oauthProvider === 'github' && providerToken) {
+          try {
+            await admin
+              .from('org_members')
+              .update({ github_token: encrypt(providerToken) })
+              .eq('user_id', user.id)
+          } catch (err) {
+            // Never block sign-in on token persistence (e.g. missing TOKEN_ENCRYPTION_KEY)
+            console.error('[auth/callback] failed to persist GitHub token:', err)
+          }
+        }
+
+        if (needsOnboarding) {
           return NextResponse.redirect(`${origin}/onboarding`)
         }
       }

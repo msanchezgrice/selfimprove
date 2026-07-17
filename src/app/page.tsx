@@ -1,5 +1,7 @@
 import { getUser } from '@/lib/supabase/auth-helpers'
+import { LOGIN_URL, OWNER_DASHBOARD_URL } from '@/lib/app-routes'
 import { CopyPrompt, AgentOneLiner } from './_components/copy-prompt'
+import Link from 'next/link'
 
 export default async function Home() {
   const user = await getUser()
@@ -15,12 +17,12 @@ export default async function Home() {
         }}
       >
         <div className="max-w-[1120px] mx-auto px-6 flex justify-between items-center">
-          <a href="/" className="text-lg font-bold tracking-tight text-text no-underline">
+          <Link href="/" className="text-lg font-bold tracking-tight text-text no-underline">
             Ships <span className="text-accent">Itself</span>
-          </a>
+          </Link>
           <div className="flex gap-8 items-center max-sm:gap-4">
             <a
-              href="#how"
+              href="#how-it-works"
               className="text-text-secondary text-sm font-medium no-underline hover:text-text transition-colors hidden sm:inline"
             >
               How it works
@@ -39,7 +41,7 @@ export default async function Home() {
             </a>
             {user ? (
               <a
-                href="/dashboard"
+                href={OWNER_DASHBOARD_URL}
                 className="bg-accent text-white px-[18px] py-2 rounded-lg text-sm font-semibold no-underline hover:bg-accent-hover transition-colors"
               >
                 Dashboard
@@ -47,13 +49,13 @@ export default async function Home() {
             ) : (
               <>
                 <a
-                  href="/login"
+                  href={LOGIN_URL}
                   className="text-text-secondary text-sm font-medium no-underline hover:text-text transition-colors hidden sm:inline"
                 >
                   Log in
                 </a>
                 <a
-                  href="/login"
+                  href={LOGIN_URL}
                   className="bg-accent text-white px-[18px] py-2 rounded-lg text-sm font-semibold no-underline hover:bg-accent-hover transition-colors"
                 >
                   Get Started
@@ -98,13 +100,13 @@ export default async function Home() {
 
         <div className="flex gap-3.5 justify-center flex-wrap mb-4">
           <a
-            href="/dashboard"
+            href={user ? OWNER_DASHBOARD_URL : LOGIN_URL}
             className="inline-flex items-center gap-2 px-7 py-3.5 bg-accent text-white rounded-[10px] text-base font-semibold no-underline hover:bg-accent-hover transition-all hover:-translate-y-px"
           >
             Get Started Free &rarr;
           </a>
           <a
-            href="#how"
+            href="#how-it-works"
             className="inline-flex items-center gap-2 px-7 py-3.5 bg-surface text-text border border-border rounded-[10px] text-base font-medium no-underline hover:border-accent hover:text-accent transition-all"
           >
             See how it works
@@ -302,7 +304,7 @@ export default async function Home() {
       </section>
 
       {/* ===== HOW IT WORKS ===== */}
-      <section id="how" className="py-[100px] px-6">
+      <section id="how-it-works" className="py-[100px] px-6">
         <div className="max-w-[1040px] mx-auto">
           <p
             className="text-[13px] font-semibold uppercase text-accent mb-3"
@@ -317,33 +319,45 @@ export default async function Home() {
               letterSpacing: "-1px",
             }}
           >
-            From signal to shipped in four steps
+            The improvement loop after v1
           </h2>
-          <p className="text-[17px] text-text-secondary max-w-[560px] leading-relaxed">
-            Connect once. Ships Itself runs forever.
+          <p className="text-[17px] text-text-secondary max-w-[720px] leading-relaxed">
+            Connect your product and repo once. Ships Itself turns scattered
+            user evidence into a ranked, reviewable stream of improvements,
+            then measures what happened after each change ships.
           </p>
 
-          <div className="grid grid-cols-4 gap-6 mt-14 max-md:grid-cols-2 max-[480px]:grid-cols-1">
+          <div className="grid grid-cols-3 gap-5 mt-14 max-md:grid-cols-2 max-[480px]:grid-cols-1">
             {[
               {
                 num: 1,
-                title: "Collect",
-                desc: "Widget collects feedback, voice, analytics, and errors. Users tag issues — bug, confusing, slow — in one click.",
+                title: "Connect context",
+                desc: "Add your repo, live site, product goals, target users, and the outcomes that matter to you.",
               },
               {
                 num: 2,
-                title: "Analyze",
-                desc: "AI groups signals, weighs by type, and deduplicates. Every signal gets categorized, scored, and linked to evidence.",
+                title: "Capture signals",
+                desc: "Bring together in-product feedback, voice notes, PostHog behavior, Sentry errors, and GitHub context.",
               },
               {
                 num: 3,
-                title: "Prioritize",
-                desc: "Generates a live roadmap with ROI scores and evidence trails. Stack-ranked so you always know what matters most.",
+                title: "Build evidence",
+                desc: "AI deduplicates and clusters related signals. Every opportunity stays linked to the reports and data behind it.",
               },
               {
                 num: 4,
-                title: "Ship",
-                desc: "Auto-implements changes via your coding agent. Reviews for safety, creates PRs, and merges — while you sleep.",
+                title: "Rank the roadmap",
+                desc: "A living roadmap weighs reach, severity, product fit, confidence, and effort — and explains why each item moved.",
+              },
+              {
+                num: 5,
+                title: "Review & ship",
+                desc: "Choose recommend-only, one-click PR, or bounded autonomy. PRDs, tests, approval gates, and risk limits stay visible.",
+              },
+              {
+                num: 6,
+                title: "Measure & learn",
+                desc: "Link the shipped change to its outcome, feed the result back into the evidence, and rerank what should happen next.",
               },
             ].map((step) => (
               <div
@@ -361,6 +375,21 @@ export default async function Home() {
                 </p>
               </div>
             ))}
+          </div>
+
+          <div
+            className="mt-8 rounded-[14px] border border-border p-7"
+            style={{ background: "var(--accent-glow)" }}
+          >
+            <p className="text-[12px] font-semibold uppercase text-accent mb-3" style={{ letterSpacing: "1px" }}>
+              A real cycle
+            </p>
+            <p className="text-[16px] text-text leading-[1.7]">
+              <strong>42% checkout drop-off + three user complaints</strong>
+              {' '}become one evidence cluster, then a ranked fix and scoped
+              PRD, then a tested PR. After release, the conversion result feeds
+              the next roadmap decision.
+            </p>
           </div>
         </div>
       </section>
@@ -607,7 +636,7 @@ export default async function Home() {
                 )}
               </ul>
               <a
-                href="/dashboard"
+                href={LOGIN_URL}
                 className="flex justify-center items-center px-7 py-3.5 bg-surface text-text border border-border rounded-[10px] text-base font-medium no-underline hover:border-accent hover:text-accent transition-all"
               >
                 Get started free
@@ -655,7 +684,7 @@ export default async function Home() {
                 ))}
               </ul>
               <a
-                href="/dashboard"
+                href={`${LOGIN_URL}?plan=pro`}
                 className="flex justify-center items-center px-7 py-3.5 bg-accent text-white rounded-[10px] text-base font-semibold no-underline hover:bg-accent-hover transition-all"
               >
                 Start 14-day trial
@@ -692,7 +721,7 @@ export default async function Home() {
                 ))}
               </ul>
               <a
-                href="/dashboard"
+                href={`${LOGIN_URL}?plan=autonomous`}
                 className="flex justify-center items-center px-7 py-3.5 bg-surface text-text border border-border rounded-[10px] text-base font-medium no-underline hover:border-accent hover:text-accent transition-all"
               >
                 Start 14-day trial
@@ -718,7 +747,7 @@ export default async function Home() {
           within 24 hours.
         </p>
         <a
-          href="/dashboard"
+          href={user ? OWNER_DASHBOARD_URL : LOGIN_URL}
           className="inline-flex items-center gap-2 px-7 py-3.5 bg-accent text-white rounded-[10px] text-base font-semibold no-underline hover:bg-accent-hover transition-all hover:-translate-y-px"
         >
           Get Started Free &rarr;
@@ -738,7 +767,7 @@ export default async function Home() {
           </div>
           <div className="flex justify-center gap-6 mb-6 flex-wrap">
             <a
-              href="#how"
+              href="#how-it-works"
               className="text-text-secondary no-underline hover:text-text transition-colors"
             >
               Product

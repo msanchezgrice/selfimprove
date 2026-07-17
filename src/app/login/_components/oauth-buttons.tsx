@@ -1,22 +1,27 @@
 'use client'
 
 import { createClient } from '@/lib/supabase/browser'
+import { getAuthCallbackUrl, getSafeAuthNextPath } from '@/lib/app-routes'
 
 export function OAuthButtons() {
   const handleLogin = async (provider: 'github' | 'google') => {
     const supabase = createClient()
     const params = new URLSearchParams(window.location.search)
     const plan = params.get('plan')
-    const redirectTo = plan
-      ? `${window.location.origin}/auth/callback?next=/dashboard?upgrade=${plan}`
-      : `${window.location.origin}/auth/callback`
-    await supabase.auth.signInWithOAuth({
+    const requestedNext = params.get('next')
+    const next = plan
+      ? `/dashboard?upgrade=${encodeURIComponent(plan)}`
+      : getSafeAuthNextPath(requestedNext)
+    const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo,
+        redirectTo: getAuthCallbackUrl(next, provider),
         ...(provider === 'github' ? { scopes: 'repo' } : {}),
       },
     })
+    if (error) {
+      window.location.assign('/login?error=oauth_start_failed')
+    }
   }
 
   return (

@@ -6,6 +6,7 @@ import { seedProjectSignals } from '@/lib/ai/cold-start'
 import { importGitHubIssues } from '@/lib/ai/import-github-issues'
 import crypto from 'crypto'
 import { encrypt } from '@/lib/crypto'
+import { APP_ORIGIN, getAuthCallbackUrl } from '@/lib/app-routes'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://shipsitself.com'
 
@@ -118,7 +119,7 @@ async function authenticateGitHub(token: string): Promise<{ userId: string; orgI
       type: 'magiclink',
       email,
       options: {
-        redirectTo: `${APP_URL}/auth/callback?next=${encodeURIComponent('/dashboard')}`,
+        redirectTo: getAuthCallbackUrl(),
       },
     })
     if (linkData?.properties?.action_link) {
@@ -204,7 +205,7 @@ export async function POST(request: Request) {
       message: 'Project already exists',
       project_id: existing.id,
       slug: existing.slug,
-      dashboard_url: `${APP_URL}/dashboard/${existing.slug}/roadmap`,
+      dashboard_url: `${APP_ORIGIN}/dashboard/${existing.slug}/roadmap`,
       widget_snippet: `<script src="${APP_URL}/widget.js" data-project="${existing.id}"></script>`,
     })
   }
@@ -251,7 +252,7 @@ export async function POST(request: Request) {
     }
   }
 
-  const dashboardUrl = `${APP_URL}/dashboard/${project.slug}/roadmap`
+  const dashboardUrl = `${APP_ORIGIN}/dashboard/${project.slug}/roadmap`
   const widgetSnippet = `<script src="${APP_URL}/widget.js" data-project="${project.id}"></script>`
 
   const agentInstructions = `## Ships Itself Integration

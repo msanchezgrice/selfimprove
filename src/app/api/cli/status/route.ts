@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server'
 import { authenticateApiKey } from '@/lib/auth/api-key'
 import { createAdminClient } from '@/lib/supabase/admin'
-
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://shipsitself.com'
+import { APP_ORIGIN } from '@/lib/app-routes'
 
 export async function GET(request: Request) {
   const auth = await authenticateApiKey(request)
@@ -58,6 +57,6 @@ export async function GET(request: Request) {
     briefs: briefCount,
     roadmap_items: roadmapCount,
     pending_jobs: pendingJobs,
-    dashboard_url: `${APP_URL}/dashboard/${project?.slug}/roadmap`,
+    dashboard_url: `${APP_ORIGIN}/dashboard/${project?.slug}/roadmap`,
   })
 }

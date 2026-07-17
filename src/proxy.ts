@@ -1,8 +1,32 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
+import { APP_ORIGIN } from '@/lib/app-routes'
+
+const APP_PATHS = ['/login', '/auth', '/onboarding', '/dashboard']
+
+function shouldUseAppOrigin(request: NextRequest): boolean {
+  const isMarketingHost =
+    request.nextUrl.hostname === 'shipsitself.com' ||
+    request.nextUrl.hostname === 'www.shipsitself.com'
+  const isAppPath = APP_PATHS.some(
+    (path) =>
+      request.nextUrl.pathname === path ||
+      request.nextUrl.pathname.startsWith(`${path}/`),
+  )
+  return isMarketingHost && isAppPath
+}
 
 export async function proxy(request: NextRequest) {
+  // Auth cookies and OAuth PKCE state cannot cross unrelated hostnames. Keep
+  // every authenticated route on one origin while shipsitself.com remains the
+  // public marketing site.
+  if (shouldUseAppOrigin(request)) {
+    const appUrl = new URL(request.nextUrl.pathname, APP_ORIGIN)
+    appUrl.search = request.nextUrl.search
+    return NextResponse.redirect(appUrl, 307)
+  }
+
   let supabaseResponse = NextResponse.next({ request })
 
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
