@@ -16,7 +16,7 @@ export default async function Home() {
       >
         <div className="max-w-[1120px] mx-auto px-6 flex justify-between items-center">
           <a href="/" className="text-lg font-bold tracking-tight text-text no-underline">
-            Self<span className="text-accent">Improve</span>
+            Ships <span className="text-accent">Itself</span>
           </a>
           <div className="flex gap-8 items-center max-sm:gap-4">
             <a
@@ -91,7 +91,7 @@ export default async function Home() {
         </h1>
 
         <p className="text-[19px] text-text-secondary max-w-[580px] mx-auto mb-10 leading-relaxed">
-          SelfImprove watches your users, builds your roadmap, and ships the
+          Ships Itself watches your users, builds your roadmap, and ships the
           fixes. The AI product manager for developers who built something — and
           need what comes next.
         </p>
@@ -294,7 +294,7 @@ export default async function Home() {
               <div className="text-[15px] text-text-secondary mt-2">
                 of software cost is maintenance.
                 <br />
-                SelfImprove handles it.
+                Ships Itself handles it.
               </div>
             </div>
           </div>
@@ -320,7 +320,7 @@ export default async function Home() {
             From signal to shipped in four steps
           </h2>
           <p className="text-[17px] text-text-secondary max-w-[560px] leading-relaxed">
-            Connect once. SelfImprove runs forever.
+            Connect once. Ships Itself runs forever.
           </p>
 
           <div className="grid grid-cols-4 gap-6 mt-14 max-md:grid-cols-2 max-[480px]:grid-cols-1">
@@ -500,14 +500,14 @@ export default async function Home() {
               letterSpacing: "-1px",
             }}
           >
-            Developers ship faster with SelfImprove
+            Developers ship faster with Ships Itself
           </h2>
 
           <div className="grid grid-cols-3 gap-5 max-md:grid-cols-1">
             {[
               {
                 quote:
-                  "I shipped my SaaS in a weekend with Cursor. SelfImprove told me what was actually broken — users were dropping off at step 3 and I had no idea.",
+                  "I shipped my SaaS in a weekend with Cursor. Ships Itself told me what was actually broken — users were dropping off at step 3 and I had no idea.",
                 name: "Alex Chen",
                 role: "Indie Developer",
                 avatar: "AC",
@@ -733,7 +733,7 @@ export default async function Home() {
         <div className="max-w-[1040px] mx-auto">
           <div className="mb-4">
             <span className="text-base font-bold text-text tracking-tight">
-              Self<span className="text-accent">Improve</span>
+              Ships <span className="text-accent">Itself</span>
             </span>
           </div>
           <div className="flex justify-center gap-6 mb-6 flex-wrap">
@@ -762,7 +762,7 @@ export default async function Home() {
               GitHub
             </a>
           </div>
-          <p>&copy; 2026 SelfImprove. All rights reserved.</p>
+          <p>&copy; 2026 Ships Itself. All rights reserved.</p>
         </div>
       </footer>
     </>

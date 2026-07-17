@@ -58,8 +58,8 @@ async function runImplement(job: BuildJob, workDir: string, repo: string, github
   const cwdOpts: ExecFileSyncOptions = { cwd: workDir }
 
   // Set git identity for commits
-  run('git', ['config', 'user.email', 'bot@selfimprove.dev'], cwdOpts)
-  run('git', ['config', 'user.name', 'SelfImprove Bot'], cwdOpts)
+  run('git', ['config', 'user.email', 'bot@shipsitself.com'], cwdOpts)
+  run('git', ['config', 'user.name', 'Ships Itself Bot'], cwdOpts)
 
   const branchName = `selfimprove/auto-${Date.now()}`
   run('git', ['checkout', '-b', branchName], cwdOpts)
@@ -104,18 +104,18 @@ async function runImplement(job: BuildJob, workDir: string, repo: string, github
   }
 
   run('git', ['add', '-A'], cwdOpts)
-  const commitMsg = `feat: ${job.prompt.slice(0, 50).replace(/"/g, "'").replace(/\n/g, ' ')}...\n\nImplemented by SelfImprove AI`
+  const commitMsg = `feat: ${job.prompt.slice(0, 50).replace(/"/g, "'").replace(/\n/g, ' ')}...\n\nImplemented by Ships Itself AI`
   run('git', ['commit', '-m', commitMsg], cwdOpts)
   run('git', ['push', 'origin', branchName], cwdOpts)
 
-  const prBody = `## Auto-Implementation\n\n${job.prompt.slice(0, 500)}\n\n---\n*Auto-implemented by [SelfImprove](${process.env.NEXT_PUBLIC_APP_URL || 'https://selfimprove-iota.vercel.app'})*`
+  const prBody = `## Auto-Implementation\n\n${job.prompt.slice(0, 500)}\n\n---\n*Auto-implemented by [Ships Itself](${process.env.NEXT_PUBLIC_APP_URL || 'https://shipsitself.com'})*`
 
   const prRes = await fetch(`https://api.github.com/repos/${repo}/pulls`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${githubToken}`,
       Accept: 'application/vnd.github.v3+json',
-      'User-Agent': 'SelfImprove-Worker',
+      'User-Agent': 'Ships Itself-Worker',
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({

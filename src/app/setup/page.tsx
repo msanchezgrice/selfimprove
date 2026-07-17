@@ -1,15 +1,15 @@
 export default function SetupPage() {
   return (
     <pre style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', padding: '20px', maxWidth: '800px' }}>
-{`# SelfImprove Setup Instructions
+{`# Ships Itself Setup Instructions
 
-Set up SelfImprove for this project by following these steps:
+Set up Ships Itself for this project by following these steps:
 
 ## Step 1: Get your GitHub token
 Run: gh auth token
 
 ## Step 2: Create the project
-curl -X POST ${process.env.NEXT_PUBLIC_APP_URL || 'https://selfimprove-iota.vercel.app'}/api/cli/init \\
+curl -X POST ${process.env.NEXT_PUBLIC_APP_URL || 'https://shipsitself.com'}/api/cli/init \\
   -H "Authorization: Bearer YOUR_GITHUB_TOKEN" \\
   -H "Content-Type: application/json" \\
   -d '{"repo_url": "YOUR_REPO_URL", "site_url": "YOUR_SITE_URL"}'
@@ -23,7 +23,7 @@ The API response includes a "dashboard_url" field. Open it in the browser.
 Your AI-generated product roadmap will populate within minutes.
 
 ## What happens
-- SelfImprove creates your account (or links to existing)
+- Ships Itself creates your account (or links to existing)
 - Scans your codebase for bugs, security issues, performance problems
 - Imports your GitHub issues as signals
 - Generates a prioritized product roadmap with PRDs

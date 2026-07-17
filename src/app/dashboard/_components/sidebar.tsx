@@ -101,7 +101,7 @@ export function DashboardSidebar({ user, orgName }: DashboardSidebarProps) {
             className="text-lg font-semibold tracking-tight"
             style={{ color: '#1a1a2e' }}
           >
-            SelfImprove
+            Ships Itself
           </div>
           <div
             className="mt-1 text-xs font-medium truncate"
@@ -243,7 +243,7 @@ export function DashboardSidebar({ user, orgName }: DashboardSidebarProps) {
           className="text-lg font-semibold tracking-tight"
           style={{ color: '#1a1a2e' }}
         >
-          SelfImprove
+          Ships Itself
         </div>
         <MobileMenu user={user} orgName={orgName} pathname={pathname} slug={slug} />
       </div>

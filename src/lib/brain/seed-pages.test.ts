@@ -42,11 +42,11 @@ function makeSettings(overrides: Partial<ProjectSettingsRow> = {}): ProjectSetti
 function makeInput(overrides: Partial<ProjectSeedInput> = {}): ProjectSeedInput {
   return {
     projectId: 'proj-1',
-    name: 'SelfImprove',
+    name: 'Ships Itself',
     description: 'AI PM for indie founders',
     framework: 'next.js',
     repoUrl: 'https://github.com/example/selfimprove',
-    siteUrl: 'https://selfimprove.dev',
+    siteUrl: 'https://shipsitself.com',
     settings: makeSettings(),
     ...overrides,
   }

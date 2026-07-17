@@ -22,7 +22,7 @@ export async function GET() {
       headers: {
         'Authorization': `Bearer ${providerToken}`,
         'Accept': 'application/vnd.github.v3+json',
-        'User-Agent': 'SelfImprove-App',
+        'User-Agent': 'Ships-Itself-App',
       },
     })
 

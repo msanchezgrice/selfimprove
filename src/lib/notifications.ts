@@ -8,20 +8,20 @@ function getResend(): Resend | null {
   return _resend
 }
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://selfimprove-iota.vercel.app'
-const FROM = 'SelfImprove <notifications@selfimprove.dev>'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://shipsitself.com'
+const FROM = process.env.RESEND_FROM_EMAIL || 'Ships Itself <notifications@shipsitself.com>'
 
 function emailTemplate(content: string): string {
   return `
     <div style="font-family: -apple-system, system-ui, sans-serif; max-width: 560px; margin: 0 auto; padding: 32px 24px; color: #1a1a2e;">
       <div style="margin-bottom: 24px;">
-        <span style="font-size: 18px; font-weight: 700;">Self</span><span style="font-size: 18px; font-weight: 700; color: #6366f1;">Improve</span>
+        <span style="font-size: 18px; font-weight: 700;">Ships </span><span style="font-size: 18px; font-weight: 700; color: #6366f1;">Itself</span>
       </div>
       ${content}
       <div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #e8e4de;">
         <p style="color: #8b8680; font-size: 12px;">
           <a href="${APP_URL}/dashboard" style="color: #6366f1; text-decoration: none;">Open Dashboard</a> ·
-          <a href="${APP_URL}" style="color: #8b8680; text-decoration: none;">SelfImprove</a>
+          <a href="${APP_URL}" style="color: #8b8680; text-decoration: none;">Ships Itself</a>
         </p>
       </div>
     </div>
@@ -59,7 +59,7 @@ export async function sendWelcomeEmail(userId: string, orgId: string) {
   await resend.emails.send({
     from: FROM,
     to: data.user.email,
-    subject: 'Welcome to SelfImprove',
+    subject: 'Welcome to Ships Itself',
     html: emailTemplate(`
       <h2 style="font-size: 20px; margin: 0 0 8px;">Welcome, ${name}!</h2>
       <p style="color: #8b8680; font-size: 15px; line-height: 1.6;">
@@ -208,7 +208,7 @@ export async function sendDailyDigest(orgId: string) {
   await resend.emails.send({
     from: FROM,
     to: emails,
-    subject: `SelfImprove Digest: ${totalActivity} update${totalActivity === 1 ? '' : 's'} today`,
+    subject: `Ships Itself Digest: ${totalActivity} update${totalActivity === 1 ? '' : 's'} today`,
     html: emailTemplate(digestHtml),
   }).catch(err => console.error('[email] Digest failed:', err))
 }
@@ -237,7 +237,7 @@ export async function sendConnectReminder(userId: string, orgId: string, missing
   await resend.emails.send({
     from: FROM,
     to: data.user.email,
-    subject: 'Complete your SelfImprove setup',
+    subject: 'Complete your Ships Itself setup',
     html: emailTemplate(`
       <h2 style="font-size: 20px; margin: 0 0 8px;">Hey ${name}, you're almost there!</h2>
       <p style="color: #8b8680; font-size: 15px; line-height: 1.6;">

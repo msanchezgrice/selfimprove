@@ -118,7 +118,7 @@ export function StepGoLive({
           className="text-sm mx-auto"
           style={{ color: '#8b8680', maxWidth: '400px' }}
         >
-          SelfImprove is watching your app. Signals flow in, roadmap populates.
+          Ships Itself is watching your app. Signals flow in, roadmap populates.
           Here&apos;s your setup:
         </p>
       </div>

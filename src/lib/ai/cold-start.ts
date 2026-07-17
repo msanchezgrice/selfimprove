@@ -43,7 +43,7 @@ export async function analyzeSite(siteUrl: string): Promise<SiteAnalysis> {
   try {
     // Fetch the homepage
     const response = await fetch(siteUrl, {
-      headers: { 'User-Agent': 'SelfImprove-Bot/1.0' },
+      headers: { 'User-Agent': 'Ships-Itself-Bot/1.0' },
       signal: AbortSignal.timeout(10000),
     })
     const html = await response.text()

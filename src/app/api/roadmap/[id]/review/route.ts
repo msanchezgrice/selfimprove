@@ -39,7 +39,7 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
     headers: {
       Authorization: `Bearer ${token}`,
       Accept: 'application/vnd.github.v3.diff',
-      'User-Agent': 'SelfImprove-App',
+      'User-Agent': 'Ships-Itself-App',
     },
   })
 
@@ -51,7 +51,7 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
     headers: {
       Authorization: `Bearer ${token}`,
       Accept: 'application/vnd.github.v3+json',
-      'User-Agent': 'SelfImprove-App',
+      'User-Agent': 'Ships-Itself-App',
     },
   })
 
@@ -79,7 +79,7 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
   const assessment = await reviewPR(diff, settings as ProjectSettingsRow)
 
   // Post review as GitHub PR comment
-  const commentBody = `## SelfImprove AI Review
+  const commentBody = `## Ships Itself AI Review
 
 **Decision:** ${assessment.decision.toUpperCase()}
 **Risk Score:** ${assessment.combinedScore}/100 (mechanical: ${assessment.mechanicalScore}, semantic: ${assessment.semanticScore})
@@ -89,14 +89,14 @@ ${assessment.reasons.length > 0 ? `### Concerns\n${assessment.reasons.map(r => `
 ${assessment.suggestions.length > 0 ? `### Suggestions\n${assessment.suggestions.map(s => `- ${s}`).join('\n')}` : ''}
 
 ---
-*Reviewed by [SelfImprove](${process.env.NEXT_PUBLIC_APP_URL || 'https://selfimprove-iota.vercel.app'}) Approval Agent*`
+*Reviewed by [Ships Itself](${process.env.NEXT_PUBLIC_APP_URL || 'https://shipsitself.com'}) Approval Agent*`
 
   await fetch(`https://api.github.com/repos/${repo}/issues/${item.pr_number}/comments`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
       Accept: 'application/vnd.github.v3+json',
-      'User-Agent': 'SelfImprove-App',
+      'User-Agent': 'Ships-Itself-App',
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ body: commentBody }),

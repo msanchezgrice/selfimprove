@@ -302,7 +302,7 @@ export default function PricingPage() {
       <footer className="border-t border-[#e8e4de] bg-white px-6 py-12">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 md:flex-row">
           <Link href="/" className="text-lg font-bold text-[#1a1a2e]">
-            Self<span className="text-[#0d9488]">Improve</span>
+            Ships <span className="text-[#0d9488]">Itself</span>
           </Link>
           <div className="flex gap-8 text-sm text-[#8b8680]">
             <Link href="/pricing" className="hover:text-[#1a1a2e]">
@@ -316,7 +316,7 @@ export default function PricingPage() {
             </Link>
           </div>
           <p className="text-xs text-[#8b8680]">
-            &copy; {new Date().getFullYear()} SelfImprove. All rights reserved.
+            &copy; {new Date().getFullYear()} Ships Itself. All rights reserved.
           </p>
         </div>
       </footer>

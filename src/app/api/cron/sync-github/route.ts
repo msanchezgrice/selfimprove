@@ -53,7 +53,7 @@ export async function GET(request: Request) {
         headers: {
           Authorization: `Bearer ${member.github_token}`,
           Accept: 'application/vnd.github.v3+json',
-          'User-Agent': 'SelfImprove-App',
+          'User-Agent': 'Ships-Itself-App',
         },
       })
 

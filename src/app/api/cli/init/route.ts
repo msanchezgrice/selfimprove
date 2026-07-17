@@ -7,12 +7,12 @@ import { importGitHubIssues } from '@/lib/ai/import-github-issues'
 import crypto from 'crypto'
 import { encrypt } from '@/lib/crypto'
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://selfimprove-iota.vercel.app'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://shipsitself.com'
 
 async function authenticateGitHub(token: string): Promise<{ userId: string; orgId: string; githubToken: string; loginUrl: string | null; isNewUser: boolean } | null> {
   // Verify the GitHub token by calling GitHub API
   const ghRes = await fetch('https://api.github.com/user', {
-    headers: { Authorization: `Bearer ${token}`, 'User-Agent': 'SelfImprove-App' },
+    headers: { Authorization: `Bearer ${token}`, 'User-Agent': 'Ships-Itself-App' },
   })
   if (!ghRes.ok) return null
 
@@ -24,7 +24,7 @@ async function authenticateGitHub(token: string): Promise<{ userId: string; orgI
   let email = ghUser.email
   if (!email) {
     const emailsRes = await fetch('https://api.github.com/user/emails', {
-      headers: { Authorization: `Bearer ${token}`, 'User-Agent': 'SelfImprove-App' },
+      headers: { Authorization: `Bearer ${token}`, 'User-Agent': 'Ships-Itself-App' },
     })
     if (emailsRes.ok) {
       const emails = await emailsRes.json()
@@ -156,7 +156,7 @@ export async function POST(request: Request) {
       error: 'Authentication required.',
       options: [
         'Pass your GitHub token: Authorization: Bearer ghp_... (auto-creates account)',
-        'Or your SelfImprove API key: Authorization: Bearer si_...',
+        'Or your Ships Itself API key: Authorization: Bearer si_...',
         'Get a GitHub token by running: gh auth token',
       ],
     }, { status: 401 })
@@ -254,8 +254,8 @@ export async function POST(request: Request) {
   const dashboardUrl = `${APP_URL}/dashboard/${project.slug}/roadmap`
   const widgetSnippet = `<script src="${APP_URL}/widget.js" data-project="${project.id}"></script>`
 
-  const agentInstructions = `## SelfImprove Integration
-This project uses SelfImprove for AI product management.
+  const agentInstructions = `## Ships Itself Integration
+This project uses Ships Itself for AI product management.
 Dashboard: ${dashboardUrl}
 Widget: ${APP_URL}/widget.js (project: ${project.id})
 Signals API: ${APP_URL}/api/signals

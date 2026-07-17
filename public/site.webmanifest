@@ -1,6 +1,6 @@
 {
-  "name": "SelfImprove",
-  "short_name": "SelfImprove",
+  "name": "Ships Itself",
+  "short_name": "Ships Itself",
   "description": "AI Product Manager for Developers",
   "start_url": "/dashboard",
   "display": "standalone",

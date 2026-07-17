@@ -447,7 +447,7 @@ export function BrainDiagramGallery() {
           Visual Models
         </h2>
         <p className="mt-2 text-sm leading-6" style={{ color: '#5d5750' }}>
-          These diagrams visualize the architectural shift: what Garry’s thesis means in the abstract, how it changes SelfImprove’s current flow, and how resolver-driven learning compounds over time.
+          These diagrams visualize the architectural shift: what Garry’s thesis means in the abstract, how it changes Ships Itself’s current flow, and how resolver-driven learning compounds over time.
         </p>
       </div>
 

@@ -25,7 +25,7 @@ export async function importGitHubIssues(
       headers: {
         Authorization: `Bearer ${githubToken}`,
         Accept: 'application/vnd.github.v3+json',
-        'User-Agent': 'SelfImprove-App',
+        'User-Agent': 'Ships-Itself-App',
       },
     },
   )

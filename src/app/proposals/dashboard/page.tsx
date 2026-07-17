@@ -926,7 +926,7 @@ function Sidebar({ state }: { state: 'before' | 'after' }) {
       className="w-[200px] shrink-0 border-r p-4"
       style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface-2)' }}
     >
-      <div className="mb-4 text-sm font-semibold" style={{ color: 'var(--text)' }}>SelfImprove</div>
+      <div className="mb-4 text-sm font-semibold" style={{ color: 'var(--text)' }}>Ships Itself</div>
       <div className="mb-4 rounded border px-3 py-2 text-xs" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)', color: 'var(--text-secondary)' }}>
         Myforeversongs Landing ▾
       </div>

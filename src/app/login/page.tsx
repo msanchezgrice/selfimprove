@@ -71,7 +71,7 @@ export default async function LoginPage({
                 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
             }}
           >
-            Sign in to SelfImprove
+            Sign in to Ships Itself
           </h1>
           <p
             style={{

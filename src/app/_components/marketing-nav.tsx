@@ -5,7 +5,7 @@ export default function MarketingNav() {
     <nav className="w-full border-b border-[#e8e4de] bg-white">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
         <Link href="/" className="text-xl font-bold tracking-tight text-[#1a1a2e]">
-          Self<span className="text-[#0d9488]">Improve</span>
+          Ships <span className="text-[#0d9488]">Itself</span>
         </Link>
 
         <div className="hidden items-center gap-8 md:flex">

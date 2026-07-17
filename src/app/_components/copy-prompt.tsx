@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://selfimprove-iota.vercel.app'
-const ONE_LINER = `Read ${APP_URL}/setup and follow the instructions to set up SelfImprove`
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://shipsitself.com'
+const ONE_LINER = `Read ${APP_URL}/setup and follow the instructions to set up Ships Itself`
 
 export function AgentOneLiner() {
   const [copied, setCopied] = useState(false)
@@ -34,7 +34,7 @@ export function AgentOneLiner() {
   )
 }
 
-const PROMPT = `Set up SelfImprove for this project. Get my GitHub token with "gh auth token", then call POST ${APP_URL}/api/cli/init with Authorization: Bearer GITHUB_TOKEN and body: {"repo_url": "THIS_REPO_URL", "site_url": "PRODUCTION_URL"}. Open the dashboard_url from the response.`
+const PROMPT = `Set up Ships Itself for this project. Get my GitHub token with "gh auth token", then call POST ${APP_URL}/api/cli/init with Authorization: Bearer GITHUB_TOKEN and body: {"repo_url": "THIS_REPO_URL", "site_url": "PRODUCTION_URL"}. Open the dashboard_url from the response.`
 
 export function CopyPrompt() {
   const [copied, setCopied] = useState(false)

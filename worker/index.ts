@@ -108,7 +108,7 @@ async function pollForJobs() {
 }
 
 async function main() {
-  console.log('[worker] Starting SelfImprove worker...')
+  console.log('[worker] Starting Ships Itself worker...')
 
   while (true) {
     try {

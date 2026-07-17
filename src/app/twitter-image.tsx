@@ -1,7 +1,7 @@
 import { ImageResponse } from 'next/og'
 
 export const runtime = 'edge'
-export const alt = 'SelfImprove: You built your v1. Now make it actually work.'
+export const alt = 'Ships Itself: You built your v1. Now make it actually work.'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 
@@ -90,11 +90,11 @@ export default function OGImage() {
           }}
         >
           <div style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.5px' }}>
-            <span style={{ color: '#1a1a2e' }}>Self</span>
-            <span style={{ color: '#0d9488' }}>Improve</span>
+            <span style={{ color: '#1a1a2e' }}>Ships </span>
+            <span style={{ color: '#0d9488' }}>Itself</span>
           </div>
           <div style={{ fontSize: '16px', color: '#999', fontWeight: 500 }}>
-            selfimprove.dev
+            shipsitself.com
           </div>
         </div>
       </div>

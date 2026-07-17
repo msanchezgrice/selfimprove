@@ -1,14 +1,14 @@
-# SelfImprove -- AI Product Manager for Developers
+# Ships Itself -- AI Product Manager for Developers
 
-SelfImprove watches your users, builds your roadmap, writes the PRDs, and ships the fixes. It is the AI product manager for developers who built something and need what comes next.
+Ships Itself watches your users, builds your roadmap, writes the PRDs, and ships the fixes. It is the AI product manager for developers who built something and need what comes next.
 
-## What is SelfImprove?
+## What is Ships Itself?
 
-Most developers ship a v1 and then fly blind. Users hit bugs and leave silently, feedback piles up with no triage, and the backlog grows without any sense of priority. SelfImprove closes that loop automatically.
+Most developers ship a v1 and then fly blind. Users hit bugs and leave silently, feedback piles up with no triage, and the backlog grows without any sense of priority. Ships Itself closes that loop automatically.
 
-SelfImprove collects signals from multiple sources -- feedback widgets, voice recordings, analytics, error trackers, GitHub issues, and AI codebase scans. It groups, deduplicates, and weighs those signals, then uses Claude to generate a live, stack-ranked roadmap where every item has an ROI score, evidence trail, and thinking trace. Each roadmap item gets a full PRD with acceptance criteria, file-level implementation plans, success metrics, and analytics events to track.
+Ships Itself collects signals from multiple sources -- feedback widgets, voice recordings, analytics, error trackers, GitHub issues, and AI codebase scans. It groups, deduplicates, and weighs those signals, then uses Claude to generate a live, stack-ranked roadmap where every item has an ROI score, evidence trail, and thinking trace. Each roadmap item gets a full PRD with acceptance criteria, file-level implementation plans, success metrics, and analytics events to track.
 
-When you are ready to ship, SelfImprove can create a GitHub issue from any roadmap item or auto-implement changes by running Claude Code against your repo, opening a PR, and optionally auto-approving and merging it -- all with configurable safety guardrails, risk thresholds, and daily caps.
+When you are ready to ship, Ships Itself can create a GitHub issue from any roadmap item or auto-implement changes by running Claude Code against your repo, opening a PR, and optionally auto-approving and merging it -- all with configurable safety guardrails, risk thresholds, and daily caps.
 
 ## Features
 
@@ -20,7 +20,7 @@ When you are ready to ship, SelfImprove can create a GitHub issue from any roadm
 - **PRD refinement** -- Iterate on PRDs with natural language feedback.
 - **Auto-implementation** -- One click queues a build job. A Fly.io worker clones your repo, runs Claude Code, commits changes, pushes a branch, and opens a PR.
 - **Codebase scanning** -- AI scans your repo for bugs, security issues, performance problems, accessibility gaps, dead code, and missing tests, then feeds findings back as signals.
-- **Cold-start site analysis** -- On project creation, SelfImprove fetches your site and generates initial signals for performance, security, accessibility, SEO, and agent readiness (llms.txt, agents.md, OpenAPI spec).
+- **Cold-start site analysis** -- On project creation, Ships Itself fetches your site and generates initial signals for performance, security, accessibility, SEO, and agent readiness (llms.txt, agents.md, OpenAPI spec).
 - **Safety guardrails** -- Two-stage PR review (mechanical + Claude semantic), configurable risk thresholds, blocked paths, max file/line limits, test requirements, and daily improvement caps.
 - **GitHub integration** -- Import open issues as signals, create issues from roadmap items, and open PRs from implementations.
 - **Voice companion** -- Audio recording transcribed via Gemini 2.5 Flash, capturing frustrations and feature requests users will not type.
@@ -145,7 +145,7 @@ fly secrets set SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... ANTHROPIC_API_KEY
 | `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret |
 | `STRIPE_PRO_PRICE_ID` | Stripe Price ID for Pro tier |
 | `STRIPE_AUTONOMOUS_PRICE_ID` | Stripe Price ID for Autonomous tier |
-| `NEXT_PUBLIC_APP_URL` | Public URL of the app (e.g., `https://selfimprove-iota.vercel.app`) |
+| `NEXT_PUBLIC_APP_URL` | Public URL of the app (e.g., `https://shipsitself.com`) |
 | `RESEND_API_KEY` | Resend API key for email notifications (optional) |
 | `CRON_SECRET` | Secret for authenticating Vercel Cron requests |
 
@@ -267,7 +267,7 @@ Signals enter the system through multiple channels:
 - **Voice companion** -- Audio recordings POST to `/api/voice`, where Gemini 2.5 Flash transcribes them and stores the result as a voice signal (5x weight).
 - **GitHub issue import** -- Open issues from connected repos are imported as feedback or error signals.
 - **Codebase scan** -- Claude Code analyzes the repo in read-only mode and inserts findings (bugs, security, performance, accessibility, code quality, missing tests, UX issues) as builder signals.
-- **Cold-start analysis** -- On project creation, SelfImprove fetches the live site and checks performance, security headers, accessibility, SEO, and agent readiness, seeding initial signals.
+- **Cold-start analysis** -- On project creation, Ships Itself fetches the live site and checks performance, security headers, accessibility, SEO, and agent readiness, seeding initial signals.
 
 Each signal type has a weight: voice (5), feedback (4), error (3), analytics (2), builder (1). Tier-based monthly caps are enforced at ingestion.
 

@@ -126,7 +126,7 @@ export default async function BrainV1Page() {
                 Project Brain v1.1
               </h1>
               <p className="mt-5 max-w-3xl text-lg leading-8" style={{ color: '#4d4741' }}>
-                This is the updated SelfImprove architecture after the resolver and backlog refinements:
+                This is the updated Ships Itself architecture after the resolver and backlog refinements:
                 resolver as governance, dominant-need focus, opportunity clusters, and a long backlog
                 that stays rankable instead of turning into brief sprawl.
               </p>

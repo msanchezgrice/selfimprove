@@ -1187,7 +1187,7 @@ export default function PilotClient() {
       )}
 
       <footer className="border-t border-[#1e2430] py-6 text-center text-xs text-[#5a6376]">
-        A SelfImprove experiment — one AI writes the show, renders the video,
+        A Ships Itself experiment — one AI writes the show, renders the video,
         and ships the platform. Daily.
       </footer>
     </div>

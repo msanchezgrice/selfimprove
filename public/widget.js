@@ -14,7 +14,7 @@
   };
 
   if (!config.projectId) {
-    console.error('[SelfImprove] Missing data-project attribute');
+    console.error('[Ships Itself] Missing data-project attribute');
     return;
   }
 
@@ -222,7 +222,7 @@
       </div>
     </div>
     <div class="si-footer">
-      <a href="https://selfimprove.dev" target="_blank" rel="noopener">Powered by SelfImprove</a>
+      <a href="https://shipsitself.com" target="_blank" rel="noopener">Powered by Ships Itself</a>
     </div>
   `;
   shadow.appendChild(panel);
@@ -340,7 +340,7 @@
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       showStatus('Thanks! Your feedback was received.', true);
     } catch (err) {
-      console.error('[SelfImprove]', err);
+      console.error('[Ships Itself]', err);
       showStatus('Something went wrong. Please try again.', false);
       setTimeout(() => restoreForm(), 2500);
     }
@@ -388,7 +388,7 @@
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             showStatus('Thanks! Voice feedback received.', true);
           } catch (err) {
-            console.error('[SelfImprove]', err);
+            console.error('[Ships Itself]', err);
             showStatus('Failed to send recording. Please try again.', false);
             setTimeout(() => restoreForm(), 2500);
           }
@@ -398,7 +398,7 @@
         recording = true;
         micBtn.classList.add('si-recording');
       } catch (err) {
-        console.error('[SelfImprove] Microphone access denied:', err);
+        console.error('[Ships Itself] Microphone access denied:', err);
       }
     });
   }

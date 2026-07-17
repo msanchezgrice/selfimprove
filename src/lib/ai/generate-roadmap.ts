@@ -508,7 +508,7 @@ ${roiFocusInstruction}${focus ? `\nThe focus mode raises: ${focus.raises.join(',
     }>({
       prompt,
       system:
-        'You are SelfImprove AI PM running the roadmap-synthesis skill. Produce actionable, well-scoped roadmap items that project cleanly from maintained opportunity clusters.',
+        'You are Ships Itself AI PM running the roadmap-synthesis skill. Produce actionable, well-scoped roadmap items that project cleanly from maintained opportunity clusters.',
       schema: ROADMAP_SCHEMA,
       schemaName: 'generate_roadmap',
       schemaDescription:

@@ -19,7 +19,7 @@ export async function ensureTierPrices(): Promise<Record<string, TierPrice>> {
   for (const [tierKey, tier] of Object.entries(TIERS)) {
     if (tier.price === 0) continue // Skip free tier
 
-    const productName = `SelfImprove ${tier.name}`
+    const productName = `Ships Itself ${tier.name}`
     const lookupKey = `${PRODUCT_PREFIX}${tierKey}_monthly`
 
     // Try to find existing price by lookup_key
@@ -40,7 +40,7 @@ export async function ensureTierPrices(): Promise<Record<string, TierPrice>> {
     // Create product
     const product = await stripe.products.create({
       name: productName,
-      description: `SelfImprove ${tier.name} plan — ${tierKey === 'pro' ? '3 projects, 10K signals/mo' : 'Unlimited projects & signals'}`,
+      description: `Ships Itself ${tier.name} plan — ${tierKey === 'pro' ? '3 projects, 10K signals/mo' : 'Unlimited projects & signals'}`,
       metadata: { tier: tierKey },
     })
 

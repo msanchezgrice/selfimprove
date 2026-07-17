@@ -96,15 +96,15 @@ export function StepAddWidget({ projectId }: StepAddWidgetProps) {
   const pid = projectId ?? 'proj_xxx'
   const [tags, setTags] = useState('bug, confusing, slow, missing feature, love it')
 
-  const widgetHost = process.env.NEXT_PUBLIC_APP_URL || 'https://selfimprove-iota.vercel.app'
+  const widgetHost = process.env.NEXT_PUBLIC_APP_URL || 'https://shipsitself.com'
   const dashboardUrl = `${widgetHost}/dashboard`
 
   const scriptSnippet = `<script src="${widgetHost}/widget.js"\n  data-project="${pid}"></script>`
   const reactSnippet = `// npm install @selfimprove/react\nimport { FeedbackWidget } from '@selfimprove/react'\n\n<FeedbackWidget projectId="${pid}" />`
-  const agentPrompt = `Add the SelfImprove feedback widget to my app. Add this script tag just before </body> in my root layout: <script src='${widgetHost}/widget.js' data-project='${pid}'></script>. That's it, one line.`
+  const agentPrompt = `Add the Ships Itself feedback widget to my app. Add this script tag just before </body> in my root layout: <script src='${widgetHost}/widget.js' data-project='${pid}'></script>. That's it, one line.`
 
-  const agentInstructions = `## SelfImprove Integration
-This project uses SelfImprove for AI product management.
+  const agentInstructions = `## Ships Itself Integration
+This project uses Ships Itself for AI product management.
 Dashboard: ${dashboardUrl}
 Widget: ${widgetHost}/widget.js (project: ${pid})
 Signals API: ${widgetHost}/api/signals
@@ -117,7 +117,7 @@ Signals API: ${widgetHost}/api/signals
 - Reference the roadmap item in commit messages: "Implements roadmap #<id>"
 - POST feedback to ${widgetHost}/api/signals with {project_id, type, content, metadata}`
 
-  const agentQuickPrompt = `Check the SelfImprove dashboard at ${dashboardUrl} for the highest-priority roadmap item. Read the PRD and acceptance criteria, then implement it.`
+  const agentQuickPrompt = `Check the Ships Itself dashboard at ${dashboardUrl} for the highest-priority roadmap item. Read the PRD and acceptance criteria, then implement it.`
 
   return (
     <div>
@@ -274,7 +274,7 @@ Signals API: ${widgetHost}/api/signals
             className="text-base font-semibold"
             style={{ color: '#1a1a2e' }}
           >
-            Tell your coding agent about SelfImprove
+            Tell your coding agent about Ships Itself
           </h3>
           <p className="text-xs" style={{ color: '#8b8680' }}>
             Optional &mdash; gives your AI coding agent context about the live roadmap
@@ -311,12 +311,12 @@ Signals API: ${widgetHost}/api/signals
             reference real user evidence when building features.
           </p>
           <CodeBlock copyText={agentInstructions} copyLabel="Copy to clipboard" label="Markdown">
-            <span style={{ color: '#a5f3c4' }}>## SelfImprove Integration</span>
+            <span style={{ color: '#a5f3c4' }}>## Ships Itself Integration</span>
             {'\n'}
-            <span style={{ color: '#e2e8f0' }}>This project uses SelfImprove (selfimprove.dev) for AI product management.</span>
+            <span style={{ color: '#e2e8f0' }}>This project uses Ships Itself (shipsitself.com) for AI product management.</span>
             {'\n'}
             <span style={{ color: '#e2e8f0' }}>Dashboard: </span>
-            <span style={{ color: '#7dd3fc' }}>https://selfimprove.dev/p/{pid}</span>
+            <span style={{ color: '#7dd3fc' }}>https://shipsitself.com/p/{pid}</span>
             {'\n\n'}
             <span style={{ color: '#a5f3c4' }}>### Context for coding agents</span>
             {'\n'}

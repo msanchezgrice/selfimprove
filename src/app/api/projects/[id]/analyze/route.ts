@@ -81,7 +81,7 @@ export async function POST(
       console.warn(`SSRF blocked: ${project.site_url} — ${urlCheck.error}`)
     } else try {
       const response = await fetch(project.site_url, {
-        headers: { 'User-Agent': 'SelfImprove-Bot/1.0' },
+        headers: { 'User-Agent': 'Ships-Itself-Bot/1.0' },
         signal: AbortSignal.timeout(10000),
       })
       const html = await response.text()
@@ -125,7 +125,7 @@ export async function POST(
             headers: {
               'Authorization': `Bearer ${providerToken}`,
               'Accept': 'application/vnd.github.v3.raw',
-              'User-Agent': 'SelfImprove-App',
+              'User-Agent': 'Ships-Itself-App',
             },
           })
           if (readmeRes.ok) {
@@ -140,7 +140,7 @@ export async function POST(
             headers: {
               'Authorization': `Bearer ${providerToken}`,
               'Accept': 'application/vnd.github.v3.raw',
-              'User-Agent': 'SelfImprove-App',
+              'User-Agent': 'Ships-Itself-App',
             },
           })
           if (pkgRes.ok) {
@@ -157,7 +157,7 @@ export async function POST(
             headers: {
               'Authorization': `Bearer ${providerToken}`,
               'Accept': 'application/vnd.github.v3+json',
-              'User-Agent': 'SelfImprove-App',
+              'User-Agent': 'Ships-Itself-App',
             },
           })
           if (treeRes.ok) {

@@ -188,7 +188,7 @@ describe('formatResolvedContextForPrompt', () => {
           reason: 'anchor',
           page: null,
           version: null,
-          content: 'SelfImprove is an AI PM for indie founders.',
+          content: 'Ships Itself is an AI PM for indie founders.',
           missing: false,
         },
       ],
@@ -199,7 +199,7 @@ describe('formatResolvedContextForPrompt', () => {
     expect(text).toContain('### current_focus (priority 5, required)')
     expect(text).toContain('_Missing._')
     expect(text).toContain('### project_overview (priority 10, required)')
-    expect(text).toContain('SelfImprove is an AI PM for indie founders.')
+    expect(text).toContain('Ships Itself is an AI PM for indie founders.')
     expect(text).toContain('Required pages not yet compiled: current_focus')
   })
 
