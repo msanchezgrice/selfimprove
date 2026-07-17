@@ -88,7 +88,7 @@ export default function OGImage() {
             alignItems: 'flex-end',
           }}
         >
-          <div style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.5px' }}>
+          <div style={{ display: 'flex', fontSize: '20px', fontWeight: 700, letterSpacing: '-0.5px' }}>
             <span style={{ color: '#1a1a2e' }}>Ships </span>
             <span style={{ color: '#0d9488' }}>Itself</span>
           </div>
