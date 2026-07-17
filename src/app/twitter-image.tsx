@@ -89,7 +89,7 @@ export default function OGImage() {
           }}
         >
           <div style={{ display: 'flex', fontSize: '20px', fontWeight: 700, letterSpacing: '-0.5px' }}>
-            <span style={{ color: '#1a1a2e' }}>Ships </span>
+            <span style={{ color: '#1a1a2e', marginRight: '5px' }}>Ships</span>
             <span style={{ color: '#0d9488' }}>Itself</span>
           </div>
           <div style={{ fontSize: '16px', color: '#999', fontWeight: 500 }}>
