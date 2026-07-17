@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   authors: [{ name: 'Ships Itself' }],
   robots: 'index, follow',
   metadataBase: new URL(siteUrl),
-  alternates: { canonical: siteUrl },
+  alternates: { canonical: '/' },
   openGraph: {
     title: 'Ships Itself — AI Product Manager for Developers',
     description: 'You built your v1. Now make it actually work. Watch your users, build your roadmap, ship the fixes—all with AI.',

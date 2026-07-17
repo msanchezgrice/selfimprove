@@ -1,7 +1,21 @@
+import type { Metadata } from 'next'
 import Link from "next/link";
 import { Check, Minus } from "lucide-react";
 import MarketingNav from "@/app/_components/marketing-nav";
 import { TIERS } from "@/lib/constants/tiers";
+
+export const metadata: Metadata = {
+  title: 'Pricing',
+  description:
+    'Simple, transparent pricing for SelfImprove. Start free with 1 project and 100 signals/month. Upgrade to Pro or Autonomous as your product grows.',
+  alternates: { canonical: '/pricing' },
+  openGraph: {
+    title: 'Pricing | SelfImprove',
+    description:
+      'Simple, transparent pricing for SelfImprove. Start free with 1 project, upgrade when ready. No per-seat charges, cancel anytime.',
+    url: '/pricing',
+  },
+};
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
