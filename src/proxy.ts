@@ -3,28 +3,15 @@ import type { NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { APP_ORIGIN } from '@/lib/app-routes'
 
-const APP_PATHS = ['/login', '/auth', '/onboarding', '/dashboard']
-
-function shouldUseAppOrigin(request: NextRequest): boolean {
-  const isMarketingHost =
-    request.nextUrl.hostname === 'shipsitself.com' ||
-    request.nextUrl.hostname === 'www.shipsitself.com'
-  const isAppPath = APP_PATHS.some(
-    (path) =>
-      request.nextUrl.pathname === path ||
-      request.nextUrl.pathname.startsWith(`${path}/`),
-  )
-  return isMarketingHost && isAppPath
-}
+const RETIRED_APP_HOSTS = new Set(['selfimprove-iota.vercel.app'])
 
 export async function proxy(request: NextRequest) {
-  // Auth cookies and OAuth PKCE state cannot cross unrelated hostnames. Keep
-  // every authenticated route on one origin while shipsitself.com remains the
-  // public marketing site.
-  if (shouldUseAppOrigin(request)) {
-    const appUrl = new URL(request.nextUrl.pathname, APP_ORIGIN)
-    appUrl.search = request.nextUrl.search
-    return NextResponse.redirect(appUrl, 307)
+  // Ships Itself is now the only production origin. Preserve the entire path
+  // and query for old bookmarks while retiring the Vercel hostname.
+  if (RETIRED_APP_HOSTS.has(request.nextUrl.hostname)) {
+    const canonicalUrl = new URL(request.nextUrl.pathname, APP_ORIGIN)
+    canonicalUrl.search = request.nextUrl.search
+    return NextResponse.redirect(canonicalUrl, 308)
   }
 
   let supabaseResponse = NextResponse.next({ request })

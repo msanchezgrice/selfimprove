@@ -46,7 +46,7 @@ Temporary exception: keep `src/lib/pilot/caps.ts` and its cycle guard in SelfImp
 - [x] Add real `/docs`, `/blog`, `/privacy`, and `/terms` routes, including three initial blog articles.
 - [x] Fix the broken “How it works” and docs/blog navigation targets.
 - [x] Expand “How it works” into a concrete six-stage improvement loop with inputs, evidence, controls, shipping, measurement, and a worked checkout example.
-- [x] Keep authenticated Ships Itself routes on `selfimprove-iota.vercel.app`: marketing login/dashboard links use that app origin, and requests for `/login`, `/auth`, `/onboarding`, or `/dashboard` on `shipsitself.com` preserve their path/query while redirecting before Supabase reads cookies.
+- [x] Consolidate the complete Ships Itself product on `shipsitself.com`: landing, login, auth callback, onboarding, dashboards, APIs, widget, and generated links now share the owned origin. The retired Vercel hostname preserves path/query while permanently redirecting to the owned domain.
 - [x] Verify Google and GitHub are enabled, linked to the same production user, and accepted by Supabase with callbacks on the app origin. Google tokens can no longer overwrite the stored GitHub repository token.
 - [x] Replace unverified testimonials with transparent product principles.
 - [x] Add a tested `canon-export.v1` / `asset-manifest.v1` generator for the live public pilot state. It strips SelfImprove branding and all private/internal pilot fields, uses stable natural keys, hashes HTTPS media, writes atomically outside both repos, and defaults every asset to unapproved.
@@ -54,7 +54,7 @@ Temporary exception: keep `src/lib/pilot/caps.ts` and its cycle guard in SelfImp
 ## P0 — required before accepting a real paid customer
 
 - [x] **Choose and deploy the owned canonical domain.** `https://shipsitself.com` points to the existing Vercel project and serves Ships Itself metadata, manifest, widget branding, favicon, and share cards.
-- [x] **Stabilize provider callbacks across the two production hosts.** Supabase accepts both Google and GitHub callbacks on `https://selfimprove-iota.vercel.app`; all authenticated routes now stay on that host so PKCE state and session cookies are not split across unrelated domains. Fresh interactive signup QA remains tracked separately below.
+- [x] **Use one production origin for provider callbacks.** Google and GitHub flows now request `https://shipsitself.com/auth/callback`, so PKCE state and session cookies remain on the same owned domain as the landing page and dashboard. Fresh interactive signup QA remains tracked separately below.
 - [ ] **Provision the Stripe catalog in the live account.** Create recurring monthly Prices for Pro ($49) and Autonomous ($199), then set `STRIPE_PRO_PRICE_ID` and `STRIPE_AUTONOMOUS_PRICE_ID` in Vercel. The app now fails closed with a clear message when these are absent.
 - [ ] **Repair the Stripe webhook subscription.** Enable at least `checkout.session.completed`, `customer.subscription.updated`, and `customer.subscription.deleted` for the deployed webhook endpoint. Confirm the endpoint secret in Vercel matches it.
 - [ ] **Finish Stripe account activation.** Payouts were disabled during the audit. Complete the required business/bank verification before launch.

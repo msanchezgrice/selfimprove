@@ -1,14 +1,19 @@
-export const DEFAULT_APP_ORIGIN = 'https://selfimprove-iota.vercel.app'
+export const DEFAULT_APP_ORIGIN = 'https://shipsitself.com'
 export const DEFAULT_DASHBOARD_PATH = '/dashboard'
 export const OWNER_DASHBOARD_PATH = '/dashboard/selfimprove/roadmap'
+const RETIRED_APP_HOSTS = new Set(['selfimprove-iota.vercel.app'])
 
-function normalizeOrigin(value: string | undefined): string {
+export function getAppOrigin(value: string | undefined): string {
   const configured = value?.trim()
   if (!configured) return DEFAULT_APP_ORIGIN
 
   try {
     const url = new URL(configured)
-    if (url.protocol !== 'https:' && url.hostname !== 'localhost') {
+    const isLocalHttp = url.protocol === 'http:' && url.hostname === 'localhost'
+    if (
+      (url.protocol !== 'https:' && !isLocalHttp) ||
+      RETIRED_APP_HOSTS.has(url.hostname)
+    ) {
       return DEFAULT_APP_ORIGIN
     }
     return url.origin
@@ -17,8 +22,9 @@ function normalizeOrigin(value: string | undefined): string {
   }
 }
 
-export const APP_ORIGIN = normalizeOrigin(
-  process.env.NEXT_PUBLIC_DASHBOARD_ORIGIN,
+export const APP_ORIGIN = getAppOrigin(
+  process.env.NEXT_PUBLIC_DASHBOARD_ORIGIN ??
+    process.env.NEXT_PUBLIC_APP_URL,
 )
 export const LOGIN_URL = `${APP_ORIGIN}/login`
 export const OWNER_DASHBOARD_URL = `${APP_ORIGIN}${OWNER_DASHBOARD_PATH}`

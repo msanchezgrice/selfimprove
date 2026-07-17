@@ -8,7 +8,7 @@
 # Requires: higgsfield CLI auth, ffmpeg, CRON_SECRET, APP_BASE_URL
 #
 # Usage:
-#   CRON_SECRET=… APP_BASE_URL=https://selfimprove-iota.vercel.app ./scripts/pilot-render-once.sh
+#   CRON_SECRET=… APP_BASE_URL=https://shipsitself.com ./scripts/pilot-render-once.sh
 
 set -euo pipefail
 

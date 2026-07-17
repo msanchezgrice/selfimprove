@@ -20,6 +20,21 @@ const nextConfig: NextConfig = {
       },
     ]
   },
+  async redirects() {
+    return [
+      {
+        source: '/:path*',
+        has: [
+          {
+            type: 'host',
+            value: 'selfimprove-iota.vercel.app',
+          },
+        ],
+        destination: 'https://shipsitself.com/:path*',
+        permanent: true,
+      },
+    ]
+  },
 }
 
 export default nextConfig

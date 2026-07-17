@@ -6,7 +6,7 @@
 
 set -euo pipefail
 
-BASE="${APP_BASE_URL:-${1:-https://selfimprove-iota.vercel.app}}"
+BASE="${APP_BASE_URL:-${1:-https://shipsitself.com}}"
 OUT="${2:-/tmp/pilot-continuity-audit-$(date +%Y%m%d-%H%M%S)}"
 
 for command_name in curl jq ffmpeg ffprobe; do

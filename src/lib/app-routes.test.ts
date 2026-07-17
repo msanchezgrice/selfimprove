@@ -4,14 +4,24 @@ import {
   DEFAULT_DASHBOARD_PATH,
   OWNER_DASHBOARD_URL,
   getAuthCallbackUrl,
+  getAppOrigin,
   getSafeAuthNextPath,
 } from './app-routes'
 
 describe('app routes', () => {
   it('keeps authentication and the dashboard on one origin', () => {
-    expect(APP_ORIGIN).toBe('https://selfimprove-iota.vercel.app')
+    expect(APP_ORIGIN).toBe('https://shipsitself.com')
     expect(OWNER_DASHBOARD_URL).toBe(
-      'https://selfimprove-iota.vercel.app/dashboard/selfimprove/roadmap',
+      'https://shipsitself.com/dashboard/selfimprove/roadmap',
+    )
+  })
+
+  it('refuses to restore the retired Vercel origin from stale environment config', () => {
+    expect(getAppOrigin('https://selfimprove-iota.vercel.app')).toBe(
+      'https://shipsitself.com',
+    )
+    expect(getAppOrigin('https://shipsitself.com/')).toBe(
+      'https://shipsitself.com',
     )
   })
 

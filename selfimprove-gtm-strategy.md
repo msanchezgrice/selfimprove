@@ -2,7 +2,7 @@
 
 **Prepared: April 2026**
 **Product:** SelfImprove — AI Product Manager for Developers
-**URL:** https://selfimprove-iota.vercel.app
+**URL:** https://shipsitself.com
 
 ---
 
