@@ -14,18 +14,19 @@ Decision recorded 2026-07-16 after direct coordination with the Fable/Claude Cod
 - [x] Open `/Users/miguel/canon` directly in a separate Claude Code task. The Claude session is resumable as `6fa116ff-4339-4834-b516-0bc4b1ac561e`.
 - [x] Finish Canon Milestone 1 and its read-only player. Local gate: 24 test files, 205 tests, typecheck, lint, and production build pass.
 - [x] Give Canon its own private GitHub repository, Vercel project, production deployment, and domain at `makeitcanon.com`.
-- [ ] Create Canon-owned Supabase, storage, credentials, analytics properties, provider budgets, and release automation. No shared runtime packages or environment files.
+- [x] Create Canon-owned Supabase, Postgres schema, least-privilege app credentials, signed-voter secret, and private `canon-media` storage. Analytics, provider budgets, and autonomous generation remain separate follow-ups.
 - [x] Export only versioned show/episode data, aggregate vote totals, and an asset manifest from SelfImprove. The live three-episode snapshot is in `/Users/miguel/handoff/canon/` as `canon-export.v1.json`, `asset-manifest.v1.json`, and `SHA256SUMS`; checksums and the privacy scan pass. All six media entries intentionally remain `approved: false` pending explicit review.
 - [ ] Review the six exported media entries, then rerun `npm run export:canon -- --approve-assets` immediately before Canon import if they are cleared for rehosting. The exporter streams media for hashes and never writes video copies locally.
 - [ ] Copy and re-host approved pilot media into Canon-owned storage; do not leave Canon dependent on SelfImprove storage URLs.
-- [ ] Secure Canon admin, spend, and destructive mutations with bearer authorization and idempotency keys. Keep public voting anonymous via a signed voter token, database uniqueness, rate limiting, and an optional bot challenge.
+- [x] Secure Canon admin/destructive mutations with bearer authorization and idempotency keys. Public voting now uses a signed voter token and database uniqueness; rate limiting and an optional bot challenge remain defense-in-depth follow-ups.
 - [ ] Rotate the existing SelfImprove `CRON_SECRET` before the next deployment and provision a different Canon admin secret; never pass either secret in a query string.
-- [ ] Replace the singleton `pilot_state` JSON document and long `after()` render polling with normalized tables and durable, idempotent jobs.
+- [x] Replace the singleton `pilot_state` JSON document in Canon with normalized tables and durable, idempotent job primitives. The actual writing/render worker is still sealed.
 - [ ] Give Canon separate GA4/PostHog/Sentry projects, social accounts, email configuration, and—if monetized—separate Stripe products, prices, webhook endpoint, metadata namespace, and restricted credentials. Canon metadata, favicon, and share cards are live.
 - [x] Keep Ships Itself and Canon separate in production: `/pilot` redirects to `makeitcanon.com`, `/canon` is 404, and Canon’s primary player is `makeitcanon.com/pilot` (`/watch` permanently redirects).
+- [x] Remove the retired embedded pilot player, `/api/pilot/*` routes, render scripts, and `src/lib/pilot` runtime from the SelfImprove repository. Only the permanent `/pilot` handoff redirect remains.
 - [x] Connect the validated three-episode Devon handoff and all six source media URLs to Canon’s read-only player. The first plot is directly linked from the Canon landing page.
 
-Temporary exception: keep `src/lib/pilot/caps.ts` and its cycle guard in SelfImprove until `/pilot` is retired; it is currently the only explicit spend brake on that experiment.
+The temporary SelfImprove pilot spend-brake exception is retired with the old runtime. Canon workers and generation remain fail-closed in the standalone app.
 
 ## Implemented in the current worktree
 
