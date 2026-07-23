@@ -1,7 +1,7 @@
 import { ImageResponse } from 'next/og'
 import { SITE_URL } from '@/lib/site-config'
 
-export const alt = 'Ships Itself: You built your v1. Now make it actually work.'
+export const alt = 'Ships Itself: Turn raw signals into shipped growth.'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 
@@ -66,8 +66,8 @@ export default function OGImage() {
               flexDirection: 'column',
             }}
           >
-            <span style={{ color: '#1a1a2e' }}>You built your v1.</span>
-            <span style={{ color: '#0d9488' }}>Now make it actually work.</span>
+            <span style={{ color: '#1a1a2e' }}>Turn raw signals into</span>
+            <span style={{ color: '#0d9488' }}>shipped growth.</span>
           </div>
           <div
             style={{

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import { ToastProvider } from "@/components/providers/ToastProvider";
+import { PostHogProvider } from "@/app/_components/posthog-provider";
 import { GoogleAnalytics } from "@/app/_components/google-analytics";
 import { SITE_URL } from "@/lib/site-config";
 import "./globals.css";
@@ -16,16 +17,16 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: { default: 'Ships Itself — AI Product Manager for Developers', template: '%s | Ships Itself' },
-  description: 'Ships Itself watches your users, builds your roadmap, and ships the fixes. AI-powered product management for indie devs and solo SaaS founders.',
+  title: { default: 'Ships Itself — Turn raw signals into shipped growth', template: '%s | Ships Itself' },
+  description: 'Ships Itself turns raw user signals into a prioritized roadmap — and ships the fixes. AI product management for indie devs and solo SaaS founders.',
   authors: [{ name: 'Ships Itself' }],
   robots: 'index, follow',
   verification: { google: 'wDt9ncF0rhWuDIZ_UZhl5lnZoXbJo8NaTrGcEYiAhCA' },
   metadataBase: new URL(SITE_URL),
   alternates: { canonical: SITE_URL },
   openGraph: {
-    title: 'Ships Itself — AI Product Manager for Developers',
-    description: 'You built your v1. Now make it actually work. Watch your users, build your roadmap, ship the fixes—all with AI.',
+    title: 'Ships Itself — Turn raw signals into shipped growth',
+    description: 'Turn raw user signals into a prioritized roadmap — and ship the fixes. Automatically.',
     url: SITE_URL,
     siteName: 'Ships Itself',
     locale: 'en_US',
@@ -33,8 +34,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Ships Itself — AI Product Manager for Developers',
-    description: 'You built your v1. Now make it actually work. AI-powered user analytics, roadmap generation, and fix shipping for indie devs.',
+    title: 'Ships Itself — Turn raw signals into shipped growth',
+    description: 'Turn raw user signals into a prioritized roadmap — and ship the fixes. Automatically.',
   },
   icons: {
     icon: '/favicon.svg',
@@ -61,7 +62,9 @@ export default function RootLayout({
       className={`${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-[var(--bg)]">
-        {children}
+        <PostHogProvider>
+          {children}
+        </PostHogProvider>
         <ToastProvider />
         <GoogleAnalytics />
         <script
