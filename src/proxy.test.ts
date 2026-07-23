@@ -39,4 +39,30 @@ describe('canonical product origin proxy', () => {
       expect(response.headers.get('location')).toBeNull()
     }
   })
+
+  it('forwards stray OAuth codes to the auth callback route', async () => {
+    delete process.env.NEXT_PUBLIC_SUPABASE_URL
+    delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+    const response = await proxy(
+      new NextRequest('https://shipsitself.com/?code=abc123&next=%2Fdashboard'),
+    )
+
+    expect(response.status).toBe(307)
+    expect(response.headers.get('location')).toBe(
+      'https://shipsitself.com/auth/callback?code=abc123&next=%2Fdashboard',
+    )
+  })
+
+  it('leaves API routes with a code param untouched', async () => {
+    delete process.env.NEXT_PUBLIC_SUPABASE_URL
+    delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+    const response = await proxy(
+      new NextRequest('https://shipsitself.com/api/webhooks/github?code=abc123'),
+    )
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('location')).toBeNull()
+  })
 })

@@ -45,8 +45,9 @@ export async function GET(request: Request) {
           .limit(1)
           .maybeSingle()
 
-        const needsOnboarding = !membership
+        let isNewUser = false
         if (!membership) {
+          isNewUser = true
           const displayName =
             user.user_metadata?.full_name ||
             user.email?.split('@')[0] ||
@@ -66,31 +67,40 @@ export async function GET(request: Request) {
             .single()
 
           if (org) {
-            await admin
+            const { error: memberError } = await admin
               .from('org_members')
               .insert({ org_id: org.id, user_id: user.id, role: 'owner' })
+
+            if (memberError) {
+              console.error('[auth/callback] failed to create membership:', memberError)
+              return NextResponse.redirect(`${origin}/login?error=account_setup`)
+            }
+
             // Send welcome email (fire-and-forget)
-            sendWelcomeEmail(user.id, org.id).catch(() => {})
+            sendWelcomeEmail(user.id).catch(() => {})
+          } else {
+            return NextResponse.redirect(`${origin}/login?error=account_setup`)
           }
         }
 
-        // GitHub grants a provider token with repo access. Store it only after
-        // membership exists; Google tokens must never overwrite this column.
+        // Persist the provider token only after first-time setup has created the
+        // org_members row. The old ordering silently dropped new users' tokens.
         const { data: { session } } = await supabase.auth.getSession()
         const providerToken = session?.provider_token
         if (oauthProvider === 'github' && providerToken) {
           try {
-            await admin
+            const { error: tokenError } = await admin
               .from('org_members')
               .update({ github_token: encrypt(providerToken) })
               .eq('user_id', user.id)
+            if (tokenError) throw tokenError
           } catch (err) {
-            // Never block sign-in on token persistence (e.g. missing TOKEN_ENCRYPTION_KEY)
+            // Never block sign-in on token persistence (e.g. missing encryption key).
             console.error('[auth/callback] failed to persist GitHub token:', err)
           }
         }
 
-        if (needsOnboarding) {
+        if (isNewUser) {
           return NextResponse.redirect(`${origin}/onboarding`)
         }
       }

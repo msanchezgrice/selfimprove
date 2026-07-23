@@ -1,5 +1,6 @@
 import { Resend } from 'resend'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getEmailFromAddress, SITE_URL } from '@/lib/site-config'
 
 let _resend: Resend | null = null
 function getResend(): Resend | null {
@@ -8,8 +9,7 @@ function getResend(): Resend | null {
   return _resend
 }
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://shipsitself.com'
-const FROM = process.env.RESEND_FROM_EMAIL || 'Ships Itself <notifications@shipsitself.com>'
+const APP_URL = SITE_URL
 
 function emailTemplate(content: string): string {
   return `
@@ -46,9 +46,10 @@ async function getOrgEmails(orgId: string): Promise<string[]> {
 }
 
 // === Welcome Email ===
-export async function sendWelcomeEmail(userId: string, orgId: string) {
+export async function sendWelcomeEmail(userId: string) {
   const resend = getResend()
-  if (!resend) return
+  const from = getEmailFromAddress()
+  if (!resend || !from) return
 
   const supabase = createAdminClient()
   const { data } = await supabase.auth.admin.getUserById(userId)
@@ -57,7 +58,7 @@ export async function sendWelcomeEmail(userId: string, orgId: string) {
   const name = data.user.user_metadata?.full_name || data.user.email.split('@')[0]
 
   await resend.emails.send({
-    from: FROM,
+    from,
     to: data.user.email,
     subject: 'Welcome to Ships Itself',
     html: emailTemplate(`
@@ -79,7 +80,8 @@ export async function sendWelcomeEmail(userId: string, orgId: string) {
 // === Roadmap Ready Email ===
 export async function sendRoadmapReadyEmail(projectId: string, itemCount: number) {
   const resend = getResend()
-  if (!resend) return
+  const from = getEmailFromAddress()
+  if (!resend || !from) return
 
   const supabase = createAdminClient()
   const { data: project } = await supabase
@@ -93,7 +95,7 @@ export async function sendRoadmapReadyEmail(projectId: string, itemCount: number
   if (emails.length === 0) return
 
   await resend.emails.send({
-    from: FROM,
+    from,
     to: emails,
     subject: `${project.name}: ${itemCount} new roadmap items`,
     html: emailTemplate(`
@@ -109,7 +111,8 @@ export async function sendRoadmapReadyEmail(projectId: string, itemCount: number
 // === Daily Digest Email ===
 export async function sendDailyDigest(orgId: string) {
   const resend = getResend()
-  if (!resend) return
+  const from = getEmailFromAddress()
+  if (!resend || !from) return
 
   const supabase = createAdminClient()
   const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
@@ -206,7 +209,7 @@ export async function sendDailyDigest(orgId: string) {
   if (emails.length === 0) return
 
   await resend.emails.send({
-    from: FROM,
+    from,
     to: emails,
     subject: `Ships Itself Digest: ${totalActivity} update${totalActivity === 1 ? '' : 's'} today`,
     html: emailTemplate(digestHtml),
@@ -216,7 +219,8 @@ export async function sendDailyDigest(orgId: string) {
 // === Connect Reminder ===
 export async function sendConnectReminder(userId: string, orgId: string, missing: string[]) {
   const resend = getResend()
-  if (!resend) return
+  const from = getEmailFromAddress()
+  if (!resend || !from) return
 
   const supabase = createAdminClient()
   const { data } = await supabase.auth.admin.getUserById(userId)
@@ -235,7 +239,7 @@ export async function sendConnectReminder(userId: string, orgId: string, missing
   }).join('')
 
   await resend.emails.send({
-    from: FROM,
+    from,
     to: data.user.email,
     subject: 'Complete your Ships Itself setup',
     html: emailTemplate(`

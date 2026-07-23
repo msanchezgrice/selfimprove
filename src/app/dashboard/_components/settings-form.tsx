@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback, useRef, type KeyboardEvent, type ChangeEvent } from 'react'
 import { createClient } from '@/lib/supabase/browser'
 import { showToast } from '@/lib/utils/toast'
-import { TIERS } from '@/lib/constants/tiers'
+import { TIERS, type TierName } from '@/lib/constants/tiers'
+import { trackEvent } from '@/lib/analytics'
 import type {
   ProjectRow,
   ProjectSettingsRow,
@@ -23,6 +24,9 @@ type SettingsFormProps = {
   project: ProjectRow
   settings: ProjectSettingsRow
   orgTier: Tier
+  initialTab?: Tab
+  requestedUpgrade?: Exclude<TierName, 'free'>
+  billingStatus?: 'success' | 'cancelled'
 }
 
 const TABS: { key: Tab; label: string }[] = [
@@ -229,9 +233,18 @@ function useToast() {
 /*  Main form component                                                */
 /* ------------------------------------------------------------------ */
 
-export function SettingsForm({ project, settings, orgTier }: SettingsFormProps) {
-  const [tab, setTab] = useState<Tab>('general')
+export function SettingsForm({
+  project,
+  settings,
+  orgTier,
+  initialTab = 'general',
+  requestedUpgrade,
+  billingStatus,
+}: SettingsFormProps) {
+  const [tab, setTab] = useState<Tab>(initialTab)
   const [saving, setSaving] = useState(false)
+  const [checkoutTier, setCheckoutTier] = useState<Exclude<TierName, 'free'> | null>(null)
+  const [billingError, setBillingError] = useState<string | null>(null)
   const { toast, show } = useToast()
 
   const tierConfig = TIERS[orgTier]
@@ -785,7 +798,7 @@ export function SettingsForm({ project, settings, orgTier }: SettingsFormProps) 
             <a href="https://us.posthog.com/settings/user-api-keys" target="_blank" rel="noopener noreferrer" style={{ color: C.accent, textDecoration: 'underline' }}>
               PostHog → Settings → Personal API Keys
             </a>
-            . The Project API key (<code>phc_</code>) won't work for reading events.
+            . The Project API key (<code>phc_</code>) won&apos;t work for reading events.
           </p>
           <div className="flex gap-2">
             <input
@@ -893,10 +906,28 @@ export function SettingsForm({ project, settings, orgTier }: SettingsFormProps) 
   function renderBilling() {
     const price = tierConfig.price === 0 ? 'Free' : `$${(tierConfig.price / 100).toFixed(0)}/mo`
 
-    async function handleCheckout() {
-      const res = await fetch('/api/stripe/checkout', { method: 'POST' })
-      const data = (await res.json()) as { url?: string }
-      if (data.url) window.location.href = data.url
+    async function handleCheckout(tier: Exclude<TierName, 'free'>) {
+      trackEvent('checkout_started', { tier })
+      setCheckoutTier(tier)
+      setBillingError(null)
+      try {
+        const res = await fetch('/api/stripe/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tier }),
+        })
+        const data = (await res.json()) as { url?: string; error?: string }
+        if (!res.ok || !data.url) {
+          throw new Error(data.error || 'Unable to start checkout')
+        }
+        trackEvent('checkout_redirected', { tier })
+        window.location.href = data.url
+      } catch (error) {
+        setBillingError(
+          error instanceof Error ? error.message : 'Unable to start checkout',
+        )
+        setCheckoutTier(null)
+      }
     }
 
     async function handlePortal() {
@@ -907,6 +938,21 @@ export function SettingsForm({ project, settings, orgTier }: SettingsFormProps) 
 
     return (
       <div className="space-y-6">
+        {billingStatus && (
+          <div
+            role="status"
+            className="rounded-xl border px-4 py-3 text-sm"
+            style={{
+              borderColor: billingStatus === 'success' ? '#a7f3d0' : C.border,
+              backgroundColor: billingStatus === 'success' ? '#ecfdf5' : '#f5f3ef',
+              color: billingStatus === 'success' ? '#047857' : C.secondary,
+            }}
+          >
+            {billingStatus === 'success'
+              ? 'Checkout completed. Your plan will update as soon as Stripe confirms the subscription.'
+              : 'Checkout was cancelled. Your current plan has not changed.'}
+          </div>
+        )}
         {/* API Key */}
         <div className="mb-6">
           <h3 className="text-sm font-semibold mb-2" style={{ color: C.text }}>API Key</h3>
@@ -972,17 +1018,49 @@ export function SettingsForm({ project, settings, orgTier }: SettingsFormProps) 
           </div>
         </div>
 
+        {orgTier === 'free' && (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {(['pro', 'autonomous'] as const).map((tier) => {
+              const paidTier = tier as Exclude<TierName, 'free'>
+              const config = TIERS[paidTier]
+              const requested = requestedUpgrade === paidTier
+              return (
+                <button
+                  key={paidTier}
+                  type="button"
+                  disabled={checkoutTier !== null}
+                  onClick={() => handleCheckout(paidTier)}
+                  className="rounded-xl border p-4 text-left transition-colors disabled:opacity-60"
+                  style={{
+                    borderColor: requested ? C.accent : C.border,
+                    backgroundColor: requested ? '#eef2ff' : C.card,
+                  }}
+                >
+                  <span className="block text-sm font-semibold" style={{ color: C.text }}>
+                    {checkoutTier === paidTier ? 'Opening checkout…' : `Choose ${config.name}`}
+                  </span>
+                  <span className="mt-1 block text-xs" style={{ color: C.secondary }}>
+                    ${(config.price / 100).toFixed(0)}/month after a 14-day trial
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        )}
+
+        {orgTier === 'pro' && (
+          <p className="text-sm" style={{ color: C.secondary }}>
+            Use Manage Billing to change or cancel your existing subscription.
+          </p>
+        )}
+
+        {billingError && (
+          <p role="alert" className="text-sm" style={{ color: '#dc2626' }}>
+            {billingError}
+          </p>
+        )}
+
         <div className="flex gap-3">
-          {orgTier !== 'autonomous' && (
-            <button
-              type="button"
-              onClick={handleCheckout}
-              className="px-5 py-2 rounded-lg text-sm font-medium text-white"
-              style={{ backgroundColor: C.accent }}
-            >
-              Upgrade
-            </button>
-          )}
           <button
             type="button"
             onClick={handlePortal}

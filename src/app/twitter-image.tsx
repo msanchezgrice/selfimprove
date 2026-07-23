@@ -1,4 +1,5 @@
 import { ImageResponse } from 'next/og'
+import { SITE_URL } from '@/lib/site-config'
 
 export const alt = 'Ships Itself: You built your v1. Now make it actually work.'
 export const size = { width: 1200, height: 630 }
@@ -93,7 +94,7 @@ export default function OGImage() {
             <span style={{ color: '#0d9488' }}>Itself</span>
           </div>
           <div style={{ fontSize: '16px', color: '#999', fontWeight: 500 }}>
-            shipsitself.com
+            {new URL(SITE_URL).host}
           </div>
         </div>
       </div>

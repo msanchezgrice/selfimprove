@@ -8,7 +8,12 @@ import type { BrainPageRow, Tier } from '@/lib/types/database'
 import { FocusPicker } from '@/app/brain-v1/runtime/_components/focus-picker'
 import { SettingsForm } from '../../_components/settings-form'
 
-export default async function SettingsPage() {
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string; upgrade?: string; billing?: string }>
+}) {
+  const query = await searchParams
   const userOrg = await getUserOrg()
   if (!userOrg) redirect('/login')
 
@@ -79,6 +84,17 @@ export default async function SettingsPage() {
         project={project}
         settings={settings}
         orgTier={orgTier}
+        initialTab={query.tab === 'billing' ? 'billing' : 'general'}
+        requestedUpgrade={
+          query.upgrade === 'pro' || query.upgrade === 'autonomous'
+            ? query.upgrade
+            : undefined
+        }
+        billingStatus={
+          query.billing === 'success' || query.billing === 'cancelled'
+            ? query.billing
+            : undefined
+        }
       />
     </div>
   )

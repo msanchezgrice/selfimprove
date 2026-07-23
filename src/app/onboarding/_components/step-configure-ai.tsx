@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Brain, Sparkles, ChevronDown, Zap, GitPullRequest, Bot, CheckCircle2, Loader2 } from 'lucide-react'
+import { Brain, Sparkles, ChevronDown, GitPullRequest, CheckCircle2, Loader2 } from 'lucide-react'
 import type { RoiFocus } from '@/lib/types/database'
 
-type AutomationLevel = 'roadmap' | 'roadmap_implement' | 'full_autonomous'
+type AutomationLevel = 'roadmap' | 'roadmap_implement'
 
 type ProductContextData = {
   description: string
@@ -22,6 +22,13 @@ type StepConfigureAiProps = {
   setRiskThreshold: (v: number) => void
   productContext: ProductContextData | null
   analyzingContext: boolean
+  productDescription: string
+  setProductDescription: (value: string) => void
+  targetUsers: string
+  setTargetUsers: (value: string) => void
+  currentFeatures: string
+  setCurrentFeatures: (value: string) => void
+  canAutoImplement: boolean
 }
 
 type PriorityOption = {
@@ -59,12 +66,6 @@ const automationOptions: AutomationOption[] = [
     description: 'AI creates PRs when you click "Implement." You review and merge.',
     icon: <GitPullRequest size={18} style={{ color: '#6366f1' }} />,
   },
-  {
-    value: 'full_autonomous',
-    title: 'Full autonomous',
-    description: 'AI auto-approves, auto-builds, auto-merges low-risk changes. You set guardrails.',
-    icon: <Bot size={18} style={{ color: '#6366f1' }} />,
-  },
 ]
 
 function mapAutomationToProps(level: AutomationLevel): {
@@ -74,7 +75,6 @@ function mapAutomationToProps(level: AutomationLevel): {
     case 'roadmap':
       return { autoImplement: false }
     case 'roadmap_implement':
-    case 'full_autonomous':
       return { autoImplement: true }
   }
 }
@@ -92,10 +92,14 @@ export function StepConfigureAi({
   setRiskThreshold,
   productContext,
   analyzingContext,
+  productDescription,
+  setProductDescription,
+  targetUsers,
+  setTargetUsers,
+  currentFeatures,
+  setCurrentFeatures,
+  canAutoImplement,
 }: StepConfigureAiProps) {
-  const [productDescription, setProductDescription] = useState('')
-  const [targetUsers, setTargetUsers] = useState('')
-  const [currentFeatures, setCurrentFeatures] = useState('')
   const [priority, setPriority] = useState('balanced')
   const [preFilled, setPreFilled] = useState(false)
   const [automationLevel, setAutomationLevel] = useState<AutomationLevel>(
@@ -299,12 +303,14 @@ export function StepConfigureAi({
         <div className="space-y-2.5">
           {automationOptions.map((opt) => {
             const selected = automationLevel === opt.value
+            const disabled = opt.value === 'roadmap_implement' && !canAutoImplement
             return (
               <button
                 key={opt.value}
                 type="button"
+                disabled={disabled}
                 onClick={() => handleAutomationChange(opt.value)}
-                className="flex items-start gap-3 w-full p-4 rounded-xl border text-left transition-all"
+                className="flex items-start gap-3 w-full p-4 rounded-xl border text-left transition-all disabled:cursor-not-allowed disabled:opacity-55"
                 style={{
                   borderColor: selected ? '#6366f1' : '#e8e4de',
                   backgroundColor: selected ? '#fafaff' : '#ffffff',
@@ -345,7 +351,7 @@ export function StepConfigureAi({
                     className="text-xs mt-0.5"
                     style={{ color: '#8b8680' }}
                   >
-                    {opt.description}
+                    {opt.description}{disabled ? ' Upgrade to Pro to enable this.' : ''}
                   </p>
                 </div>
               </button>
@@ -353,17 +359,6 @@ export function StepConfigureAi({
           })}
         </div>
 
-        {automationLevel === 'full_autonomous' && (
-          <div
-            className="mt-3 p-3 rounded-xl border flex items-center gap-2"
-            style={{ borderColor: '#e8e4de', backgroundColor: '#fffbeb' }}
-          >
-            <Zap size={14} style={{ color: '#d97706' }} />
-            <p className="text-xs" style={{ color: '#92400e' }}>
-              Full autonomous mode auto-merges low-risk changes. You can set guardrails in project settings.
-            </p>
-          </div>
-        )}
       </div>
     </div>
   )

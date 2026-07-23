@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getStripe } from '@/lib/stripe/client'
+import { getSiteUrl } from '@/lib/site-config'
 
-export async function POST(request: Request) {
+export async function POST() {
   const supabase = await createClient()
   const {
     data: { user },
@@ -25,7 +26,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'No billing account' }, { status: 400 })
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const appUrl = getSiteUrl()
 
   const session = await getStripe().billingPortal.sessions.create({
     customer: org.stripe_customer_id,

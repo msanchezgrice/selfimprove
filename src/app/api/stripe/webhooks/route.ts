@@ -3,6 +3,7 @@ import { getStripe } from '@/lib/stripe/client'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { notifyTierChanged } from '@/lib/notifications'
 import type { TierName } from '@/lib/constants/tiers'
+import { resolveSubscriptionTier } from '@/lib/stripe/subscription-state'
 
 export async function POST(request: Request) {
   const body = await request.text()
@@ -39,13 +40,14 @@ export async function POST(request: Request) {
           .single()
         const oldTier = (orgBefore?.tier as string) || 'free'
 
-        await supabase
+        const { error: updateError } = await supabase
           .from('orgs')
           .update({
             tier,
             stripe_subscription_id: session.subscription as string,
           })
           .eq('id', orgId)
+        if (updateError) throw updateError
 
         // Notify about tier change (fire-and-forget)
         const { data: orgProject } = await supabase
@@ -63,23 +65,28 @@ export async function POST(request: Request) {
 
     case 'customer.subscription.updated': {
       const subscription = event.data.object
-      // If subscription is cancelled/past_due, downgrade to free
-      if (
-        subscription.status === 'canceled' ||
-        subscription.status === 'past_due'
-      ) {
-        const { data: org } = await supabase
-          .from('orgs')
-          .select('id')
-          .eq('stripe_subscription_id', subscription.id)
-          .single()
-
-        if (org) {
-          await supabase
+      const metadataOrgId = subscription.metadata?.org_id
+      const { data: org } = metadataOrgId
+        ? await supabase.from('orgs').select('id').eq('id', metadataOrgId).maybeSingle()
+        : await supabase
             .from('orgs')
-            .update({ tier: 'free', stripe_subscription_id: null })
-            .eq('id', org.id)
-        }
+            .select('id')
+            .eq('stripe_subscription_id', subscription.id)
+            .maybeSingle()
+
+      if (org) {
+        const tier = resolveSubscriptionTier(
+          subscription.status,
+          subscription.metadata?.tier,
+        )
+        const { error: updateError } = await supabase
+          .from('orgs')
+          .update({
+            tier,
+            stripe_subscription_id: tier === 'free' ? null : subscription.id,
+          })
+          .eq('id', org.id)
+        if (updateError) throw updateError
       }
       break
     }
@@ -90,13 +97,14 @@ export async function POST(request: Request) {
         .from('orgs')
         .select('id')
         .eq('stripe_subscription_id', subscription.id)
-        .single()
+        .maybeSingle()
 
       if (org) {
-        await supabase
+        const { error: updateError } = await supabase
           .from('orgs')
           .update({ tier: 'free', stripe_subscription_id: null })
           .eq('id', org.id)
+        if (updateError) throw updateError
       }
       break
     }

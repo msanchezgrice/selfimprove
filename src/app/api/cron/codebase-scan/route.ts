@@ -2,6 +2,10 @@ import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { queueScanJob } from '@/lib/ai/queue-build'
 import { verifySecret } from '@/lib/auth/verify-secret'
+import { decryptIfNeeded } from '@/lib/crypto'
+
+export const maxDuration = 300
+export const dynamic = 'force-dynamic'
 
 export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization')
@@ -49,7 +53,7 @@ export async function GET(request: Request) {
     if (count && count > 0) continue // Already scanned recently
 
     try {
-      await queueScanJob(project.id, project.repo_url, member.github_token)
+      await queueScanJob(project.id, project.repo_url, decryptIfNeeded(member.github_token))
       queued++
     } catch {}
   }

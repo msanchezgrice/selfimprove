@@ -28,6 +28,12 @@ export default function MarketingNav() {
           >
             Docs
           </Link>
+          <Link
+            href="/blog"
+            className="text-sm font-medium text-[#8b8680] transition-colors hover:text-[#1a1a2e]"
+          >
+            Blog
+          </Link>
         </div>
 
         <Link

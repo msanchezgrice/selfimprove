@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import type { RoiFocus } from '@/lib/types/database'
+import { trackEvent } from '@/lib/analytics'
+import type { RoiFocus, Tier } from '@/lib/types/database'
 import { StepConnectRepo } from './step-connect-repo'
 import { StepSelectSources } from './step-select-sources'
 import { StepAddWidget } from './step-add-widget'
@@ -11,6 +12,7 @@ import { StepGoLive } from './step-go-live'
 
 type OnboardingWizardProps = {
   orgId: string
+  orgTier: Tier
 }
 
 const TOTAL_STEPS = 5
@@ -31,10 +33,11 @@ function slugify(text: string): string {
     || 'project'
 }
 
-export function OnboardingWizard({ orgId }: OnboardingWizardProps) {
+export function OnboardingWizard({ orgId, orgTier }: OnboardingWizardProps) {
   const router = useRouter()
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   // Project ID and slug created in step 1
   const [projectId, setProjectId] = useState<string | null>(null)
@@ -69,6 +72,9 @@ export function OnboardingWizard({ orgId }: OnboardingWizardProps) {
   const [roiFocus, setRoiFocus] = useState<RoiFocus>('balanced')
   const [autoImplement, setAutoImplement] = useState(false)
   const [riskThreshold, setRiskThreshold] = useState(50)
+  const [productDescription, setProductDescription] = useState('')
+  const [targetUsers, setTargetUsers] = useState('')
+  const [currentFeatures, setCurrentFeatures] = useState('')
 
   const canContinue = () => {
     if (step === 1) return projectName.trim().length > 0
@@ -77,6 +83,7 @@ export function OnboardingWizard({ orgId }: OnboardingWizardProps) {
 
   const handleStep1Continue = async () => {
     setLoading(true)
+    setError(null)
     try {
       const res = await fetch('/api/projects', {
         method: 'POST',
@@ -111,9 +118,10 @@ export function OnboardingWizard({ orgId }: OnboardingWizardProps) {
         .finally(() => setAnalyzingContext(false))
 
       setStep(2)
+      trackEvent('onboarding_project_created')
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.error('Project creation error:', err)
+      setError(err instanceof Error ? err.message : 'Unable to create project')
     } finally {
       setLoading(false)
     }
@@ -122,6 +130,7 @@ export function OnboardingWizard({ orgId }: OnboardingWizardProps) {
   const handleGoLive = async () => {
     if (!projectId) return
     setLoading(true)
+    setError(null)
     try {
       // Update project settings — project already exists from step 1
       const res = await fetch(`/api/projects/${projectId}`, {
@@ -131,6 +140,11 @@ export function OnboardingWizard({ orgId }: OnboardingWizardProps) {
           repo_url: repoUrl || null,
           site_url: siteUrl || null,
           framework: framework || null,
+          description: [
+            productDescription.trim(),
+            targetUsers.trim() ? `Target users: ${targetUsers.trim()}` : '',
+            currentFeatures.trim() ? `Current features: ${currentFeatures.trim()}` : '',
+          ].filter(Boolean).join('\n\n') || null,
           settings: {
             automation_roi_focus: roiFocus,
             automation_implement_enabled: autoImplement,
@@ -152,10 +166,11 @@ export function OnboardingWizard({ orgId }: OnboardingWizardProps) {
       if (projectId) {
         document.cookie = `selfimprove_project=${projectId};path=/;max-age=31536000`
       }
+      trackEvent('onboarding_completed', { auto_implement: autoImplement })
       router.push(projectSlug ? `/dashboard/${projectSlug}/roadmap` : '/dashboard')
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.error('Onboarding error:', err)
+      setError(err instanceof Error ? err.message : 'Unable to finish onboarding')
       setLoading(false)
     }
   }
@@ -216,6 +231,15 @@ export function OnboardingWizard({ orgId }: OnboardingWizardProps) {
           borderColor: '#e8e4de',
         }}
       >
+        {error && (
+          <div
+            role="alert"
+            className="mb-5 rounded-xl border px-4 py-3 text-sm"
+            style={{ borderColor: '#fecaca', backgroundColor: '#fef2f2', color: '#991b1b' }}
+          >
+            {error}
+          </div>
+        )}
         {step === 1 && (
           <StepConnectRepo
             projectName={projectName}
@@ -249,6 +273,13 @@ export function OnboardingWizard({ orgId }: OnboardingWizardProps) {
             setRiskThreshold={setRiskThreshold}
             productContext={productContext}
             analyzingContext={analyzingContext}
+            productDescription={productDescription}
+            setProductDescription={setProductDescription}
+            targetUsers={targetUsers}
+            setTargetUsers={setTargetUsers}
+            currentFeatures={currentFeatures}
+            setCurrentFeatures={setCurrentFeatures}
+            canAutoImplement={orgTier !== 'free'}
           />
         )}
         {step === 5 && (

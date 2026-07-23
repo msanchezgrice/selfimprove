@@ -13,6 +13,9 @@ import { verifySecret } from '@/lib/auth/verify-secret'
  *
  * Supports `?dryRun=1` for a cost estimate without mutating anything.
  */
+export const maxDuration = 300
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization')
   const cronSecret = process.env.CRON_SECRET

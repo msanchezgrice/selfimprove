@@ -1202,7 +1202,7 @@ const PROPOSALS: Proposal[] = [
     newFiles: ['src/lib/notifications.ts (extension)'],
     mockup: {
       kind: 'page',
-      title: 'brain-alert@shipsitself.com',
+      title: 'Ships Itself system alert',
       rows: [
         { kind: 'heading', text: 'Resolver drift detected — selfimprove' },
         { kind: 'text', text: 'Weekly audit found 4 issues (threshold 3). Pass rate dropped to 78% (floor 85%).' },

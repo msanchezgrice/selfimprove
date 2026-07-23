@@ -2,6 +2,10 @@ import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { SIGNAL_WEIGHTS } from '@/lib/constants/signal-weights'
 import { verifySecret } from '@/lib/auth/verify-secret'
+import { decryptIfNeeded } from '@/lib/crypto'
+
+export const maxDuration = 300
+export const dynamic = 'force-dynamic'
 
 export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization')
@@ -48,7 +52,7 @@ export async function GET(request: Request) {
         `https://api.github.com/repos/${repo}/issues?state=open&since=${oneDayAgo}&per_page=20&sort=created`,
         {
           headers: {
-            Authorization: `Bearer ${member.github_token}`,
+            Authorization: `Bearer ${decryptIfNeeded(member.github_token)}`,
             Accept: 'application/vnd.github.v3+json',
             'User-Agent': 'Ships-Itself-App',
           },

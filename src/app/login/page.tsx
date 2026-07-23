@@ -1,4 +1,20 @@
 import { OAuthButtons } from './_components/oauth-buttons'
+import type { Metadata } from 'next'
+import Link from 'next/link'
+
+export const metadata: Metadata = {
+  title: 'Sign in',
+  description: 'Sign in or create a Ships Itself account with GitHub or Google.',
+  alternates: { canonical: '/login' },
+  robots: { index: false, follow: false },
+}
+
+const ERROR_MESSAGES: Record<string, string> = {
+  oauth_start_failed: 'Could not start the sign-in flow. Please try again.',
+  invalid_link: 'That sign-in link is invalid or expired. Please sign in again.',
+  account_setup: 'Sign-in succeeded but account setup failed. Please try again.',
+  auth_failed: 'Authentication failed. Please try again.',
+}
 
 export default async function LoginPage({
   searchParams,
@@ -96,7 +112,10 @@ export default async function LoginPage({
               fontSize: '14px',
             }}
           >
-            Authentication failed. Please try again.
+            {ERROR_MESSAGES[error] ?? 'Authentication failed. Please try again.'}
+            <span style={{ display: 'block', marginTop: '4px', fontSize: '12px', color: '#b91c1c' }}>
+              Code: {error}
+            </span>
           </div>
         )}
 
@@ -111,7 +130,10 @@ export default async function LoginPage({
             lineHeight: '1.5',
           }}
         >
-          By signing in, you agree to our Terms of Service
+          By signing in, you agree to our{' '}
+          <Link href="/terms" style={{ color: '#6366f1' }}>Terms of Service</Link>
+          {' '}and{' '}
+          <Link href="/privacy" style={{ color: '#6366f1' }}>Privacy Policy</Link>.
         </p>
       </div>
     </div>

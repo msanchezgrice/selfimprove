@@ -100,7 +100,6 @@ export function StepAddWidget({ projectId }: StepAddWidgetProps) {
   const dashboardUrl = `${widgetHost}/dashboard`
 
   const scriptSnippet = `<script src="${widgetHost}/widget.js"\n  data-project="${pid}"></script>`
-  const reactSnippet = `// npm install @selfimprove/react\nimport { FeedbackWidget } from '@selfimprove/react'\n\n<FeedbackWidget projectId="${pid}" />`
   const agentPrompt = `Add the Ships Itself feedback widget to my app. Add this script tag just before </body> in my root layout: <script src='${widgetHost}/widget.js' data-project='${pid}'></script>. That's it, one line.`
 
   const agentInstructions = `## Ships Itself Integration
@@ -189,34 +188,6 @@ Signals API: ${widgetHost}/api/signals
         <span style={{ color: '#a5f3c4' }}>&quot;{pid}&quot;</span>
         <span style={{ color: '#7dd3fc' }}>&gt;&lt;/script&gt;</span>
       </CodeBlock>
-
-      {/* React component */}
-      <p
-        className="text-xs font-semibold uppercase tracking-wider mb-1.5 mt-5"
-        style={{ color: '#8b8680' }}
-      >
-        React component
-      </p>
-      <CodeBlock copyText={reactSnippet} label="JSX">
-        <span style={{ color: '#6b7280' }}>// npm install @selfimprove/react</span>
-        {'\n'}
-        <span style={{ color: '#c084fc' }}>import</span>
-        {' { '}
-        <span style={{ color: '#e2e8f0' }}>FeedbackWidget</span>
-        {' } '}
-        <span style={{ color: '#c084fc' }}>from</span>{' '}
-        <span style={{ color: '#a5f3c4' }}>&apos;@selfimprove/react&apos;</span>
-        {'\n\n'}
-        <span style={{ color: '#7dd3fc' }}>&lt;FeedbackWidget</span>{' '}
-        <span style={{ color: '#fbbf24' }}>projectId</span>
-        <span style={{ color: '#94a3b8' }}>=</span>
-        <span style={{ color: '#a5f3c4' }}>&quot;{pid}&quot;</span>
-        {' '}
-        <span style={{ color: '#7dd3fc' }}>/&gt;</span>
-      </CodeBlock>
-      <p className="text-xs mt-1.5" style={{ color: '#8b8680' }}>
-        npm package coming soon
-      </p>
 
       {/* Agent prompt */}
       <p
@@ -313,10 +284,10 @@ Signals API: ${widgetHost}/api/signals
           <CodeBlock copyText={agentInstructions} copyLabel="Copy to clipboard" label="Markdown">
             <span style={{ color: '#a5f3c4' }}>## Ships Itself Integration</span>
             {'\n'}
-            <span style={{ color: '#e2e8f0' }}>This project uses Ships Itself (shipsitself.com) for AI product management.</span>
+            <span style={{ color: '#e2e8f0' }}>This project uses Ships Itself for AI product management.</span>
             {'\n'}
             <span style={{ color: '#e2e8f0' }}>Dashboard: </span>
-            <span style={{ color: '#7dd3fc' }}>https://shipsitself.com/p/{pid}</span>
+            <span style={{ color: '#7dd3fc' }}>{dashboardUrl}</span>
             {'\n\n'}
             <span style={{ color: '#a5f3c4' }}>### Context for coding agents</span>
             {'\n'}
@@ -330,17 +301,10 @@ Signals API: ${widgetHost}/api/signals
             {'\n'}
             <span style={{ color: '#e2e8f0' }}>- Reference roadmap items in commits: &quot;Implements roadmap #&lt;id&gt;&quot;</span>
             {'\n'}
-            <span style={{ color: '#e2e8f0' }}>- Feedback API: /api/feedback (POST)</span>
+            <span style={{ color: '#e2e8f0' }}>- Signals API: {widgetHost}/api/signals (POST)</span>
           </CodeBlock>
           <div className="flex flex-wrap gap-2 mt-3">
             <CopyButton text={agentInstructions} label="Copy agent instructions" />
-            <button
-              type="button"
-              className="text-xs font-medium px-2.5 py-1 rounded-lg transition-colors"
-              style={{ color: '#6366f1', backgroundColor: '#eef2ff' }}
-            >
-              Add to CLAUDE.md
-            </button>
           </div>
         </div>
       </div>

@@ -14,6 +14,21 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(canonicalUrl, 308)
   }
 
+  // Rescue stray OAuth codes. If the Supabase redirect allowlist is ever out
+  // of sync with this origin, GoTrue falls back to its configured Site URL and
+  // the auth code lands on the wrong path (usually "/"), silently dropping the
+  // sign-in. Forward any such code to the callback route so login still
+  // completes. Only /auth/callback consumes a `code` query param today.
+  if (
+    request.nextUrl.searchParams.has('code') &&
+    request.nextUrl.pathname !== '/auth/callback' &&
+    !request.nextUrl.pathname.startsWith('/api/')
+  ) {
+    const rescueUrl = request.nextUrl.clone()
+    rescueUrl.pathname = '/auth/callback'
+    return NextResponse.redirect(rescueUrl)
+  }
+
   let supabaseResponse = NextResponse.next({ request })
 
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {

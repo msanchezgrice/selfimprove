@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { verifySecret } from '@/lib/auth/verify-secret'
+import { decryptIfNeeded } from '@/lib/crypto'
+
+export const maxDuration = 300
+export const dynamic = 'force-dynamic'
 
 export async function GET(request: Request) {
   // Verify cron secret
@@ -51,7 +55,7 @@ export async function GET(request: Request) {
     try {
       const prRes = await fetch(`https://api.github.com/repos/${repo}/pulls/${item.pr_number}`, {
         headers: {
-          Authorization: `Bearer ${member.github_token}`,
+          Authorization: `Bearer ${decryptIfNeeded(member.github_token)}`,
           Accept: 'application/vnd.github.v3+json',
           'User-Agent': 'Ships-Itself-App',
         },

@@ -19,6 +19,9 @@ import { verifySecret } from '@/lib/auth/verify-secret'
  * dismiss reason is recorded so the founder can resurrect anything by
  * setting status back to 'proposed'.
  */
+export const maxDuration = 300
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization')
   const cronSecret = process.env.CRON_SECRET

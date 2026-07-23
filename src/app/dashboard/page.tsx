@@ -6,13 +6,16 @@ export default async function DashboardPage({
 }: {
   searchParams: Promise<{ upgrade?: string; billing?: string }>
 }) {
-  const { upgrade } = await searchParams
+  const { upgrade, billing } = await searchParams
   const project = await getActiveProject()
 
   if (!project) redirect('/onboarding')
 
   if (upgrade === 'pro' || upgrade === 'autonomous') {
     redirect(`/dashboard/${project.slug}/settings?tab=billing&upgrade=${upgrade}`)
+  }
+  if (billing === 'success' || billing === 'cancelled') {
+    redirect(`/dashboard/${project.slug}/settings?tab=billing&billing=${billing}`)
   }
   redirect(`/dashboard/${project.slug}/roadmap`)
 }

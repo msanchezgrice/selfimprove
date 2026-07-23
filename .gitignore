@@ -46,3 +46,9 @@ next-env.d.ts
 # local agent state (not project-relevant)
 .claude/tsc-cache/
 .agentspend/
+
+# cowork/agent artifacts
+.playwright-mcp/
+supabase/.temp/
+.cowork-audit-snapshot.tar.gz
+.claude/settings.local.json

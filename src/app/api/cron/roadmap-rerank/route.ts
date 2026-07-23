@@ -26,6 +26,9 @@ import { verifySecret } from '@/lib/auth/verify-secret'
  *   ?promotionConfidenceFloor=N  — override the 70% confidence floor
  *   ?promotionFocusFloor=N       — override the 50 cluster score floor
  */
+export const maxDuration = 300
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization')
   const cronSecret = process.env.CRON_SECRET

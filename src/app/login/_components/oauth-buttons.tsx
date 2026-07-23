@@ -1,10 +1,12 @@
 'use client'
 
 import { createClient } from '@/lib/supabase/browser'
+import { trackEvent } from '@/lib/analytics'
 import { getAuthCallbackUrl, getSafeAuthNextPath } from '@/lib/app-routes'
 
 export function OAuthButtons() {
   const handleLogin = async (provider: 'github' | 'google') => {
+    trackEvent('sign_up_started', { provider })
     const supabase = createClient()
     const params = new URLSearchParams(window.location.search)
     const plan = params.get('plan')

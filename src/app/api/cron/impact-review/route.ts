@@ -19,6 +19,9 @@ import { verifySecret } from '@/lib/auth/verify-secret'
  * starve the rest of the sweep. Run limit is capped to protect the worker
  * budget.
  */
+export const maxDuration = 300
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization')
   const cronSecret = process.env.CRON_SECRET

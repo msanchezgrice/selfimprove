@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { sanitizeProjectSettingsUpdate } from '@/lib/onboarding/settings-update'
+import type { Tier } from '@/lib/types/database'
 
 export async function PATCH(
   request: Request,
@@ -15,7 +17,7 @@ export async function PATCH(
   const { id } = await params
 
   const body = await request.json()
-  const { repo_url, site_url, framework, settings } = body
+  const { repo_url, site_url, framework, description, settings } = body
 
   const admin = createAdminClient()
 
@@ -55,6 +57,7 @@ export async function PATCH(
     }
   }
   if (framework !== undefined) updates.framework = framework
+  if (description !== undefined) updates.description = description
 
   if (Object.keys(updates).length > 0) {
     const { error } = await admin
@@ -69,17 +72,23 @@ export async function PATCH(
 
   // Update project_settings if provided (allowlisted fields only)
   if (settings) {
-    const allowedFields = [
-      'widget_position', 'widget_color', 'widget_label',
-      'allowed_domains', 'voice_enabled',
-      'automation_implement_enabled', 'automation_auto_merge',
-      'posthog_api_key', 'posthog_host',
-    ]
-    const sanitized = Object.fromEntries(
-      Object.entries(settings).filter(([key]) => allowedFields.includes(key))
+    const { data: org } = await admin
+      .from('orgs')
+      .select('tier')
+      .eq('id', project.org_id)
+      .single()
+    const sanitized = sanitizeProjectSettingsUpdate(
+      settings as Record<string, unknown>,
+      (org?.tier ?? 'free') as Tier,
     )
     if (Object.keys(sanitized).length > 0) {
-      await admin.from('project_settings').update(sanitized).eq('project_id', id)
+      const { error } = await admin
+        .from('project_settings')
+        .update(sanitized)
+        .eq('project_id', id)
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 })
+      }
     }
   }
 

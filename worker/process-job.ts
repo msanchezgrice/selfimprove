@@ -58,7 +58,11 @@ async function runImplement(job: BuildJob, workDir: string, repo: string, github
   const cwdOpts: ExecFileSyncOptions = { cwd: workDir }
 
   // Set git identity for commits
-  run('git', ['config', 'user.email', 'bot@shipsitself.com'], cwdOpts)
+  run('git', [
+    'config',
+    'user.email',
+    process.env.SELFIMPROVE_BOT_EMAIL || 'selfimprove-bot@users.noreply.github.com',
+  ], cwdOpts)
   run('git', ['config', 'user.name', 'Ships Itself Bot'], cwdOpts)
 
   const branchName = `selfimprove/auto-${Date.now()}`

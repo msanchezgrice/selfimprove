@@ -16,6 +16,9 @@ import { verifySecret } from '@/lib/auth/verify-secret'
  * Per-project failures are captured, not thrown, so one bad project cannot
  * starve the rest of the sweep.
  */
+export const maxDuration = 300
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization')
   const cronSecret = process.env.CRON_SECRET
@@ -30,6 +33,7 @@ export async function GET(request: Request) {
     .from('projects')
     .select('id')
     .eq('status', 'active')
+    .order('updated_at', { ascending: true })
     .limit(200)
 
   if (!projects || projects.length === 0) {
@@ -68,7 +72,10 @@ export async function GET(request: Request) {
     runId: string | null
   }> = []
 
+  const loopStarted = Date.now()
+  let timedOut = false
   for (const projectId of toProcess) {
+    if (Date.now() - loopStarted > 260_000) { timedOut = true; break }
     try {
       const result = await runProjectEnrichment({ projectId })
       processed += 1
@@ -88,6 +95,7 @@ export async function GET(request: Request) {
   return NextResponse.json({
     processed,
     candidates: toProcess.length,
+    timedOut,
     total: projects.length,
     summaries,
     errors,

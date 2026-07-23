@@ -2,6 +2,9 @@
   'use strict';
 
   const script = document.currentScript;
+  const productUrl = script.src
+    ? new URL(script.src).origin
+    : 'https://shipsitself.com';
   const config = {
     projectId: script.getAttribute('data-project'),
     color: script.getAttribute('data-color') || '#6366f1',
@@ -10,7 +13,7 @@
     text: script.getAttribute('data-text') || 'Feedback',
     tags: (script.getAttribute('data-tags') || 'bug,feature,improvement,question').split(',').map(t => t.trim()),
     voice: script.getAttribute('data-voice') === 'true',
-    api: script.getAttribute('data-api') || '',
+    api: script.getAttribute('data-api') || productUrl,
   };
 
   if (!config.projectId) {
@@ -222,7 +225,7 @@
       </div>
     </div>
     <div class="si-footer">
-      <a href="https://shipsitself.com" target="_blank" rel="noopener">Powered by Ships Itself</a>
+      <a href="${productUrl}" target="_blank" rel="noopener">Powered by Ships Itself</a>
     </div>
   `;
   shadow.appendChild(panel);

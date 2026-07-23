@@ -34,18 +34,18 @@ export default async function Home() {
               Pricing
             </a>
             <a
-              href="#"
+              href="/docs"
               className="text-text-secondary text-sm font-medium no-underline hover:text-text transition-colors hidden sm:inline"
             >
               Docs
             </a>
             {user ? (
-              <a
+              <Link
                 href={OWNER_DASHBOARD_URL}
                 className="bg-accent text-white px-[18px] py-2 rounded-lg text-sm font-semibold no-underline hover:bg-accent-hover transition-colors"
               >
                 Dashboard
-              </a>
+              </Link>
             ) : (
               <>
                 <a
@@ -480,7 +480,7 @@ export default async function Home() {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
-            <a href="/login" className="inline-flex items-center gap-2 px-7 py-3.5 bg-accent text-white rounded-[10px] text-base font-semibold no-underline hover:bg-accent-hover transition-all">
+            <a href={LOGIN_URL} className="inline-flex items-center gap-2 px-7 py-3.5 bg-accent text-white rounded-[10px] text-base font-semibold no-underline hover:bg-accent-hover transition-all">
               Sign Up Free &rarr;
             </a>
             <a href="#agent-setup" className="inline-flex items-center gap-2 px-7 py-3.5 bg-white text-text rounded-[10px] text-base font-medium no-underline border border-border hover:border-accent hover:text-accent transition-all">
@@ -513,14 +513,14 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* ===== SOCIAL PROOF / TESTIMONIALS ===== */}
+      {/* ===== EARLY ACCESS ===== */}
       <section className="py-[100px] px-6 bg-surface-2 border-t border-b border-border">
         <div className="max-w-[1040px] mx-auto">
           <p
             className="text-[13px] font-semibold uppercase text-accent mb-3 text-center"
             style={{ letterSpacing: "1.5px" }}
           >
-            Trusted by Developers
+            Early access
           </p>
           <h2
             className="font-extrabold leading-[1.15] mb-14 text-text text-center"
@@ -529,40 +529,32 @@ export default async function Home() {
               letterSpacing: "-1px",
             }}
           >
-            Developers ship faster with Ships Itself
+            Built around inspectable product decisions
           </h2>
 
           <div className="grid grid-cols-3 gap-5 max-md:grid-cols-1">
             {[
               {
-                quote:
-                  "I shipped my SaaS in a weekend with Cursor. Ships Itself told me what was actually broken — users were dropping off at step 3 and I had no idea.",
-                name: "Alex Chen",
-                role: "Indie Developer",
-                avatar: "AC",
+                title: "Evidence first",
+                body: "Every proposed roadmap item keeps the signals and reasoning that led to it.",
+                marker: "01",
               },
               {
-                quote:
-                  "It's like having a product manager that never sleeps. The roadmap updates itself and the PRs are surprisingly good. Saved me 10+ hours a week.",
-                name: "Sarah Kim",
-                role: "Solo SaaS Founder",
-                avatar: "SK",
+                title: "Review before action",
+                body: "Start with recommendations and explicit approval gates before enabling implementation.",
+                marker: "02",
               },
               {
-                quote:
-                  "The autonomous mode is wild. I woke up to three merged PRs that fixed real user-reported bugs. All with evidence trails and test coverage.",
-                name: "Marcus Johnson",
-                role: "Full-Stack Developer",
-                avatar: "MJ",
+                title: "Bounded automation",
+                body: "Project safety limits keep automated work scoped, tested, and auditable.",
+                marker: "03",
               },
-            ].map((testimonial) => (
+            ].map((principle) => (
               <div
-                key={testimonial.name}
+                key={principle.title}
                 className="bg-surface border border-border rounded-[14px] p-7 flex flex-col"
               >
-                <p className="text-[15px] text-text-secondary leading-[1.6] flex-1 mb-6">
-                  &ldquo;{testimonial.quote}&rdquo;
-                </p>
+                <p className="text-[15px] text-text-secondary leading-[1.6] flex-1 mb-6">{principle.body}</p>
                 <div className="flex items-center gap-3 pt-5 border-t border-border">
                   <div
                     className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-accent"
@@ -571,15 +563,11 @@ export default async function Home() {
                       border: "2px solid var(--accent)",
                     }}
                   >
-                    {testimonial.avatar}
+                    {principle.marker}
                   </div>
                   <div>
-                    <div className="text-sm font-semibold text-text">
-                      {testimonial.name}
-                    </div>
-                    <div className="text-[13px] text-text-secondary">
-                      {testimonial.role}
-                    </div>
+                    <div className="text-sm font-semibold text-text">{principle.title}</div>
+                    <div className="text-[13px] text-text-secondary">Product principle</div>
                   </div>
                 </div>
               </div>
@@ -746,12 +734,12 @@ export default async function Home() {
           Free for 1 project. Setup takes 5 minutes. First roadmap items appear
           within 24 hours.
         </p>
-        <a
+        <Link
           href={user ? OWNER_DASHBOARD_URL : LOGIN_URL}
           className="inline-flex items-center gap-2 px-7 py-3.5 bg-accent text-white rounded-[10px] text-base font-semibold no-underline hover:bg-accent-hover transition-all hover:-translate-y-px"
         >
           Get Started Free &rarr;
-        </a>
+        </Link>
         <p className="text-[13px] text-text-secondary mt-4">
           No credit card required
         </p>
@@ -779,13 +767,31 @@ export default async function Home() {
               Pricing
             </a>
             <a
-              href="#"
+              href="/docs"
               className="text-text-secondary no-underline hover:text-text transition-colors"
             >
               Docs
             </a>
+            <Link
+              href="/blog"
+              className="text-text-secondary no-underline hover:text-text transition-colors"
+            >
+              Blog
+            </Link>
             <a
-              href="#"
+              href="/privacy"
+              className="text-text-secondary no-underline hover:text-text transition-colors"
+            >
+              Privacy
+            </a>
+            <a
+              href="/terms"
+              className="text-text-secondary no-underline hover:text-text transition-colors"
+            >
+              Terms
+            </a>
+            <a
+              href="https://github.com/msanchezgrice/selfimprove"
               className="text-text-secondary no-underline hover:text-text transition-colors"
             >
               GitHub

@@ -11,6 +11,15 @@ export async function POST(request: Request) {
   const { project_id } = await request.json()
   if (!project_id) return NextResponse.json({ error: 'Missing project_id' }, { status: 400 })
 
+  // Authorization: ensure the caller is a member of the project's org.
+  // The RLS-scoped client returns null when the user is not a member (prevents cross-org IDOR).
+  const { data: ownedProject } = await supabase
+    .from('projects')
+    .select('id')
+    .eq('id', project_id)
+    .maybeSingle()
+  if (!ownedProject) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
   const admin = createAdminClient()
 
   // Get PostHog API key from project settings

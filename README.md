@@ -118,9 +118,7 @@ cd worker && npm run dev  # Worker (polls Supabase for jobs)
 
 6. **Deploy the web app to Vercel**
 
-```bash
-vercel deploy --prod
-```
+Push a reviewed change to `main` to deploy through the existing GitHub/Vercel integration. Pull requests receive preview deployments.
 
 7. **Deploy the worker to Fly.io**
 
@@ -147,6 +145,8 @@ fly secrets set SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... ANTHROPIC_API_KEY
 | `STRIPE_AUTONOMOUS_PRICE_ID` | Stripe Price ID for Autonomous tier |
 | `NEXT_PUBLIC_APP_URL` | Public URL of the app (e.g., `https://shipsitself.com`) |
 | `RESEND_API_KEY` | Resend API key for email notifications (optional) |
+| `RESEND_FROM_EMAIL` | Verified sender address or formatted sender, such as `Ships Itself <hello@owned-domain.example>` |
+| `NEXT_PUBLIC_GA_MEASUREMENT_ID` | Google Analytics 4 measurement ID (optional) |
 | `CRON_SECRET` | Secret for authenticating Vercel Cron requests |
 
 #### Worker (Fly.io)
@@ -156,6 +156,7 @@ fly secrets set SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... ANTHROPIC_API_KEY
 | `SUPABASE_URL` | Supabase project URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key |
 | `ANTHROPIC_API_KEY` | Anthropic API key (used by Claude Code CLI) |
+| `SELFIMPROVE_BOT_EMAIL` | Git commit email for the worker (optional; defaults to a GitHub noreply address) |
 
 ## Project Structure
 
@@ -227,7 +228,8 @@ selfimprove/
         tiers.ts                       # Pricing tier definitions
       stripe/
         client.ts                      # Stripe client
-        products.ts                    # Stripe product config
+        checkout-config.ts             # Fixed Stripe price and trial config
+        subscription-state.ts          # Subscription status to app tier mapping
         tier-enforcement.ts            # Tier-based feature gates
       supabase/
         admin.ts                       # Service role client

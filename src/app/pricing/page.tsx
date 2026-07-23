@@ -2,6 +2,13 @@ import Link from "next/link";
 import { Check, Minus } from "lucide-react";
 import MarketingNav from "@/app/_components/marketing-nav";
 import { TIERS } from "@/lib/constants/tiers";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Pricing",
+  description: "Compare Ships Itself Free, Pro, and Autonomous plans.",
+  alternates: { canonical: "/pricing" },
+};
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */

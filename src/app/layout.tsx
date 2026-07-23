@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import { ToastProvider } from "@/components/providers/ToastProvider";
+import { GoogleAnalytics } from "@/app/_components/google-analytics";
+import { SITE_URL } from "@/lib/site-config";
 import "./globals.css";
 
 const inter = Inter({
@@ -13,19 +15,17 @@ const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
 });
 
-const siteUrl = 'https://shipsitself.com'
-
 export const metadata: Metadata = {
   title: { default: 'Ships Itself — AI Product Manager for Developers', template: '%s | Ships Itself' },
   description: 'Ships Itself watches your users, builds your roadmap, and ships the fixes. AI-powered product management for indie devs and solo SaaS founders.',
   authors: [{ name: 'Ships Itself' }],
   robots: 'index, follow',
-  metadataBase: new URL(siteUrl),
-  alternates: { canonical: siteUrl },
+  metadataBase: new URL(SITE_URL),
+  alternates: { canonical: SITE_URL },
   openGraph: {
     title: 'Ships Itself — AI Product Manager for Developers',
     description: 'You built your v1. Now make it actually work. Watch your users, build your roadmap, ship the fixes—all with AI.',
-    url: siteUrl,
+    url: SITE_URL,
     siteName: 'Ships Itself',
     locale: 'en_US',
     type: 'website',
@@ -37,7 +37,6 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: '/favicon.svg',
-    apple: '/apple-touch-icon.png',
   },
   manifest: '/site.webmanifest',
   appleWebApp: {
@@ -63,8 +62,9 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col bg-[var(--bg)]">
         {children}
         <ToastProvider />
+        <GoogleAnalytics />
         <script
-          src={`${siteUrl}/widget.js`}
+          src={`${SITE_URL}/widget.js`}
           data-project="bb7ec56a-5ef9-4bc1-af84-b206af76e039"
           async
         />
