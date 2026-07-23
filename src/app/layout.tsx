@@ -20,6 +20,7 @@ export const metadata: Metadata = {
   description: 'Ships Itself watches your users, builds your roadmap, and ships the fixes. AI-powered product management for indie devs and solo SaaS founders.',
   authors: [{ name: 'Ships Itself' }],
   robots: 'index, follow',
+  verification: { google: 'wDt9ncF0rhWuDIZ_UZhl5lnZoXbJo8NaTrGcEYiAhCA' },
   metadataBase: new URL(SITE_URL),
   alternates: { canonical: SITE_URL },
   openGraph: {
