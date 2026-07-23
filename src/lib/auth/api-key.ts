@@ -1,3 +1,4 @@
+import crypto from 'crypto'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { decryptIfNeeded } from '@/lib/crypto'
 
@@ -6,12 +7,13 @@ export async function authenticateApiKey(request: Request): Promise<{ userId: st
   if (!authHeader?.startsWith('Bearer si_')) return null
 
   const apiKey = authHeader.slice(7) // Remove "Bearer "
+  const keyHash = crypto.createHash('sha256').update(apiKey).digest('hex')
   const supabase = createAdminClient()
 
   const { data } = await supabase
     .from('org_members')
     .select('user_id, org_id')
-    .eq('api_key', apiKey)
+    .eq('api_key_hash', keyHash)
     .limit(1)
     .single()
 
@@ -24,12 +26,13 @@ export async function getGitHubTokenFromApiKey(request: Request): Promise<string
   if (!authHeader?.startsWith('Bearer si_')) return null
 
   const apiKey = authHeader.slice(7)
+  const keyHash = crypto.createHash('sha256').update(apiKey).digest('hex')
   const supabase = createAdminClient()
 
   const { data } = await supabase
     .from('org_members')
     .select('github_token')
-    .eq('api_key', apiKey)
+    .eq('api_key_hash', keyHash)
     .limit(1)
     .single()
 

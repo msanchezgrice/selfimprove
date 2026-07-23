@@ -251,10 +251,11 @@ export function SettingsForm({
 
   /* ----- API Key state ----- */
   const [apiKey, setApiKey] = useState<string | null>(null)
+  const [keyHint, setKeyHint] = useState<string | null>(null)
   const [loadingKey, setLoadingKey] = useState(false)
 
   useEffect(() => {
-    fetch('/api/settings/api-key').then(r => r.json()).then(d => setApiKey(d.api_key)).catch(() => {})
+    fetch('/api/settings/api-key').then(r => r.json()).then(d => { setApiKey(d.api_key ?? null); setKeyHint(d.hint ?? null) }).catch(() => {})
   }, [])
 
   /* ----- General state ----- */
@@ -960,20 +961,43 @@ export function SettingsForm({
             Use this key for CLI and agent onboarding. Pass as: <code className="bg-gray-100 px-1 py-0.5 rounded text-xs">Authorization: Bearer si_...</code>
           </p>
           {apiKey ? (
-            <div className="flex gap-2">
-              <input
-                readOnly
-                value={apiKey}
-                className={inputClass + ' flex-1 font-mono text-xs'}
-                style={inputStyle}
-              />
+            <div>
+              <div className="flex gap-2">
+                <input readOnly value={apiKey} className={inputClass + ' flex-1 font-mono text-xs'} style={inputStyle} />
+                <button
+                  type="button"
+                  onClick={() => navigator.clipboard.writeText(apiKey)}
+                  className="shrink-0 px-4 py-2 rounded-lg text-sm font-medium text-white transition-opacity hover:opacity-90"
+                  style={{ backgroundColor: C.accent }}
+                >
+                  Copy
+                </button>
+              </div>
+              <p className="text-xs mt-2" style={{ color: C.secondary }}>
+                Copy this key now &mdash; for your security it is not stored and won&apos;t be shown again.
+              </p>
+            </div>
+          ) : keyHint ? (
+            <div className="flex gap-2 items-center">
+              <input readOnly value={keyHint} className={inputClass + ' flex-1 font-mono text-xs'} style={inputStyle} />
               <button
                 type="button"
-                onClick={() => navigator.clipboard.writeText(apiKey)}
-                className="shrink-0 px-4 py-2 rounded-lg text-sm font-medium text-white transition-opacity hover:opacity-90"
+                disabled={loadingKey}
+                onClick={async () => {
+                  setLoadingKey(true)
+                  try {
+                    const res = await fetch('/api/settings/api-key', { method: 'POST' })
+                    const data = await res.json()
+                    setApiKey(data.api_key)
+                    setKeyHint(null)
+                  } finally {
+                    setLoadingKey(false)
+                  }
+                }}
+                className="shrink-0 px-4 py-2 rounded-lg text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-60"
                 style={{ backgroundColor: C.accent }}
               >
-                Copy
+                {loadingKey ? '...' : 'Regenerate'}
               </button>
             </div>
           ) : (
@@ -986,6 +1010,7 @@ export function SettingsForm({
                   const res = await fetch('/api/settings/api-key', { method: 'POST' })
                   const data = await res.json()
                   setApiKey(data.api_key)
+                  setKeyHint(null)
                 } finally {
                   setLoadingKey(false)
                 }

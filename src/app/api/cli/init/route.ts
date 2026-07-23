@@ -108,9 +108,11 @@ async function authenticateGitHub(token: string): Promise<{ userId: string; orgI
 
     // Generate API key for future use
     const apiKey = `si_${crypto.randomBytes(24).toString('hex')}`
+    const apiKeyHash = crypto.createHash('sha256').update(apiKey).digest('hex')
+    const apiKeyHint = `${apiKey.slice(0, 11)}…${apiKey.slice(-4)}`
     await supabase
       .from('org_members')
-      .update({ api_key: apiKey })
+      .update({ api_key_hash: apiKeyHash, api_key_hint: apiKeyHint })
       .eq('user_id', userId)
 
     // Generate magic login link so user can access dashboard without separate signup
