@@ -16,6 +16,13 @@ import { POST } from './route'
 const PROJECT_ID = '9e26a4c1-92b8-4f65-b306-571b82f35a10'
 const ORIGIN = 'https://shipsitself.com'
 
+type MockQueryBuilder = {
+  select: (columns?: string) => MockQueryBuilder
+  eq: (column: string, value: unknown) => MockQueryBuilder
+  insert: (payload: unknown) => MockQueryBuilder
+  single: () => Promise<{ data: unknown; error: null }>
+}
+
 function form({ projectId = PROJECT_ID, audio = true, transcript }: { projectId?: string; audio?: boolean; transcript?: string } = {}) {
   const data = new FormData()
   data.set('project_id', projectId)
@@ -27,7 +34,7 @@ function form({ projectId = PROJECT_ID, audio = true, transcript }: { projectId?
 function setup(project: unknown) {
   const inserted: unknown[] = []
   const from = vi.fn((table: string) => {
-    const builder: any = {
+    const builder: MockQueryBuilder = {
       select: vi.fn(() => builder),
       eq: vi.fn(() => builder),
       insert: vi.fn((payload: unknown) => { inserted.push(payload); return builder }),
@@ -43,9 +50,9 @@ function setup(project: unknown) {
   return { from, inserted }
 }
 
-async function post(body: FormData, origin: string | undefined = ORIGIN) {
+async function post(body: FormData, origin: string | null = ORIGIN) {
   const headers = new Headers()
-  if (origin !== undefined) headers.set('origin', origin)
+  if (origin !== null) headers.set('origin', origin)
   const request = { headers, formData: async () => body } as unknown as Request
   return POST(request)
 }
@@ -83,7 +90,7 @@ describe('compatibility-preserving POST /api/voice variant', () => {
 
   it('preserves missing-Origin behavior when no domain allowlist is configured', async () => {
     const { inserted } = setup({ status: 'active', allowed_domains: [] })
-    const response = await post(form(), undefined)
+    const response = await post(form(), null)
     expect(response.status).toBe(201)
     expect(transcribeAudio).toHaveBeenCalledTimes(1)
     expect(inserted).toHaveLength(1)
