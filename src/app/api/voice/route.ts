@@ -28,27 +28,7 @@ export async function POST(request: Request) {
     )
   }
 
-  // If audio file provided, transcribe it via Gemini
-  if (audioFile && !transcript) {
-    try {
-      const buffer = await audioFile.arrayBuffer()
-      if (buffer.byteLength === 0) {
-        return NextResponse.json(
-          { error: 'Empty audio file' },
-          { status: 400 },
-        )
-      }
-      transcript = await transcribeAudio(buffer, audioFile.type || 'audio/webm')
-    } catch (err) {
-      console.error('[voice] Transcription failed:', err instanceof Error ? err.message : err)
-      return NextResponse.json(
-        { error: `Transcription failed: ${err instanceof Error ? err.message : 'Unknown error'}` },
-        { status: 422 },
-      )
-    }
-  }
-
-  if (!transcript) {
+  if (!audioFile && !transcript) {
     return NextResponse.json(
       { error: 'No audio or transcript provided' },
       { status: 400 },
@@ -85,6 +65,33 @@ export async function POST(request: Request) {
     if (!allowed) {
       return NextResponse.json({ error: 'Domain not allowed' }, { status: 403 })
     }
+  }
+
+  // If audio file provided, transcribe it via Gemini
+  if (audioFile && !transcript) {
+    try {
+      const buffer = await audioFile.arrayBuffer()
+      if (buffer.byteLength === 0) {
+        return NextResponse.json(
+          { error: 'Empty audio file' },
+          { status: 400 },
+        )
+      }
+      transcript = await transcribeAudio(buffer, audioFile.type || 'audio/webm')
+    } catch (err) {
+      console.error('[voice] Transcription failed:', err instanceof Error ? err.message : err)
+      return NextResponse.json(
+        { error: `Transcription failed: ${err instanceof Error ? err.message : 'Unknown error'}` },
+        { status: 422 },
+      )
+    }
+  }
+
+  if (!transcript) {
+    return NextResponse.json(
+      { error: 'No audio or transcript provided' },
+      { status: 400 },
+    )
   }
 
   const { data: signal, error } = await supabase
